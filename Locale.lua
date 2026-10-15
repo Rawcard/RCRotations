@@ -103,6 +103,7 @@ L.enUS = {
 	OPT_CARD_BLOCK = "Never suggest",
 	OPT_HUD_COMPACT = "HUD: Compact",
 	LOCKBAR = "Click to lock",
+	BADGE_TIP = "Click: open the options (unlock, rotation, import).",
 	LOCKBAR_DONE = "HUD locked. Unlock it from the options (General > Lock) or the minimap button.",
 	OPT_HUD_CLASSIC = "HUD: Classic",
 	OPT_SIM_FOR = "%s on %s",

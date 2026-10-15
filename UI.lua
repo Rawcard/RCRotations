@@ -839,9 +839,32 @@ local function badge(slot)
 	if slot.rcBadge then
 		return slot.rcBadge
 	end
-	local b = CreateFrame("Frame", nil, slot, "BackdropTemplate")
-	b:SetSize(18, 12)
-	b:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 6, 6)
+	-- The RC badge is a button: click it to open the options (works locked too).
+	local b = CreateFrame("Button", "RCRotationsBadge", slot, "BackdropTemplate")
+	b:SetSize(22, 14)
+	b:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 6, 7)
+	b:EnableMouse(true)
+	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	b:SetScript("OnClick", function()
+		if ns.ToggleOptions then
+			ns.ToggleOptions()
+		end
+	end)
+	b:SetScript("OnEnter", function(self)
+		self:SetBackdropBorderColor(1, 1, 1, 1)
+		if GameTooltip then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText("RCRotations")
+			GameTooltip:AddLine(ns.T("BADGE_TIP"), 0.8, 0.8, 0.8)
+			GameTooltip:Show()
+		end
+	end)
+	b:SetScript("OnLeave", function(self)
+		self:SetBackdropBorderColor(1, 0.82, 0.2, 1)
+		if GameTooltip then
+			GameTooltip:Hide()
+		end
+	end)
 	b:SetFrameLevel(slot:GetFrameLevel() + 5)
 	if b.SetBackdrop then
 		b:SetBackdrop(COMPACT_EDGE)
@@ -852,7 +875,7 @@ local function badge(slot)
 	text:SetPoint("CENTER", 0, 0)
 	local font = text:GetFont()
 	if font then
-		text:SetFont(font, 8, "OUTLINE")
+		text:SetFont(font, 9, "OUTLINE")
 	end
 	text:SetText("|cff66ccffR|r|cffd4a017C|r")
 	b.text = text
@@ -1195,9 +1218,14 @@ function ns.UI.ApplyMouse()
 			frame:EnableMouse(mouse)
 		end
 	end
+	-- Suggestion icons stay clickable when locked (right-click = never
+	-- suggest); dragging them is still only possible while unlocked.
 	if ns.UI.slots then
 		for _, slot in ipairs(ns.UI.slots) do
-			slot:EnableMouse(mouse)
+			slot:EnableMouse(true)
+			if slot.rcBadge then
+				slot.rcBadge:EnableMouse(true)
+			end
 		end
 	end
 	if ns.UI.lockWrap then

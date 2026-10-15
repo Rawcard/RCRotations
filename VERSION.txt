@@ -32,6 +32,9 @@ WoWSims rotations on MoP Classic.
   or /rcr style.
 - Compact style replaces the padlock with a thin "Click to lock" bar under the icons. It disappears
   once locked; unlock from Options > General > Lock (or the minimap button).
+- The RC badge on the main icon is a button: click it to open the options.
+- Suggestion icons stay clickable while locked (right-click = never suggest); dragging still
+  needs the HUD unlocked.
 - Spells the game says you can't cast right now (Dark Transformation without 5 Shadow Infusion,
   procs, forms, resources) are never suggested.
 - Never-suggest list, applied on top of every rotation so WoWSims updates can't bring them back:

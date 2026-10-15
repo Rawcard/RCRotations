@@ -223,6 +223,94 @@ check(FROST["obliterate"] not in q, "unknown spells never suggested (got %s)" % 
 q = scenario(cds + "WORLD.unusable = true")
 check(q == [], "nothing usable -> empty queue (got %s)" % q)
 
+# --------------------------------------------------------------- 4. rotation picker
+UI_STUB = r'''
+UIParent = {}
+UISpecialFrames = {}
+EVENT_FRAMES = {}
+local function region()
+	local r = { shown = false, scripts = {}, text = "" }
+	function r:Show() self.shown = true end
+	function r:Hide() self.shown = false end
+	function r:IsShown() return self.shown end
+	function r:SetText(t) self.text = t end
+	function r:GetText() return self.text end
+	function r:SetScript(e, f) self.scripts[e] = f end
+	function r:RegisterEvent(e) local ev = rawget(self, 'events') or {} self.events = ev ev[e] = true EVENT_FRAMES[#EVENT_FRAMES + 1] = self end
+	function r:CreateFontString() return region() end
+	function r:CreateTexture() return region() end
+	setmetatable(r, { __index = function() return function() end end })
+	return r
+end
+function CreateFrame(kind, name) local f = region() if name then _G[name] = f end return f end
+COMBAT = false
+function InCombatLockdown() return COMBAT end
+C_Timer = { After = function(_, fn) fn() end }
+function GetSpecializationInfo(i) return i, ({ "Blood", "Frost", "Unholy" })[i] end
+PRINTS = {}
+function FIRE(ev, ...)
+	for _, f in ipairs(EVENT_FRAMES) do
+		if rawget(f, 'events') and f.events[ev] and f.scripts.OnEvent then f.scripts.OnEvent(f, ev, ...) end
+	end
+end
+'''
+
+
+def picker_world():
+    L = lupa_mod.LuaRuntime(unpack_returned_tuples=True)
+    L.execute(WORLD)
+    L.execute(UI_STUB)
+    ns = load_addon_files(L)
+    L.eval("function(ns) ns.Print = function(m) PRINTS[#PRINTS + 1] = m end ns.T = function(k) return k end end")(ns)
+    L.eval("function(src, ns) return assert(loadstring(src, 'SimPicker.lua'))('RCRotations', ns) end")(read("SimPicker.lua"), ns)
+    L.execute("WORLD.spec = 2")
+    return L, ns
+
+
+L, ns = picker_world()
+frost = ns.Sim.Rotations()[0]
+names = [frost[i].file for i in range(1, len(frost) + 1)]
+L.execute("FIRE('PLAYER_ENTERING_WORLD', true, false)")
+pf = L.globals().RCRotationsPicker
+check(pf is not None and pf.shown, "login with no saved choice -> picker opens (Frost DK: %s)" % names)
+visible = [pf.buttons[i] for i in range(1, len(pf.buttons) + 1) if pf.buttons[i].shown]
+check(len(visible) == len(frost), "one button per rotation (%d)" % len(visible))
+target = next(i for i, n in enumerate(names, 1) if n.endswith("obliterate"))
+pf.buttons[target].scripts.OnClick(pf.buttons[target])
+check(ns.db.simPick["DEATHKNIGHT:2"] == "death_knight/frost/obliterate", "clicking Obliterate saves it for this spec")
+check(ns.Sim.Current().file == "death_knight/frost/obliterate", "the HUD now uses Obliterate")
+check(not pf.shown, "picker closes after choosing")
+pf.shown = False
+L.execute("FIRE('PLAYER_ENTERING_WORLD', false, true)")
+check(not pf.shown, "next login with a saved choice -> no picker")
+check(ns.Sim.ShowPicker(True) and pf.shown and pf.buttons[target].selected,
+      "/rcr apl reopens it with the saved rotation highlighted")
+pf.shown = False
+
+L, ns = picker_world()
+L.execute("COMBAT = true")
+L.execute("FIRE('PLAYER_ENTERING_WORLD', true, false)")
+pf = L.globals().RCRotationsPicker
+check(pf is None or not pf.shown, "logging in during combat -> picker waits")
+L.execute("COMBAT = false; FIRE('PLAYER_REGEN_ENABLED')")
+pf = L.globals().RCRotationsPicker
+check(pf is not None and pf.shown, "...and opens when combat ends")
+
+L, ns = picker_world()
+L.execute("WORLD.spec = 3")
+one = ns.Sim.Rotations()[0]
+L.execute("FIRE('PLAYER_ENTERING_WORLD', true, false)")
+pf = L.globals().RCRotationsPicker
+if len(one) < 2:
+    check(pf is None or not pf.shown, "spec with a single rotation -> no picker")
+else:
+    check(pf is not None and pf.shown, "Unholy has %d rotations -> picker opens" % len(one))
+L.execute("WORLD.spec = 1")
+L.execute("RCRotationsPicker = RCRotationsPicker or {}; RCRotationsPicker.shown = false; FIRE('PLAYER_SPECIALIZATION_CHANGED', 'player')")
+pf = L.globals().RCRotationsPicker
+check(pf.shown and "Blood" in str(pf.sub.text if pf.sub else "SIM_PICK_TITLE"),
+      "changing spec to one with no saved choice -> picker opens for the new spec")
+
 print()
 print("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS))
 sys.exit(1 if FAILS else 0)

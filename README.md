@@ -30,7 +30,7 @@ On **MoP Classic**, rotations come from [WoWSims](https://github.com/wowsims/mop
 - `tools/wowsims_convert.py` turns WoWSims' rotation files into `SimData_Mists.lua` (generated; don't edit by hand). The file header records the WoWSims commit it came from.
 - `Sim.lua` evaluates those rotations live each tick and fills the HUD with the first three castable spells.
 - A GitHub Action (`Sync WoWSims rotations`) runs daily. When WoWSims changes a rotation, it opens a pull request with the new data and an import report: what converted, what was approximated (simulator-only values like trinket-proc tracking), and anything unsupported. Merge it, tag a release, done.
-- In game: `/rcr apl` switches between the WoWSims rotations for your spec (for example Frost DK "Obliterate" vs "Masterfrost"); `/rcr sim` turns WoWSims rotations off to use the built-in lists.
+- In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker; `/rcr sim` turns WoWSims rotations off to use the built-in lists.
 - Tests: `pip install lupa && python3 tools/test_sim.py`.
 
 

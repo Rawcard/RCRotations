@@ -27,4 +27,5 @@ Glow.lua
 Rotations.lua
 SimData_Mists.lua
 Sim.lua
+SimPicker.lua
 Core.lua

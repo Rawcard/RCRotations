@@ -1,35 +1,41 @@
-# Forever Rotation (Multi language)
+# RCRotations
 
-Rotation helper for **WoW Forever** (Classic Era combat on the camelot / Midnight-family client, interface `16001`).
+Rotation helper for **WoW Forever** (Classic Era combat on the camelot client, interface `16001`).
 
-It shows the next three abilities on a small HUD, flashes a skull on the matching action-bar button, and also tracks heals, long defense buffs, interrupts, purges, cleanses, and weapon imbues. It does **not** cast spells for you.
+It shows the next three abilities on a small HUD, flashes the matching action-bar button, and also tracks heals, long defense buffs, interrupts, purges, cleanses, and weapon imbues. It does **not** cast spells for you.
 
-Author: [Vohnka](https://wow-forever.fr) · Current version: **1.5.72**
+Maintained by **Rob** · Version **1.0.0**
 
-**Development status:** Active development by Vohnka has **stopped**. The project is **open source** (MIT). Source and forks: [github.com/ssablon/ForeverRotation](https://github.com/ssablon/ForeverRotation). Anyone may continue improving it.
+## Credits
 
-Player-facing text is translated for `enUS`, `frFR`, `deDE`, `esES`, `esMX`, `ruRU`, `zhCN`, `zhTW`, `ptBR`, `itIT`, and `koKR`. Missing strings fall back to English.
+RCRotations is a fork of **[Forever Rotation](https://github.com/ssablon/ForeverRotation)** by **Vohnka** ([wow-forever.fr](https://wow-forever.fr)), released under the MIT license. The original copyright notice is kept in `LICENSE`. Please report RCRotations problems to Rob, not to the original project.
 
 ## Requirements
 
-- WoW Forever Classic client (`_classic_beta_`, camelot)
-- Interface version `16001`
-- All nine Classic classes: Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock, Druid
+One folder works on every Classic client:
 
-Forever uses its own spell IDs for some abilities (for example Devotion Aura). The addon resolves spells by **name + spellbook**, so ranks and remapped IDs still match.
+| Client | AddOns folder |
+| --- | --- |
+| Classic Era | `World of Warcraft\_classic_era_\Interface\AddOns` |
+| TBC Anniversary | `World of Warcraft\_anniversary_\Interface\AddOns` |
+| MoP Classic | `World of Warcraft\_classic_\Interface\AddOns` |
+| WoW Forever | `World of Warcraft\_classic_beta_\Interface\AddOns` |
+
+Retail is not supported: since Midnight, combat state is hidden from addons, so a rotation helper can't make decisions there.
+
+Rotation lists are currently the Classic Era lists (all nine Classic classes). Spells resolve by **name + spellbook**, so ranks and remapped IDs still match. Death Knight and Monk load and get a HUD, but have no rotation yet; WoWSims-based rotations for later expansions are in progress.
 
 ## Install
 
-1. Copy the `WoWForeverRot` folder into:
-
-   `World of Warcraft\_classic_beta_\Interface\AddOns\WoWForeverRot`
-
+1. Copy the `RCRotations` folder into the AddOns folder of each client you play (table above).
 2. Restart the client or type `/reload`.
-3. Enable **Forever Rotation** in the add-on list.
+3. Enable **RCRotations** in the add-on list.
 
 The folder must contain both `.toc` files, the `.lua` files, and the `images/` directory.
 
-The CurseForge app often installs into official Classic. On Forever, unzip by hand into `_classic_beta_`.
+## Releases
+
+Pushing a version tag (for example `v1.2.0`) to GitHub builds the addon zip with the BigWigs packager and attaches it to a GitHub release. Once a CurseForge project ID is in the TOC (`## X-Curse-Project-ID`) and the `CF_API_KEY` secret is set, the same run uploads to CurseForge (and Wago with `WAGO_API_TOKEN` / `## X-Wago-ID`).
 
 ## What it does
 
@@ -77,10 +83,10 @@ Four profiles, all saved independently:
 
 | Profile | Slash | Typical use |
 | --- | --- | --- |
-| Base | `/wfr base` | Default / shared |
-| PvE | `/wfr jce` or `/wfr pve` | PvE |
-| PvP | `/wfr jcj` or `/wfr pvp` | PvP |
-| Customs | `/wfr custom` | Experiments |
+| Base | `/rcr base` | Default / shared |
+| PvE | `/rcr jce` or `/rcr pve` | PvE |
+| PvP | `/rcr jcj` or `/rcr pvp` | PvP |
+| Customs | `/rcr custom` | Experiments |
 
 Switch from the options window or the class-colored HUD button. **Reset** only wipes the **selected** profile. You can export / import a profile as text. Optional auto-switch uses PvE or PvP from the instance type.
 
@@ -103,7 +109,7 @@ Per class: damage, tank, heal, and the extra Classic styles (hunter range/melee,
 
 ## Slash commands
 
-`/wfr`, `/foreverrot`, or `/foreverrotation`
+`/rcr`, `/rcrot`, or `/rcrotations`
 
 | Command | Action |
 | --- | --- |
@@ -117,15 +123,15 @@ Per class: damage, tank, heal, and the extra Classic styles (hunter range/melee,
 | `base` / `jce` / `jcj` / `custom` | Jump to that profile |
 | `menu` / `options` | Open the configuration window |
 
-Open options with `/wfr options` or a left-click on the minimap button. Right-click the minimap button to lock or unlock the windows.
+Open options with `/rcr options` or a left-click on the minimap button. Right-click the minimap button to lock or unlock the windows.
 
 When locked, the mouse clicks through the HUD. The padlock stays clickable.
 
 ## Files
 
 ```
-WoWForeverRot.toc              # standard load
-WoWForeverRot_Camelot.toc      # camelot / Forever load
+RCRotations.toc              # standard load
+RCRotations_Camelot.toc      # camelot / Forever load
 Credits.lua
 Locale.lua                     # enUS + 10 locales
 API.lua                        # spell resolve, auras, ready, heals
@@ -142,7 +148,7 @@ Core.lua                       # profiles, events, slash
 images/                        # skull, roles, lock, minimap
 ```
 
-Saved variables: `WoWForeverRotDB`, `WoWForeverSharedDB` (credit line shared with other WoW Forever add-ons).
+Saved variables: `RCRotationsDB`, `RCRotationsCharDB`, `RCRotationsCreditDB` (login credit line toggle).
 
 ## Notes
 
@@ -150,20 +156,16 @@ Saved variables: `WoWForeverRotDB`, `WoWForeverSharedDB` (credit line shared wit
 - Racials appear in the editor (off by default). Air Walk is never put in the combat list.
 - Do not overwrite Blizzard spell APIs from other add-ons; this one reads `C_Spell` / `C_SpellBook` and never patches them.
 
-## For agents and contributors
+## Original project
 
-The player guide above is not the implementation map. Before changing code, read [AGENTS.md](AGENTS.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+RCRotations is based on Forever Rotation by Vohnka. The original project, for reference:
 
-The git repository is the source of truth. The copy under `World of Warcraft\_classic_beta_\Interface\AddOns\WoWForeverRot` must be refreshed from this repo. Do not replace this repo with files taken from the game folder.
+- Source: [https://github.com/ssablon/ForeverRotation](https://github.com/ssablon/ForeverRotation)
+- CurseForge: [https://www.curseforge.com/wow/addons/forever-rot](https://www.curseforge.com/wow/addons/forever-rot)
+- Website: [https://wow-forever.fr](https://wow-forever.fr)
 
-## Support
-
-Download: [https://www.curseforge.com/wow/addons/forever-rot](https://www.curseforge.com/wow/addons/forever-rot).
-
-Source (public): [https://github.com/ssablon/ForeverRotation](https://github.com/ssablon/ForeverRotation).
-
-Community chat on Discord (English): [https://discord.gg/qmb2uDu8Z3](https://discord.gg/qmb2uDu8Z3) (`#support`, `#bugs`, `#suggestions`). Website: [https://wow-forever.fr](https://wow-forever.fr).
+Report RCRotations problems to Rob, not to the original project.
 
 ## License
 
-[MIT](LICENSE) — free to use, modify, fork, and redistribute. © Vohnka / [wow-forever.fr](https://wow-forever.fr). Active development by the original author has stopped; contributions and forks are welcome.
+[MIT](LICENSE). Original work © Vohnka / wow-forever.fr; RCRotations modifications © Rob. Free to use, modify, fork, and redistribute, as long as the copyright notices and license are kept.

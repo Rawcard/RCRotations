@@ -1,0 +1,13 @@
+package-as: RCRotations
+
+ignore:
+  - docs
+  - tools
+  - README.md
+  - .github
+  - .pkgmeta
+  - .gitignore
+
+manual-changelog:
+  filename: VERSION.txt
+  markup-type: markdown

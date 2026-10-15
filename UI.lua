@@ -4,7 +4,7 @@ local API = ns.API
 
 local SIZE = 50
 local GAP = 8
-local IMG = "Interface\\AddOns\\WoWForeverRot\\images\\"
+local IMG = "Interface\\AddOns\\RCRotations\\images\\"
 local CHROME = {
 	bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
 	edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -177,7 +177,7 @@ function ns.UI.Create()
 		return
 	end
 
-	local root = CreateFrame("Frame", "WoWForeverRotFrame", UIParent, "BackdropTemplate")
+	local root = CreateFrame("Frame", "RCRotationsFrame", UIParent, "BackdropTemplate")
 	root:SetSize(SIZE * 3 + GAP * 2 + 16, 8 + SIZE + 8)
 	root:SetFrameStrata("MEDIUM")
 	applyChrome(root)
@@ -191,7 +191,7 @@ function ns.UI.Create()
 		{ "TIP_QUEUE3", "TIP_QUEUE3_DESC" },
 	}
 	for i = 1, 3 do
-		local slot = makeIcon("WoWForeverRotSlot" .. i, root, i == 1 and SIZE or 40)
+		local slot = makeIcon("RCRotationsSlot" .. i, root, i == 1 and SIZE or 40)
 		if i == 1 then
 			slot:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -8)
 		else
@@ -206,7 +206,7 @@ function ns.UI.Create()
 		end
 	end
 
-	local gauge = CreateFrame("Frame", "WoWForeverRotGauge", root)
+	local gauge = CreateFrame("Frame", "RCRotationsGauge", root)
 	gauge:SetFrameLevel(root:GetFrameLevel() + 5)
 	gauge:SetPoint("TOPLEFT", ns.UI.slots[1], "BOTTOMLEFT", 0, -8)
 	gauge:SetPoint("RIGHT", root, "RIGHT", -8, 0)
@@ -403,7 +403,7 @@ function ns.UI.Create()
 	end
 
 	local function makeDefense()
-		local frame = CreateFrame("Frame", "WoWForeverRotDefense", UIParent, "BackdropTemplate")
+		local frame = CreateFrame("Frame", "RCRotationsDefense", UIParent, "BackdropTemplate")
 		frame:SetSize(42, 42)
 		frame:SetFrameStrata("MEDIUM")
 		applyChrome(frame)
@@ -438,7 +438,7 @@ function ns.UI.Create()
 		slot.texture:SetColorTexture(r, g, b, 0.35)
 	end
 
-	local kick = makeIcon("WoWForeverRotInterrupt", UIParent, 26)
+	local kick = makeIcon("RCRotationsInterrupt", UIParent, 26)
 	kick:ClearAllPoints()
 	kick:SetPoint("RIGHT", ns.UI.slots[1], "LEFT", -8, 10)
 	kick.texture:SetTexture(IMG .. "lightning-interrupt")
@@ -480,7 +480,7 @@ function ns.UI.Create()
 	end)
 	ns.UI.interrupt = kick
 
-	local purge = makeIcon("WoWForeverRotPurge", UIParent, 26)
+	local purge = makeIcon("RCRotationsPurge", UIParent, 26)
 	purge:ClearAllPoints()
 	purge:SetPoint("RIGHT", ns.UI.slots[1], "LEFT", -8, -14)
 	purge.texture:SetTexture(IMG .. "magiccircle-purge")
@@ -489,7 +489,7 @@ function ns.UI.Create()
 	bindTip(purge, "TIP_PURGE", "TIP_PURGE_DESC")
 	ns.UI.purge = purge
 
-	local cleanse = makeIcon("WoWForeverRotCleanse", UIParent, 26)
+	local cleanse = makeIcon("RCRotationsCleanse", UIParent, 26)
 	cleanse:ClearAllPoints()
 	cleanse:SetPoint("LEFT", ns.UI.slots[3], "RIGHT", 8, 6)
 	paintIdle(cleanse, 0.2, 0.85, 0.35)
@@ -497,7 +497,7 @@ function ns.UI.Create()
 	bindTip(cleanse, "TIP_CLEANSE", "TIP_CLEANSE_DESC")
 	ns.UI.cleanse = cleanse
 
-	local weapon = makeIcon("WoWForeverRotWeapon", UIParent, 26)
+	local weapon = makeIcon("RCRotationsWeapon", UIParent, 26)
 	weapon:ClearAllPoints()
 	weapon:SetPoint("LEFT", ns.UI.slots[3], "RIGHT", 8, -16)
 	weapon.texture:SetTexture("Interface\\Icons\\INV_Axe_02")
@@ -515,11 +515,11 @@ function ns.UI.Create()
 	end
 	ns.UI.weapon = weapon
 
-	local lockWrap = CreateFrame("Frame", "WoWForeverRotLock", UIParent, "BackdropTemplate")
+	local lockWrap = CreateFrame("Frame", "RCRotationsLock", UIParent, "BackdropTemplate")
 	lockWrap:SetSize(28, 28)
 	lockWrap:SetFrameStrata("HIGH")
 	applyChrome(lockWrap)
-	local lock = makeIconButton("WoWForeverRotLockBtn", lockWrap, 18)
+	local lock = makeIconButton("RCRotationsLockBtn", lockWrap, 18)
 	lock:SetPoint("CENTER")
 	lock:RegisterForClicks("LeftButtonUp")
 	lock:SetScript("OnClick", function(self)
@@ -536,7 +536,7 @@ function ns.UI.Create()
 
 	local TOOLBAR_W_FULL = 332
 	local TOOLBAR_W_COMPACT = 188
-	local bar = CreateFrame("Frame", "WoWForeverRotToolbar", UIParent, "BackdropTemplate")
+	local bar = CreateFrame("Frame", "RCRotationsToolbar", UIParent, "BackdropTemplate")
 	bar:SetSize(TOOLBAR_W_FULL, 32)
 	bar:SetFrameStrata("MEDIUM")
 	bar:SetHitRectInsets(-10, -10, -8, -8)
@@ -557,7 +557,7 @@ function ns.UI.Create()
 	ns.UI.toolbarWidthFull = TOOLBAR_W_FULL
 	ns.UI.toolbarWidthCompact = TOOLBAR_W_COMPACT
 
-	local grip = CreateFrame("Frame", "WoWForeverRotToolbarGrip", bar)
+	local grip = CreateFrame("Frame", "RCRotationsToolbarGrip", bar)
 	grip:SetSize(14, 22)
 	grip:SetPoint("LEFT", bar, "LEFT", 4, 0)
 	for i = 1, 6 do
@@ -631,7 +631,7 @@ function ns.UI.Create()
 		return btn
 	end
 
-	local roleBtn = makeCycleBtn("WoWForeverRotRoleBtn", 90, function()
+	local roleBtn = makeCycleBtn("RCRotationsRoleBtn", 90, function()
 		if ns.CycleRole then
 			ns.CycleRole()
 		end
@@ -641,7 +641,7 @@ function ns.UI.Create()
 	makeMovable(roleBtn, "toolbar", bar)
 	ns.UI.roleBtn = roleBtn
 
-	local autoBtn = makeCycleBtn("WoWForeverRotAutoBtn", 56, function()
+	local autoBtn = makeCycleBtn("RCRotationsAutoBtn", 56, function()
 		if ns.ToggleAuto then
 			ns.ToggleAuto()
 		end
@@ -651,7 +651,7 @@ function ns.UI.Create()
 	makeMovable(autoBtn, "toolbar", bar)
 	ns.UI.autoBtn = autoBtn
 
-	local modeBtn = makeCycleBtn("WoWForeverRotModeBtn", 80, function()
+	local modeBtn = makeCycleBtn("RCRotationsModeBtn", 80, function()
 		if ns.CycleCombatMode then
 			ns.CycleCombatMode()
 		end
@@ -660,7 +660,7 @@ function ns.UI.Create()
 	makeMovable(modeBtn, "toolbar", bar)
 	ns.UI.modeBtn = modeBtn
 
-	local profileBtn = makeCycleBtn("WoWForeverRotProfileBtn", 64, function()
+	local profileBtn = makeCycleBtn("RCRotationsProfileBtn", 64, function()
 		if ns.CycleProfile then
 			ns.CycleProfile()
 		end
@@ -673,7 +673,7 @@ function ns.UI.Create()
 	ns.UI.roles = {}
 	ns.UI.modes = {}
 
-	local combo = CreateFrame("Frame", "WoWForeverRotCombo", UIParent, "BackdropTemplate")
+	local combo = CreateFrame("Frame", "RCRotationsCombo", UIParent, "BackdropTemplate")
 	combo:SetSize(36, 36)
 	combo:SetFrameStrata("MEDIUM")
 	applyChrome(combo)

@@ -47,7 +47,8 @@ local function markId(set, spellID)
 end
 
 function ns.Physics.Enabled()
-	return ns.db and ns.db.showPhysics ~= false
+	-- Energy ticks and swing clipping only exist before Wrath.
+	return ns.db and ns.db.showPhysics ~= false and ns.CLASSIC_TIMING ~= false
 end
 
 function ns.Physics.IsSwing(spellID)

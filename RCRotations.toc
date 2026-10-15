@@ -1,0 +1,28 @@
+## Interface: 11508, 11509, 20505, 20506, 30405, 40402, 50504, 16001
+## ExcludeLoadGameType: standard
+## Title: |cff66ccffRC|r|cffd4a017Rotations|r
+## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT).
+## Version: 1.2.0
+## Author: Rob
+## X-Original-Author: Vohnka (Forever Rotation, MIT)
+## X-Original-Source: https://github.com/ssablon/ForeverRotation
+## IconTexture: Interface\AddOns\RCRotations\images\logo.tga
+## Category: RC Addons
+## SavedVariables: RCRotationsDB, RCRotationsCreditDB
+## SavedVariablesPerCharacter: RCRotationsCharDB
+## DefaultState: enabled
+
+Credits.lua
+Compat.lua
+Locale.lua
+API.lua
+Data.lua
+Physics.lua
+Lists.lua
+APL.lua
+Share.lua
+UI.lua
+Options.lua
+Glow.lua
+Rotations.lua
+Core.lua

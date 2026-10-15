@@ -1,16 +1,40 @@
-1.5.72
+1.2.0
 
-# 1.5.72
+# 1.2.0
 
-## Open source — development by Vohnka has stopped
+Runs on every Classic client, not just Forever.
 
-Active development of Forever Rotation by the original author has ended. The GitHub repository is now **public** under the **MIT** license so anyone can fork it, fix bugs, and keep improving the addon for Forever.
+- One folder loads on Classic Era, TBC Anniversary, Wrath, Cata and MoP Classic, plus WoW Forever.
+  Retail is excluded on purpose (Midnight hides combat state from addons).
+- New Compat.lua detects the client (ns.GAME: vanilla, tbc, wrath, cata, mists, forever).
+- Death Knight and Monk recognized: class colors, roles (DK damage/tank, Monk damage/tank/heal), HUD.
+  They have no rotation lists yet, so the HUD stays empty for them until the WoWSims import lands.
+- Interrupts and purges updated per client: Wind Shear, Mind Freeze, Rebuke, Skull Bash,
+  Counter Shot, Spear Hand Strike, and MoP's Dispel Magic ID.
+- Energy-tick and swing-clip timing only runs on Era, TBC and Forever (later clients don't have them).
+- Rotation lists are still the Classic Era lists. Spells resolve by name, so they mostly work on TBC;
+  on Wrath, Cata and MoP they're a placeholder until the WoWSims rotations are imported.
 
-### What changed for players
-- Info → Links now includes **GitHub** next to Website, Discord, and CurseForge.
-- About / support text states that maintenance by Vohnka has stopped and that forks are welcome.
-- CurseForge description and project source point to https://github.com/ssablon/ForeverRotation.
+# 1.1.0
 
-### What did not change
-- Rotation logic, holds, profiles, and HUD behaviour from **1.5.71** are unchanged in this build aside from the Info texts and links.
-- The addon still never casts for you and still never reads the combat log.
+RC SpellFlash built in.
+
+- New default flash style ported from RC-SpellFlash 2.1.1: colored glow fill plus a pulsing outline,
+  drawn above the button so hidden bar headers (RCDiabloUI) can't hide it.
+- Colors: next spell yellow, defense/long buffs cyan, interrupt orange, purge purple,
+  heals and weapon imbues keep their own colors.
+- Switch styles in Options > General > Display ("RC SpellFlash style"), or with /rcr flash.
+  Turning it off brings back the original skull.
+- More bars detected (from RC-SpellFlash): ElvUI stance bar, pet action bar, RCDiabloUI bars and stance bar.
+
+# 1.0.0
+
+First RCRotations release, forked from Forever Rotation 1.5.72 by Vohnka (MIT).
+
+- Renamed to RCRotations: folder, TOC files, title, author, category.
+- New slash commands: /rcr (also /rcrot and /rcrotations). Credit toggle: /rcrmsg on|off.
+- New SavedVariables names (RCRotationsDB, RCRotationsCharDB, RCRotationsCreditDB) and frame names,
+  so RCRotations can be installed next to the original without conflicts.
+- Info panel and login line credit Vohnka; links point to the original project for reference.
+- Rotation logic, holds, profiles and HUD behaviour are unchanged from Forever Rotation 1.5.72.
+- Profile share strings keep the original format, so strings from Forever Rotation still import.

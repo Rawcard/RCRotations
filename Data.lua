@@ -10,6 +10,8 @@ ns.CLASSES = {
 	MAGE = 8,
 	WARLOCK = 9,
 	DRUID = 11,
+	DEATHKNIGHT = 6,
+	MONK = 10,
 }
 
 -- Styles de jeu par classe. Druide hybrid = switch automatique caster / chat / ours.
@@ -23,6 +25,8 @@ ns.CLASS_ROLES = {
 	MAGE = { "damage" },
 	WARLOCK = { "damage" },
 	DRUID = { "hybrid", "heal", "tank" },
+	DEATHKNIGHT = { "damage", "tank" },
+	MONK = { "damage", "tank", "heal" },
 }
 
 ns.COMBAT_MODES = { "auto", "single", "aoe", "burst" }
@@ -38,6 +42,8 @@ ns.CLASS_COLORS = {
 	MAGE = { 0.25, 0.78, 0.92 },
 	WARLOCK = { 0.58, 0.51, 0.79 },
 	DRUID = { 1.00, 0.49, 0.04 },
+	DEATHKNIGHT = { 0.77, 0.12, 0.23 },
+	MONK = { 0.00, 1.00, 0.59 },
 }
 
 ns.CLASS_BY_ID = {
@@ -50,6 +56,8 @@ ns.CLASS_BY_ID = {
 	[8] = "MAGE",
 	[9] = "WARLOCK",
 	[11] = "DRUID",
+	[6] = "DEATHKNIGHT",
+	[10] = "MONK",
 }
 
 ns.COLOR_DEFAULTS = {
@@ -82,6 +90,8 @@ ns.CLASS_DAMAGE_ICON = {
 	MAGE = "caster",
 	WARLOCK = "caster",
 	DRUID = "caster",
+	DEATHKNIGHT = "melee",
+	MONK = "melee",
 }
 
 ns.CLASS_SPELL = {
@@ -94,6 +104,8 @@ ns.CLASS_SPELL = {
 	MAGE = "Mage",
 	WARLOCK = "Warlock",
 	DRUID = "Druid",
+	DEATHKNIGHT = "Death Knight",
+	MONK = "Monk",
 }
 
 -- Raciaux Classic + Éolides. Air Walk (1259416) et passifs (Béni par le vent, Perspicacité) absents.
@@ -131,6 +143,22 @@ ns.PURGES = {
 	PRIEST = 527, -- Dispel Magic
 	MAGE = 30449, -- Spellsteal (may be absent)
 }
+
+-- Later clients changed or added interrupts and purges. Spells still resolve by
+-- name through the spellbook, so a wrong rank or remapped ID still matches.
+if ns.IsGame and ns.IsGame("wrath", "cata", "mists") then
+	ns.INTERRUPTS.SHAMAN = 57994 -- Wind Shear
+	ns.INTERRUPTS.DEATHKNIGHT = 47528 -- Mind Freeze
+	if ns.IsGame("cata", "mists") then
+		ns.INTERRUPTS.PALADIN = 96231 -- Rebuke
+		ns.INTERRUPTS.DRUID = 106839 -- Skull Bash
+	end
+	if ns.IsGame("mists") then
+		ns.INTERRUPTS.HUNTER = 147362 -- Counter Shot
+		ns.INTERRUPTS.MONK = 116705 -- Spear Hand Strike
+		ns.PURGES.PRIEST = 528 -- Dispel Magic (527 is Purify in MoP)
+	end
+end
 
 -- Dispel perso : maladie / poison / malédiction / magie sur le joueur.
 ns.CLEANSE = {

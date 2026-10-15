@@ -1,6 +1,6 @@
 local addonName, ns = ...
 local API = ns.API
-local IMG = "Interface\\AddOns\\WoWForeverRot\\images\\"
+local IMG = "Interface\\AddOns\\RCRotations\\images\\"
 local SITE_URL = "https://wow-forever.fr"
 local DISCORD_URL = "https://discord.gg/qmb2uDu8Z3"
 local CURSE_URL = "https://www.curseforge.com/wow/addons/forever-rot"
@@ -451,7 +451,7 @@ local function ensureOptions()
 		return ns.UI.options
 	end
 	ns.optSerial = (ns.optSerial or 0) + 1
-	local frame = CreateFrame("Frame", "WoWForeverRotOptions" .. ns.optSerial, UIParent, "BackdropTemplate")
+	local frame = CreateFrame("Frame", "RCRotationsOptions" .. ns.optSerial, UIParent, "BackdropTemplate")
 	frame:SetSize(900, 680)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
 	frame:SetFrameStrata("DIALOG")
@@ -625,6 +625,11 @@ local function ensureOptions()
 	end)
 	frame.resetAll = resetAll
 
+	local sfRow = makeSwitch(displayCard, "spellFlash", ns.T("OPT_SPELLFLASH"))
+	sfRow:SetPoint("TOPLEFT", displayCard, "TOPLEFT", 12, -164)
+	sfRow:SetPoint("TOPRIGHT", displayCard, "TOPRIGHT", -12, -164)
+	frame.optSpellFlash = sfRow
+
 	local weaponCard = makeCard(general, "OPT_CARD_WEAPON", 338, -188, 318, 196)
 	frame.weaponCard = weaponCard
 	frame.weaponLabel = weaponCard.title
@@ -753,7 +758,7 @@ local function ensureOptions()
 	listCard:SetBackdropBorderColor(0.5, 0.42, 0.28, 0.9)
 	frame.listCard = listCard
 
-	local scroll = CreateFrame("ScrollFrame", "WoWForeverRotAPLScroll", listCard, "UIPanelScrollFrameTemplate")
+	local scroll = CreateFrame("ScrollFrame", "RCRotationsAPLScroll", listCard, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", 6, -8)
 	scroll:SetPoint("BOTTOMRIGHT", -28, 8)
 	local child = CreateFrame("Frame", nil, scroll)
@@ -806,7 +811,7 @@ local function ensureOptions()
 		return addBtn
 	end
 
-	frame.addSpell = makeDropZone("WoWForeverRotAddSpell")
+	frame.addSpell = makeDropZone("RCRotationsAddSpell")
 	for _, mode in ipairs({ "auto", "single", "aoe", "burst" }) do
 		local header = CreateFrame("Frame", nil, child)
 		header:SetSize(580, 22)
@@ -825,7 +830,7 @@ local function ensureOptions()
 		header.reset = reset
 		header:Hide()
 		frame.modeHeaders[mode] = header
-		local drop = makeDropZone("WoWForeverRotAddSpell_" .. mode)
+		local drop = makeDropZone("RCRotationsAddSpell_" .. mode)
 		drop.mode = mode
 		frame.modeDrops[mode] = drop
 	end
@@ -942,10 +947,10 @@ local function ensureOptions()
 	shareHint:SetTextColor(0.72, 0.72, 0.72)
 	frame.shareHint = shareHint
 
-	local box = CreateFrame("ScrollFrame", "WoWForeverRotShareScroll", shareCard, "UIPanelScrollFrameTemplate")
+	local box = CreateFrame("ScrollFrame", "RCRotationsShareScroll", shareCard, "UIPanelScrollFrameTemplate")
 	box:SetPoint("TOPLEFT", 12, -50)
 	box:SetPoint("BOTTOMRIGHT", -32, 40)
-	local edit = CreateFrame("EditBox", "WoWForeverRotShareEdit", box)
+	local edit = CreateFrame("EditBox", "RCRotationsShareEdit", box)
 	edit:SetMultiLine(true)
 	edit:SetFontObject("ChatFontSmall")
 	edit:SetWidth(580)
@@ -1082,7 +1087,7 @@ local function ensureOptions()
 
 	function frame.RelocalizeChrome()
 		local ver = addonVersion()
-		local title = tostring(ns.T("TITLE") or "Forever Rotation")
+		local title = tostring(ns.T("TITLE") or "RCRotations")
 		local sub = tostring(ns.T("TITLE_SUB") or "(Multi language)")
 		if ver ~= "" then
 			frame.windowTitle:SetText(title .. "  |cffbbbbbb" .. sub .. "|r  |cff66ccffv" .. ver .. "|r")
@@ -1215,7 +1220,7 @@ local function aplRow(parent, index)
 	num:SetWidth(18)
 	row.num = num
 
-	local box = CreateFrame("CheckButton", "WoWForeverRotAPLCheck" .. index, row, "UICheckButtonTemplate")
+	local box = CreateFrame("CheckButton", "RCRotationsAPLCheck" .. index, row, "UICheckButtonTemplate")
 	box:SetPoint("LEFT", 20, 0)
 	box:SetSize(24, 24)
 	row.box = box
@@ -1231,7 +1236,7 @@ local function aplRow(parent, index)
 	name:SetJustifyH("LEFT")
 	row.label = name
 
-	local hold = CreateFrame("EditBox", "WoWForeverRotAPLHold" .. index, row, "InputBoxTemplate")
+	local hold = CreateFrame("EditBox", "RCRotationsAPLHold" .. index, row, "InputBoxTemplate")
 	hold:SetSize(34, 18)
 	hold:SetPoint("RIGHT", -152, 0)
 	hold:SetAutoFocus(false)
@@ -1362,6 +1367,9 @@ function ns.RefreshOptions()
 	if frame.optLock then
 		frame.optLock:SetChecked(ns.db.locked == true)
 		frame.optGlow:SetChecked(ns.db.glow ~= false)
+		if frame.optSpellFlash then
+			frame.optSpellFlash:SetChecked(ns.db.spellFlash ~= false)
+		end
 		if frame.optRotation then
 			frame.optRotation:SetChecked(ns.db.showRotation ~= false)
 		end
@@ -1429,7 +1437,7 @@ function ns.RefreshOptions()
 		for i, entry in ipairs(choices) do
 			local box = frame.weaponBoxes[i]
 			if not box then
-				box = CreateFrame("CheckButton", "WoWForeverRotWep" .. i, frame.weaponCard, "UICheckButtonTemplate")
+				box = CreateFrame("CheckButton", "RCRotationsWep" .. i, frame.weaponCard, "UICheckButtonTemplate")
 				local text = box:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 				text:SetPoint("LEFT", box, "RIGHT", 4, 0)
 				text:SetTextColor(0.92, 0.92, 0.92)
@@ -1691,7 +1699,7 @@ function ns.CreateMinimap()
 	if ns.UI.minimap then
 		return
 	end
-	local btn = CreateFrame("Button", "WoWForeverRotMinimap", Minimap)
+	local btn = CreateFrame("Button", "RCRotationsMinimap", Minimap)
 	btn:SetSize(32, 32)
 	btn:SetFrameStrata("MEDIUM")
 	btn:SetFrameLevel(8)

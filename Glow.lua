@@ -1,7 +1,7 @@
 local addonName, ns = ...
 local API = ns.API
 
-local IMG = "Interface\\AddOns\\WoWForeverRot\\images\\"
+local IMG = "Interface\\AddOns\\RCRotations\\images\\"
 local BARS = {
 	"Action",
 	"MultiBarBottomLeft",
@@ -253,74 +253,197 @@ local function overlay(button, key, texture, r, g, b, scale, alpha)
 	return frame
 end
 
+-- ---------------------------------------------------------------------------
+-- RC SpellFlash style (ported from Rob's RC-SpellFlash 2.1.1)
+-- Colored additive fill + pulsing 4-edge outline, parented to UIParent so a
+-- hidden bar header (RCDiabloUI) cannot hide the flash. Toggle: ns.db.spellFlash
+-- (nil/true = SpellFlash style, false = original Forever Rotation skull).
+-- ---------------------------------------------------------------------------
+local SF_FILL = "Interface\\Cooldown\\star4"
+local SF_EDGE = "Interface\\Buttons\\WHITE8X8"
+local SF_COLORS = {
+	next = { 1, 1, 0 }, -- yellow: primary / next spell
+	def = { 0, 1, 1 }, -- cyan: defense, long buffs
+	kick = { 1, 0.5, 0 }, -- orange: interrupt
+	purge = { 0.85, 0.35, 1 }, -- purple: purge
+}
+local SF_FILL_ALPHA = 0.8
+
+local function useSpellFlash()
+	return not (ns.db and ns.db.spellFlash == false)
+end
+
+local function sfIsStance(button)
+	local name = button.GetName and button:GetName() or ""
+	if type(name) ~= "string" then
+		return false
+	end
+	return name:match("^StanceButton") or name:match("^ElvUI_StanceBarButton") or name:match("^RCUI32StanceBtn")
+end
+
+local function sfOnUpdate(self, elapsed)
+	self.animTime = (self.animTime or 0) + elapsed
+	local pulse = (math.sin(self.animTime * 3) + 1) / 2
+	local alpha = 0.3 + (pulse * 0.4)
+	for _, edge in pairs(self.edges) do
+		edge:SetAlpha(alpha)
+	end
+end
+
+local function sfFrame(button, key)
+	button.RCRFlash = button.RCRFlash or {}
+	local flash = button.RCRFlash[key]
+	if flash then
+		return flash
+	end
+	flash = CreateFrame("Frame", nil, UIParent)
+	flash:SetAllPoints(button)
+	flash:SetFrameStrata("HIGH")
+	flash:SetFrameLevel(sfIsStance(button) and 200 or 100)
+	local tex = flash:CreateTexture(nil, "OVERLAY", nil, 7)
+	tex:SetAllPoints(flash)
+	tex:SetTexture(SF_FILL)
+	tex:SetBlendMode("ADD")
+	flash.texture = tex
+	local outline = CreateFrame("Frame", nil, flash)
+	outline:SetAllPoints(flash)
+	outline:SetFrameLevel(flash:GetFrameLevel() + 1)
+	local edges = {}
+	local function edge(p1, x1, y1, p2, x2, y2, w, h)
+		local t = outline:CreateTexture(nil, "OVERLAY")
+		t:SetPoint(p1, button, p1, x1, y1)
+		t:SetPoint(p2, button, p2, x2, y2)
+		if w then
+			t:SetWidth(w)
+		else
+			t:SetHeight(h)
+		end
+		t:SetTexture(SF_EDGE)
+		t:SetBlendMode("ADD")
+		return t
+	end
+	edges.top = edge("TOPLEFT", -2, 2, "TOPRIGHT", 2, 2, nil, 3)
+	edges.bottom = edge("BOTTOMLEFT", -2, -2, "BOTTOMRIGHT", 2, -2, nil, 3)
+	edges.left = edge("TOPLEFT", -2, 2, "BOTTOMLEFT", -2, -2, 3, nil)
+	edges.right = edge("TOPRIGHT", 2, 2, "BOTTOMRIGHT", 2, -2, 3, nil)
+	flash.edges = edges
+	flash.animTime = 0
+	flash:SetScript("OnUpdate", sfOnUpdate)
+	flash:Hide()
+	button.RCRFlash[key] = flash
+	return flash
+end
+
+local function sfShow(button, key, r, g, b)
+	local c = SF_COLORS[key]
+	if c then
+		r, g, b = c[1], c[2], c[3]
+	end
+	local flash = sfFrame(button, key)
+	flash.texture:SetVertexColor(r or 1, g or 1, b or 0)
+	flash.texture:SetAlpha(SF_FILL_ALPHA)
+	for _, e in pairs(flash.edges) do
+		e:SetVertexColor(r or 1, g or 1, b or 0)
+		e:SetAlpha(0.5)
+	end
+	flash:Show()
+end
+
+local function sfHide(button, key)
+	local flash = button.RCRFlash and button.RCRFlash[key]
+	if flash then
+		flash:Hide()
+	end
+end
+
+-- One entry point for every flash kind: draws the active style, hides the other.
+local function mark(button, key, texture, r, g, b, scale, alpha)
+	if useSpellFlash() then
+		if button.WFROverlays and button.WFROverlays[key] then
+			button.WFROverlays[key]:Hide()
+		end
+		sfShow(button, key, r, g, b)
+	else
+		sfHide(button, key)
+		overlay(button, key, texture, r, g, b, scale, alpha):Show()
+	end
+end
+
+local function unmark(button, key)
+	if button.WFROverlays and button.WFROverlays[key] then
+		button.WFROverlays[key]:Hide()
+	end
+	sfHide(button, key)
+end
+
+-- When the style switch flips, wipe every flash so the next tick redraws.
+local shownStyle
+local function styleSync()
+	local style = useSpellFlash()
+	if shownStyle == nil then
+		shownStyle = style
+		return
+	end
+	if style ~= shownStyle then
+		shownStyle = style
+		if ns.GlowClearAllStyles then
+			ns.GlowClearAllStyles()
+		end
+	end
+end
+
 local function showDamage(button, isHeal)
 	if isHeal then
-		if button.WFROverlays and button.WFROverlays.next then
-			button.WFROverlays.next:Hide()
-		end
+		unmark(button, "next")
 		local r, g, b = ns.Color("heal")
-		overlay(button, "heal", IMG .. "skull", r, g, b, 1.45, 0.95):Show()
+		mark(button, "heal", IMG .. "skull", r, g, b, 1.45, 0.95)
 	else
-		if button.WFROverlays and button.WFROverlays.heal then
-			button.WFROverlays.heal:Hide()
-		end
+		unmark(button, "heal")
 		local r, g, b = ns.Color("next")
-		overlay(button, "next", IMG .. "skull", r, g, b, 1.45, 0.9):Show()
+		mark(button, "next", IMG .. "skull", r, g, b, 1.45, 0.9)
 	end
 	damageGlowing[button] = true
 end
 
 local function hideDamage(button)
-	if button.WFROverlays then
-		if button.WFROverlays.next then
-			button.WFROverlays.next:Hide()
-		end
-		if button.WFROverlays.heal then
-			button.WFROverlays.heal:Hide()
-		end
-	end
+	unmark(button, "next")
+	unmark(button, "heal")
 	damageGlowing[button] = nil
 end
 
 local function showDefense(button, isHeal)
 	if isHeal then
 		local r, g, b = ns.Color("heal")
-		overlay(button, "def", IMG .. "skull", r, g, b, 1.45, 0.95):Show()
+		mark(button, "def", IMG .. "skull", r, g, b, 1.45, 0.95)
 	else
 		local r, g, b = ns.Color("def")
-		overlay(button, "def", IMG .. "skull", r, g, b, 1.45, 0.92):Show()
+		mark(button, "def", IMG .. "skull", r, g, b, 1.45, 0.92)
 	end
 	defenseGlowing[button] = true
 end
 
 local function hideDefense(button)
-	if button.WFROverlays and button.WFROverlays.def then
-		button.WFROverlays.def:Hide()
-	end
+	unmark(button, "def")
 	defenseGlowing[button] = nil
 end
 
 local function showKick(button)
-	overlay(button, "kick", IMG .. "lightning-interrupt", 1, 1, 0.35, 1.2, 0.75):Show()
+	mark(button, "kick", IMG .. "lightning-interrupt", 1, 1, 0.35, 1.2, 0.75)
 	kickGlowing[button] = true
 end
 
 local function hideKick(button)
-	if button.WFROverlays and button.WFROverlays.kick then
-		button.WFROverlays.kick:Hide()
-	end
+	unmark(button, "kick")
 	kickGlowing[button] = nil
 end
 
 local function showPurge(button)
-	overlay(button, "purge", IMG .. "magiccircle-purge", 0.85, 0.35, 1, 1.2, 0.75):Show()
+	mark(button, "purge", IMG .. "magiccircle-purge", 0.85, 0.35, 1, 1.2, 0.75)
 	purgeGlowing[button] = true
 end
 
 local function hidePurge(button)
-	if button.WFROverlays and button.WFROverlays.purge then
-		button.WFROverlays.purge:Hide()
-	end
+	unmark(button, "purge")
 	purgeGlowing[button] = nil
 end
 
@@ -602,6 +725,37 @@ function ns.GlowFetch(force)
 			end
 		end
 	end
+	-- From RC-SpellFlash: ElvUI and RCDiabloUI stance bars, pet bar, RCDiabloUI bars.
+	if GetNumShapeshiftForms then
+		local ok, count = pcall(GetNumShapeshiftForms)
+		if ok and count then
+			for i = 1, count do
+				if _G["ElvUI_StanceBarButton" .. i] then
+					queue[#queue + 1] = { stance = i, button = _G["ElvUI_StanceBarButton" .. i] }
+				end
+				if _G["RCUI32StanceBtn" .. i] then
+					queue[#queue + 1] = { stance = i, button = _G["RCUI32StanceBtn" .. i] }
+				end
+			end
+		end
+	end
+	for i = 1, 10 do
+		if _G["PetActionButton" .. i] then
+			queue[#queue + 1] = { pet = i, button = _G["PetActionButton" .. i] }
+		end
+	end
+	for bar = 1, 6 do
+		for i = 1, 12 do
+			local button = _G["RCUI32_bar" .. bar .. "Button" .. i]
+			if button then
+				-- RCDiabloUI bars without a state driver report action 0; derive the slot.
+				if not button.action or button.action == 0 then
+					button.action = (bar - 1) * 12 + i
+				end
+				queue[#queue + 1] = button
+			end
+		end
+	end
 	if addonLoaded("Dominos") then
 		for i = 1, 132 do
 			queue[#queue + 1] = _G["DominosActionButton" .. i]
@@ -632,7 +786,15 @@ function ns.GlowFetch(force)
 			local entry = queue[idx]
 			idx = idx + 1
 			budget = budget - 1
-			if type(entry) == "table" and entry.stance then
+			if type(entry) == "table" and entry.pet then
+				local button = entry.button
+				if button and GetPetActionInfo then
+					local okPet, _, _, _, _, _, _, petSpell = pcall(GetPetActionInfo, entry.pet)
+					if okPet and petSpell then
+						addButton(petSpell, button)
+					end
+				end
+			elseif type(entry) == "table" and entry.stance then
 				local button = entry.button
 				if button and GetShapeshiftFormInfo then
 					local okForm, _, _, _, spellID = pcall(function()
@@ -762,6 +924,7 @@ local function apply(spellID, isDef)
 end
 
 function ns.GlowSpell(spellID)
+	styleSync()
 	if ns.db.glow == false or ns.db.showRotation == false then
 		ns.GlowClear()
 		return
@@ -770,6 +933,7 @@ function ns.GlowSpell(spellID)
 end
 
 function ns.GlowDef(spellID)
+	styleSync()
 	if ns.db.glow == false or ns.db.showDefense == false then
 		ns.GlowClearDef()
 		return
@@ -778,6 +942,7 @@ function ns.GlowDef(spellID)
 end
 
 local function applyExtra(spellID, lastKey, glowing, show, clear)
+	styleSync()
 	if not spellID then
 		clear()
 		return
@@ -827,27 +992,23 @@ local cleanseGlowing, weaponGlowing = {}, {}
 local lastCleanse, lastWeapon
 
 local function showCleanse(button)
-	overlay(button, "cleanse", "Interface\\Buttons\\UI-ActionButton-Border", 0.35, 1, 0.45, 1.2, 0.8):Show()
+	mark(button, "cleanse", "Interface\\Buttons\\UI-ActionButton-Border", 0.35, 1, 0.45, 1.2, 0.8)
 	cleanseGlowing[button] = true
 end
 
 local function hideCleanse(button)
-	if button.WFROverlays and button.WFROverlays.cleanse then
-		button.WFROverlays.cleanse:Hide()
-	end
+	unmark(button, "cleanse")
 	cleanseGlowing[button] = nil
 end
 
 local function showWeapon(button)
 	local r, g, b = ns.Color("weapon")
-	overlay(button, "weapon", IMG .. "skull", r, g, b, 1.45, 0.95):Show()
+	mark(button, "weapon", IMG .. "skull", r, g, b, 1.45, 0.95)
 	weaponGlowing[button] = true
 end
 
 local function hideWeapon(button)
-	if button.WFROverlays and button.WFROverlays.weapon then
-		button.WFROverlays.weapon:Hide()
-	end
+	unmark(button, "weapon")
 	weaponGlowing[button] = nil
 end
 
@@ -1185,4 +1346,17 @@ function ns.SpellBinding(spellID)
 		end
 	end
 	return ""
+end
+
+function ns.GlowClearAllStyles()
+	ns.GlowClear()
+	ns.GlowClearDef()
+	ns.GlowClearKick()
+	ns.GlowClearPurge()
+	ns.GlowClearCleanse()
+	ns.GlowClearWeapon()
+	ns.GlowInvalidate()
+	if ns.InvalidateTick then
+		ns.InvalidateTick()
+	end
 end

@@ -1,8 +1,9 @@
 # Architecture de Forever Rotation
 
+> Note RCRotations : ce document vient du projet original Forever Rotation (Vohnka). Les noms ont changé dans RCRotations : `WoWForeverRot*` → `RCRotations*`, `WoWForeverSharedDB` → `RCRotationsCreditDB`, `/wfr` → `/rcr`. `Compat.lua` (détection du client) et le style RC SpellFlash dans `Glow.lua` sont propres à RCRotations.
+
 Aide de rotation Classic Era pour le client **camelot** de WoW Forever (interface `16001`, dossier `_classic_beta_`). Le joueur appuie toujours sur les touches. L'addon propose jusqu'à 3 sorts, un rappel de défense, d'interruption, de purge, de dissipation et d'enchantement d'arme, puis pose une tête de mort sur le bouton de barre correspondant.
 
-Lire aussi [AGENTS.md](../AGENTS.md) pour le dépôt, le chemin AddOns et la règle de push.
 
 ## Contraintes du client
 

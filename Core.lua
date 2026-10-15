@@ -1,7 +1,7 @@
 local addonName, ns = ...
 local API = ns.API
 
-WoWForeverRotDB = WoWForeverRotDB or {}
+RCRotationsDB = RCRotationsDB or {}
 
 local function copyValue(value, seen)
 	if type(value) ~= "table" then
@@ -20,18 +20,18 @@ local function copyValue(value, seen)
 end
 
 local function useCharacterDB()
-	WoWForeverRotDB = WoWForeverRotDB or {}
-	WoWForeverRotCharDB = WoWForeverRotCharDB or {}
-	if WoWForeverRotCharDB.charReady ~= 1 then
-		local snap = copyValue(WoWForeverRotDB)
+	RCRotationsDB = RCRotationsDB or {}
+	RCRotationsCharDB = RCRotationsCharDB or {}
+	if RCRotationsCharDB.charReady ~= 1 then
+		local snap = copyValue(RCRotationsDB)
 		for k, v in pairs(snap) do
-			if WoWForeverRotCharDB[k] == nil then
-				WoWForeverRotCharDB[k] = v
+			if RCRotationsCharDB[k] == nil then
+				RCRotationsCharDB[k] = v
 			end
 		end
-		WoWForeverRotCharDB.charReady = 1
+		RCRotationsCharDB.charReady = 1
 	end
-	ns.db = WoWForeverRotCharDB
+	ns.db = RCRotationsCharDB
 end
 
 useCharacterDB()
@@ -305,7 +305,7 @@ function ns.ConfirmResetAll()
 		ns.ResetAll()
 		return
 	end
-	StaticPopupDialogs.WOWFOREVERROT_RESET_ALL = {
+	StaticPopupDialogs.RCROTATIONS_RESET_ALL = {
 		text = ns.T("OPT_RESET_ALL_CONFIRM"),
 		button1 = YES or OKAY or "OK",
 		button2 = NO or CANCEL or "No",
@@ -317,7 +317,7 @@ function ns.ConfirmResetAll()
 		hideOnEscape = true,
 		preferredIndex = 3,
 	}
-	StaticPopup_Show("WOWFOREVERROT_RESET_ALL")
+	StaticPopup_Show("RCROTATIONS_RESET_ALL")
 end
 
 function ns.NormalizeRole(role)
@@ -617,7 +617,7 @@ function ns.Tick()
 			lastAlertWeapon = weapon
 		end
 	end
-	local sig = (queue[1] or 0) .. ":" .. (queue[2] or 0) .. ":" .. (queue[3] or 0) .. ":" .. (defense or 0) .. ":" .. (interrupt or 0) .. ":" .. (purge or 0) .. ":" .. (cleanse or 0) .. ":" .. (weapon or 0) .. ":" .. (weaponNeed and 1 or 0) .. ":" .. (noticeKey or "") .. ":" .. flagBit(ns.db.showRotation) .. flagBit(ns.db.showDefense) .. flagBit(ns.db.showInterrupt) .. flagBit(ns.db.showPurge) .. flagBit(ns.db.showCleanse) .. flagBit(ns.db.showWeapon) .. flagBit(ns.db.glow) .. flagBit(ns.db.showModes) .. flagBit(ns.db.showRange) .. (ns.db.locked == true and "1" or "0") .. flagBit(not idle)
+	local sig = (queue[1] or 0) .. ":" .. (queue[2] or 0) .. ":" .. (queue[3] or 0) .. ":" .. (defense or 0) .. ":" .. (interrupt or 0) .. ":" .. (purge or 0) .. ":" .. (cleanse or 0) .. ":" .. (weapon or 0) .. ":" .. (weaponNeed and 1 or 0) .. ":" .. (noticeKey or "") .. ":" .. flagBit(ns.db.showRotation) .. flagBit(ns.db.showDefense) .. flagBit(ns.db.showInterrupt) .. flagBit(ns.db.showPurge) .. flagBit(ns.db.showCleanse) .. flagBit(ns.db.showWeapon) .. flagBit(ns.db.glow) .. flagBit(ns.db.spellFlash) .. flagBit(ns.db.showModes) .. flagBit(ns.db.showRange) .. (ns.db.locked == true and "1" or "0") .. flagBit(not idle)
 	if sig ~= lastTickSig then
 		lastTickSig = sig
 		ns.UI.Update(queue, defense, interrupt, purge, cleanse, weapon, weaponNeed, notice)
@@ -984,10 +984,10 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 	end
 end)
 
-SLASH_WFR1 = "/wfr"
-SLASH_WFR2 = "/foreverrot"
-SLASH_WFR3 = "/foreverrotation"
-SlashCmdList.WFR = function(msg)
+SLASH_RCROT1 = "/rcr"
+SLASH_RCROT2 = "/rcrot"
+SLASH_RCROT3 = "/rcrotations"
+SlashCmdList.RCROT = function(msg)
 	msg = strtrim(strlower(msg or ""))
 	if msg == "unlock" then
 		ns.UI.SetLocked(false)
@@ -1015,6 +1015,15 @@ SlashCmdList.WFR = function(msg)
 		ns.SetProfile("base")
 	elseif msg == "custom" or msg == "customs" then
 		ns.SetProfile("custom")
+	elseif msg == "flash" then
+		ns.db.spellFlash = (ns.db.spellFlash == false)
+		ns.Print(ns.T(ns.db.spellFlash and "FLASH_SPELLFLASH" or "FLASH_SKULL"))
+		if ns.GlowClearAllStyles then
+			ns.GlowClearAllStyles()
+		end
+		if ns.Tick then
+			ns.Tick()
+		end
 	elseif msg == "menu" or msg == "options" or msg == "opt" then
 		ns.ToggleOptions()
 	else

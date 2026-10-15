@@ -198,6 +198,8 @@ def scenario(setup):
         L.execute("WORLD.known[%d] = true" % sid)
     L.execute("WORLD.spec = 2; WORLD.power[6] = 20")
     L.execute(setup)
+    if not L.eval("NO_HORN"):
+        L.execute("table.insert(WORLD.auras.player, {id=57330, remain=300})")  # raid AP buff up
     if L.eval("NS_UNBLOCK"):
         ns.db.simBlock = L.table_from({48707: False})
     rot = None
@@ -227,6 +229,18 @@ q = scenario(cds + "WORLD.cd[77575]=50; WORLD.auras.target = {{id=55095, remain=
              "WORLD.power[6] = 95; for s=1,6 do WORLD.runes[s] = {remain=6} end")
 check(len(q) > 0 and q[0] == FROST["frost_strike"],
       "diseases up, no runes, runic power capped -> Frost Strike first (got %s)" % q)
+
+# DK upkeep reminders WoWSims leaves to the pre-pull
+q = scenario("NO_HORN = true")
+check(q[:1] == [57330], "Frost: Horn of Winter first when no attack power buff is up (got %s)" % q)
+q = scenario("NO_HORN = true; WORLD.auras.player = {{id=6673, remain=300}}")
+check(57330 not in q[:1], "Frost: no Horn of Winter reminder when a warrior's Battle Shout is up (got %s)" % q)
+q = scenario("WORLD.known[48266] = true; function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 0 end; "
+             "function GetShapeshiftFormInfo(i) return 'i', false, true, ({48263, 48266, 48265})[i] end")
+check(q[:1] == [48266], "Frost: Frost Presence first when in no presence (got %s)" % q)
+q = scenario("WORLD.known[48266] = true; function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 2 end; "
+             "function GetShapeshiftFormInfo(i) return 'i', i == 2, true, ({48263, 48266, 48265})[i] end")
+check(48266 not in q, "Frost: no presence reminder while in Frost Presence (got %s)" % q)
 
 # never-suggest defaults: AMS / Army are simulator picks, not player picks
 q = scenario("")
@@ -481,6 +495,37 @@ L.execute("C_SpecializationInfo = nil; GetSpecialization = function() return 3 e
 check(ns.Sim.Rotations()[2] == 3 and ns.Sim.SpecName(3) == "Unholy", "old global API still works")
 L.execute("GetSpecialization = nil; GetSpecializationInfo = nil")
 check(ns.Sim.Spec() == 0 and str(ns.Sim.NoSpecMessage()) == "SIM_IMPORT_NOSPEC", "MoP with no readable spec -> 'pick a spec' message")
+# Workshop app rotations (companion addon global)
+L, ns = picker_world()
+L.execute("WORLD.spec = 2")
+L.execute("""RCRotations_MyRotations = {
+  { class = "DEATHKNIGHT", spec = 2, name = "My Frost", json = '{"type":"TypeAPL","priorityList":[{"action":{"castSpell":{"spellId":{"spellId":49020}}}},{"hide":true,"action":{"castSpell":{"spellId":{"spellId":49143}}}}]}' },
+  { class = "DEATHKNIGHT", spec = 3, name = "Other spec", json = '{"priorityList":[]}' },
+  { class = "DEATHKNIGHT", spec = 2, name = "Broken", json = 'not json' },
+}""")
+rots_now = ns.Sim.Rotations()[0]
+names_now = [rots_now[i].name for i in range(1, len(rots_now) + 1)]
+check(any(n.startswith("My Frost") for n in names_now), "workshop: app rotation listed for its spec (%s)" % names_now)
+check(not any(n.startswith("Other spec") or n.startswith("Broken") for n in names_now), "workshop: other specs and broken entries skipped")
+ws = next(rots_now[i] for i in range(1, len(rots_now) + 1) if rots_now[i].name.startswith("My Frost"))
+check(len(list(ws.list.keys())) == 1 and ws.list[1].id == 49020, "workshop: lines turned off in the app are left out")
+L.execute("RCRotations_MyRotations = nil")
+# the app's real output file loads in the addon (needs node)
+import shutil as _sh, subprocess as _sp
+if _sh.which("node"):
+    lua_out = _sp.run(["node", "-e", """
+const wow = require(process.argv[1]);
+process.stdout.write(wow.buildLua([{ token: "DEATHKNIGHT", specIndex: 2, name: 'Rob\\'s "Frost" ]]==]',
+  rotation: { priorityList: [{ action: { castSpell: { spellId: { spellId: 49143 } } } }] } }]));
+""", os.path.join(ROOT, "app", "wow.js")], capture_output=True, text=True, check=True).stdout
+    L, ns = picker_world()
+    L.execute("WORLD.spec = 2")
+    L.execute(lua_out)
+    rl = ns.Sim.Rotations()[0]
+    got = [rl[i].name for i in range(1, len(rl) + 1)]
+    check(any("Frost" in n and ("(Workshop)" in n or "SIM_WORKSHOP_TAG" in n) for n in got), "app: MyRotations.lua written by the app loads in game (%s)" % got)
+else:
+    print("SKIP app file round trip (no node)")
 # --------------------------------------------------------------- 6b. WoWSims only: empty specs, Era/TBC imports
 L, ns = picker_world()
 L.execute("WORLD.spec = 2; ns_db_reset = true")
@@ -497,6 +542,8 @@ check(ns.Sim.Current() is None, "...and nothing else is suggested (no built-in f
 L, ns = picker_world()
 ns.GAME = "tbc"
 L.execute("GetSpecialization = nil; C_SpecializationInfo = nil; WORLD.known[1752] = true")
+r = ns.Sim.ImportText("NAG_ROTATION:WARLOCK:2:1.0:eyJhIjoxfQ==", "x")
+check(r[0] is False and r[1] == "SIM_IMPORT_NAG", "import: a NAG rotation string gets a clear message (got %s)" % (r[1],))
 era = '{"type":"TypeAPL","priorityList":[{"action":{"castSpell":{"spellId":{"spellId":1752}}}}]}'
 r = ns.Sim.ImportText(era, "Combat")
 check(r[0] is True, "TBC (no specs): import accepted (%s)" % (r[1],))
@@ -512,6 +559,155 @@ Lg.execute(read(os.path.join("tools", "test_glow.lua")))
 for line in Lg.globals().PRINTED.values():
     if line.startswith("PASS ") or line.startswith("FAIL "):
         check(line.startswith("PASS "), "flash: " + line[5:])
+
+# --------------------------------------------------------------- 9. tuning layer
+import tuning as tun
+STRUCT = {"and", "or", "not", "cmp", "math", "max", "min"}
+samples = ["pet.buff(91342).stacks >= 5", "runes.blood == 0 and runes.frost == 0", "not buff(51124) or target.health.pct < 35%",
+           "cooldown(49020).remains <= 1.5s", "debuff(55095).remains < 3s and targets >= 3", "execute(20)", "debuff(55095).down",
+           "spell(63560).usable and gcd.ready", "holy_power >= 3 or chi > 1", "mana.pct > 50% and not moving", "buff(81229).known",
+           "time_to_die > 20s and combat_time > 5", "cooldown(1).charges >= 1 and spell(1).cast_time < 1", "health < 10000 and target.buff(1).remains > 1"]
+kinds = set()
+for text in samples:
+    kinds |= tun.node_kinds(tun.parse_condition(text))
+check(kinds - STRUCT <= conv.SUPPORTED, "tuning syntax only produces conditions the evaluator supports %s" % sorted(kinds - STRUCT - conv.SUPPORTED))
+for bad in ("buff(5).bogus", "pet.buff(1).stacks >=", "runes.purple > 1", "wat > 1", "buff(1) and"):
+    try:
+        tun.parse_condition(bad)
+        check(False, "tuning syntax rejects %r" % bad)
+    except tun.TuningError:
+        check(True, "tuning syntax rejects %r" % bad)
+try:
+    tun.compile_tuning({"death_knight/purple": {"block": [1]}}, conv.SPECS)
+    check(False, "tuning: unknown spec rejected")
+except tun.TuningError:
+    check(True, "tuning: unknown spec rejected")
+shipped = tun.load(os.path.join(ROOT, "rotations", "tuning", "mists.json"), conv.SPECS)
+check("DEATHKNIGHT:3" in shipped, "shipped tuning file compiles (%s)" % ", ".join(sorted(shipped)))
+
+# shipped fix: Dark Transformation waits for 5 Shadow Infusion even if the game says usable
+q, _ = unholy("C_Spell.IsSpellUsable = function(id) return true, false end; WORLD.auras.pet = {{id=91342, stacks=3}}")
+check(63560 not in q, "tuning: Dark Transformation held at 3 Shadow Infusion stacks (got %s)" % q)
+
+# synthetic rules on Frost DK: block, move, add
+L = new_lua()
+ns = load_addon_files(L)
+for sid in (51271, 42650, 48707, 77575, 49184, 45462, 49020, 49143, 57330, 47568, 123693, 12345):
+    L.execute("WORLD.known[%d] = true" % sid)
+L.execute("WORLD.spec = 2; WORLD.power[6] = 20; WORLD.cd[51271] = 60; WORLD.cd[57330] = 20; WORLD.cd[47568] = 200")
+setrules = L.eval("""function(ns)
+	ns.SimData.tuning["DEATHKNIGHT:2"] = {
+		block = { 77575 },
+		move = { { id = 45462, to = "top" } },
+		add = { { id = 12345, at = "top", c = { k = "cmp", op = ">=", v = { { k = "currentRunicPower" }, 10 } } } },
+	}
+end""")
+setrules(ns)
+rots = ns.SimData.specs["DEATHKNIGHT"][2]
+rot = next(rots[i] for i in range(1, len(rots) + 1) if rots[i].file.endswith("obliterate"))
+q = ns.Sim.BuildQueue(rot)
+q = [q[i] for i in range(1, len(q) + 1)]
+check(q[:2] == [12345, 45462], "tuning: 'add at top' and 'move to top' take the first slots (got %s)" % q)
+check(77575 not in q, "tuning: blocked spell skipped (got %s)" % q)
+check(len(list(rot.list.keys())) == len(list(rot.list.keys())) and rot.list[1].id != 12345, "tuning never edits the original rotation")
+L.execute("WORLD.power[6] = 5")
+q = ns.Sim.BuildQueue(rot)
+q = [q[i] for i in range(1, len(q) + 1)]
+check(12345 not in q, "tuning: added line respects its 'when' (got %s)" % q)
+
+# "coming up": with nothing castable, the HUD names the spell that's ready soonest
+cds_short = cds + "WORLD.cd[77575]=50; WORLD.auras.target = {{id=55095, remain=20}, {id=55078, remain=20}}; WORLD.power[6] = 5; "
+q = scenario(cds_short + "WORLD.cd[123693]=30; WORLD.cd[45462]=30; WORLD.known[49143] = nil; WORLD.cd[49020]=2; WORLD.cd[49184]=4")
+check(q[:1] == [49020], "coming up: nothing castable -> Obliterate (ready in 2s) shown instead of a blank HUD (got %s)" % q)
+q = scenario(cds_short + "WORLD.cd[49020]=9")
+check(49020 not in q, "coming up: nothing further away than %ss (got %s)" % (6, q))
+L = new_lua()
+ns = load_addon_files(L)
+for sid in (49020, 49143):
+    L.execute("WORLD.known[%d] = true" % sid)
+L.execute("WORLD.cd[49020] = 3; WORLD.cd[49143] = 0")
+lst = L.eval("{ { id = 49143 }, { id = 49020 } }")
+q = ns.Sim.BuildQueue(L.eval("function(l) return { name = 't', file = 't', list = l } end")(lst))
+check(q[1] == 49143 and q[2] == 49020 and q.soon[49020] and not q.soon[49143],
+      "coming up: castable spell first, then the next one marked 'soon'")
+ns.db.simLookahead = False
+q = ns.Sim.BuildQueue(L.eval("function(l) return { name = 't', file = 't', list = l } end")(lst))
+check(q[2] is None, "coming up: can be turned off")
+L.execute("C_Spell.IsSpellUsable = function(id) return id ~= 49020, false end")
+ns.db.simLookahead = None
+q = ns.Sim.BuildQueue(L.eval("function(l) return { name = 't', file = 't', list = l } end")(lst))
+check(q[2] is None, "coming up: never shows a spell the game says isn't usable")
+
+# stance: seal reminder for Retribution (seals sit on the stance bar)
+for text, want in (("stance == 0", {"k": "cmp"}), ("stance(31801)", {"k": "playerStance", "id": 31801})):
+    node = tun.parse_condition(text)
+    check(all(node.get(k) == v for k, v in want.items()), "tuning syntax: %s" % text)
+check("PALADIN:3" in shipped, "shipped tuning has the Retribution seal reminder")
+L = new_lua()
+ns = load_addon_files(L)
+L.execute("""
+function UnitClass() return "Paladin", "PALADIN", 2 end
+WORLD.spec = 3; WORLD.known[31801] = true; WORLD.known[20154] = true; WORLD.known[35395] = true
+STANCE = 0
+function GetNumShapeshiftForms() return 2 end
+function GetShapeshiftForm() return STANCE end
+function GetShapeshiftFormInfo(i) return 'icon', STANCE == i, true, ({31801, 20154})[i] end
+""")
+L.eval("function(ns) ns.ClassToken = function() return 'PALADIN', 2 end; ns.db.barOnly = true; ns.SpellOnBar = function(id) return id == 35395 end end")(ns)
+ret = ns.SimData.specs["PALADIN"][3][1]
+q = ns.Sim.BuildQueue(ret)
+check(q[1] == 31801, "Ret with no seal: Seal of Truth first, even though seals aren't on action bars (got %s)" % q[1])
+L.execute("WORLD.enemies = 5")
+q = ns.Sim.BuildQueue(ret)
+check(q[1] == 20154, "Ret with no seal on 5 targets: Seal of Righteousness (got %s)" % q[1])
+L.execute("STANCE = 1; WORLD.enemies = 1")
+q = ns.Sim.BuildQueue(ret)
+check(31801 not in [q[i] for i in range(1, len(q) + 1)], "Ret with Seal of Truth on: no seal reminder")
+check(L.eval("function(ns) return ns.Sim.HANDLERS.playerStance({ id = 31801 }) end")(ns) is True, "stance(31801) true while Truth is active")
+
+# Metamorphosis: Shadow Bolt -> Touch of Chaos, Corruption -> Doom on the same buttons
+L = new_lua()
+ns = load_addon_files(L)
+L.execute("""
+function UnitClass() return "Warlock", "WARLOCK", 9 end
+WORLD.spec = 2; META = false
+OVER = { [686] = 103964, [172] = 603, [105174] = 124916, [6353] = 104027 }
+BASE = {}
+for b, o in pairs(OVER) do BASE[o] = b end
+for _, id in ipairs({686, 172, 105174, 6353, 103958, 1454, 113861, 104316}) do WORLD.known[id] = true end
+""")
+L.eval("""function(ns)
+	ns.ClassToken = function() return 'WARLOCK', 9 end
+	ns.API.BaseSpell = function(id) return BASE[id] end
+	ns.API.CurrentOverride = function(id) if META and OVER[id] then return OVER[id] end return id end
+	ns.API.Ready = function(id) return WORLD.known[id] or (META and BASE[id] and WORLD.known[BASE[id]]) or false end
+	ns.API.Resolve = function(id)
+		if META and OVER[id] and WORLD.known[id] then return OVER[id] end
+		if WORLD.known[id] then return id end
+		return nil
+	end
+end""")(ns)
+demo = ns.SimData.specs["WARLOCK"][2][1]
+def demo_q(setup):
+    L.execute(setup)
+    q = ns.Sim.BuildQueue(demo)
+    return [q[i] for i in range(1, len(q) + 1)] if q else []
+q = demo_q("META = false; WORLD.power[15] = 100; WORLD.auras.player = {}; WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}}")
+check(103964 not in q and 603 not in q, "Demo out of Meta: no Touch of Chaos / Doom (got %s)" % q)
+check(len(q) > 0, "Demo out of Meta: something to cast (got %s)" % q)
+q = demo_q("WORLD.cd[113861] = 60; WORLD.cd[104316] = 60; META = true; WORLD.power[15] = 600; WORLD.auras.player = {{id=103958, remain=60}}; WORLD.auras.target = {{id=172, remain=3, kind='HARMFUL'}, {id=603, remain=40, kind='HARMFUL'}}")
+check(q[:1] == [103964], "Demo in Meta, Corruption about to drop: Touch of Chaos first (got %s)" % q)
+check(686 not in q and 172 not in q, "Demo in Meta: icons follow the buttons (no Shadow Bolt / Corruption) (got %s)" % q)
+check(103958 not in q, "Demo in Meta: never suggests Metamorphosis again (it would cancel it) (got %s)" % q)
+q = demo_q("WORLD.cd[103958] = 0; META = true; WORLD.power[15] = 250; WORLD.auras.player = {{id=103958, remain=60}}; WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}, {id=603, remain=40, kind='HARMFUL'}}")
+qt = ns.Sim.BuildQueue(demo)
+check(103958 in q and qt.cancel and qt.cancel[103958], "Demo in Meta, low fury, no Dark Soul: WoWSims' 'cancel Metamorphosis' line shows, marked CANCEL (got %s)" % q)
+q = demo_q("WORLD.power[15] = 800")
+check(103958 not in q, "Demo in Meta with plenty of fury: no cancel (got %s)" % q)
+q = demo_q("WORLD.known[1490] = true; META = false; WORLD.auras.player = {}; WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}}")
+check(q[:1] == [1490], "Warlock: Curse of the Elements first when the target has no magic-damage debuff (got %s)" % q)
+q = demo_q("WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}, {id=34889, remain=20, kind='HARMFUL'}}")
+check(1490 not in q, "Warlock: no Curse of the Elements when a hunter pet's Fire Breath covers it (got %s)" % q)
 
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j

@@ -18,6 +18,7 @@ on:
     paths:
       - "rotations/**"
       - "tools/wowsims_convert.py"
+      - "tools/build_workshop_data.py"
   schedule:
     - cron: "17 9 * * *" # daily, 09:17 UTC (3:17 am Alberta time)
   workflow_dispatch:
@@ -49,13 +50,14 @@ jobs:
       - name: Fetch WoWSims rotation files
         run: |
           git clone --depth 1 --filter=blob:none --sparse https://github.com/wowsims/mop wowsims-mop
-          git -C wowsims-mop sparse-checkout set --no-cone 'LICENSE' '/ui/specs/**/apls/*'
+          git -C wowsims-mop sparse-checkout set --no-cone 'LICENSE' '/ui/specs/**/apls/*' '/assets/database/db.json' '/assets/database/leftover_db.json'
 
       - name: Convert
         run: |
           cp SimData_Mists.lua old-simdata.lua
           python3 tools/wowsims_convert.py --sims wowsims-mop --custom rotations/mists \
-            --out SimData_Mists.lua --report sim-report.md --summary sim-summary.json
+            --tuning rotations/tuning/mists.json --out SimData_Mists.lua --report sim-report.md --summary sim-summary.json
+          python3 tools/build_workshop_data.py --sims wowsims-mop --custom rotations/mists --out app/data
           echo "SIMS_SHA=$(git -C wowsims-mop rev-parse --short=10 HEAD)" >> "$GITHUB_ENV"
 
       - name: Test
@@ -68,7 +70,7 @@ jobs:
       - name: Anything changed?
         id: changed
         run: |
-          if git diff --quiet -- SimData_Mists.lua; then
+          if git diff --quiet -- SimData_Mists.lua app/data; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No rotation changes."
           else
@@ -98,7 +100,7 @@ jobs:
           VERSION=$(python3 tools/sync_release.py bump "$SIMS_SHA")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add SimData_Mists.lua RCRotations.toc RCRotations_Camelot.toc VERSION.txt
+          git add SimData_Mists.lua app/data RCRotations.toc RCRotations_Camelot.toc VERSION.txt
           git commit -m "Update WoWSims rotations (wowsims/mop@$SIMS_SHA), v$VERSION"
           git tag "v$VERSION"
           git push origin HEAD:main "v$VERSION"
@@ -117,7 +119,9 @@ jobs:
         with:
           branch: wowsims-sync
           delete-branch: true
-          add-paths: SimData_Mists.lua
+          add-paths: |
+            SimData_Mists.lua
+            app/data
           commit-message: "Update WoWSims rotations (wowsims/mop@${{ env.SIMS_SHA }})"
           title: "Update WoWSims rotations (wowsims/mop@${{ env.SIMS_SHA }})"
           body-path: pr-body.md

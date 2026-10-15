@@ -1,0 +1,70 @@
+name: Build Workshop app
+
+# Builds the RCRotations Workshop desktop app for Windows and puts it on the
+# fixed download page https://github.com/Rawcard/RCRotations/releases/tag/workshop
+# (the address the addon shows players in /rcr options > Rotation).
+# - Push a tag like app-v1.0.1 (version from the tag), or
+# - run it by hand: Actions > Build Workshop app > Run workflow.
+# The "workshop" release is never marked Latest, so addon releases stay on top.
+on:
+  push:
+    tags: ["app-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/app-v')
+        shell: bash
+        run: npm version --no-git-tag-version "${GITHUB_REF_NAME#app-v}"
+
+      - name: Build
+        run: npm run dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RCRotations-Workshop
+          path: app/dist/*.exe
+
+      - name: Update the Workshop download page
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          cp dist/*.exe RCRotations-Workshop.exe
+          NOTES="RCRotations Workshop $VERSION for Windows: edit WoWSims rotations and save them straight into RCRotations.
+
+          1. Download RCRotations-Workshop.exe and run it. Windows may warn that it isn't code-signed: click More info, then Run anyway.
+          2. Click Choose WoW folder and pick your World of Warcraft folder.
+          3. Edit a rotation, click Save to WoW, then type /reload in game. It shows in your rotation list as (Workshop).
+
+          Needs RCRotations 1.4.0 or newer."
+          if gh release view workshop >/dev/null 2>&1; then
+            gh release edit workshop --title "RCRotations Workshop (Windows app) $VERSION" --notes "$NOTES" --latest=false
+          else
+            gh release create workshop --title "RCRotations Workshop (Windows app) $VERSION" --notes "$NOTES" --latest=false --target "$GITHUB_SHA"
+          fi
+          gh release upload workshop RCRotations-Workshop.exe --clobber

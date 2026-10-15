@@ -23,3 +23,5 @@ jobs:
         run: |
           pip install lupa
           python3 tools/test_sim.py
+      - name: Workshop app tests
+        run: node app/test/wow.test.js

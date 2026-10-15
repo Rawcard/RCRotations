@@ -117,10 +117,40 @@ local function resolve(id)
 	pass.resolved = pass.resolved or {}
 	local r = pass.resolved[id]
 	if r == nil then
-		r = (API.Resolve and API.Resolve(id)) or false
+		r = Sim.LiveSpell(id) or false
 		pass.resolved[id] = r
 	end
 	return r or nil
+end
+
+-- The spell a rotation line means right now, as the action bar shows it.
+-- - A base spell (Shadow Bolt) becomes its active override (Touch of Chaos
+--   during Metamorphosis), so the HUD icon matches the button you press.
+-- - An override spell (Touch of Chaos) only exists while its override is
+--   active; otherwise nil.
+function Sim.LiveSpell(id)
+	if not API.Resolve then
+		return nil
+	end
+	local baseOf = API.BaseSpell or function() return nil end
+	local overrideOf = API.CurrentOverride or function(x) return x end
+	local base = baseOf(id)
+	if base then
+		local known = API.Resolve(base)
+		if known then
+			local live = overrideOf(baseOf(known) or known)
+			if live == id then
+				return id
+			end
+			return nil
+		end
+		return API.Resolve(id)
+	end
+	local known = API.Resolve(id)
+	if not known then
+		return nil
+	end
+	return overrideOf(baseOf(known) or known)
 end
 
 local function gcdRemain()
@@ -749,6 +779,16 @@ end
 V.unitIsMoving = function(n)
 	return num(call(GetUnitSpeed, n.unit or "player"), 0) > 0
 end
+-- Tuning only: "stance" is the active stance-bar slot (0 = none, e.g. no
+-- seal); "stance(31801)" is true while that seal/presence/stance is active.
+V.playerStance = function(n)
+	local st = Sim.StanceSlots()
+	if n.id then
+		local rid = resolve(n.id) or n.id
+		return st.active ~= nil and (st.active == n.id or st.active == rid)
+	end
+	return st.index
+end
 
 -- spells
 V.spellIsKnown = function(n)
@@ -902,11 +942,15 @@ function Sim.Rotations()
 	local data = ns.SimData
 	local base = data and data.specs and data.specs[token] and data.specs[token][spec]
 	local imported = Sim.Imported and Sim.Imported(token, spec) or {}
-	if #imported == 0 then
+	local workshop = Sim.Workshop and Sim.Workshop(token, spec) or {}
+	if #imported == 0 and #workshop == 0 then
 		return base, token, spec
 	end
 	local list = {}
 	for _, rot in ipairs(base or {}) do
+		list[#list + 1] = rot
+	end
+	for _, rot in ipairs(workshop) do
 		list[#list + 1] = rot
 	end
 	for _, rot in ipairs(imported) do
@@ -974,6 +1018,9 @@ Sim.DEFAULT_BLOCK = {
 	[20484] = "Rebirth",
 }
 
+-- Spec blocks from the tuning file (set per queue build; see Sim.BuildQueue).
+local tuningBlock = {}
+
 local function blockState(id)
 	if not id then
 		return nil
@@ -982,7 +1029,7 @@ local function blockState(id)
 	if user and user[id] ~= nil then
 		return user[id]
 	end
-	if Sim.DEFAULT_BLOCK[id] then
+	if Sim.DEFAULT_BLOCK[id] or tuningBlock[id] then
 		return true
 	end
 	return nil
@@ -1091,13 +1138,137 @@ function Sim.FindSpell(text)
 	return sid
 end
 
+-- ------------------------------------------------------------------ tuning
+-- Per-spec fixes from rotations/tuning/*.json, compiled into
+-- ns.SimData.tuning by the converter. Applied to every rotation for the spec,
+-- bundled or imported: require (extra condition), move, add, block.
+local tunedCache = setmetatable({}, { __mode = "k" })
+
+function Sim.TuningFor(rot, token, spec)
+	local all = ns.SimData and ns.SimData.tuning
+	if not all then
+		return nil
+	end
+	local merged
+	local keys = { "*", (token or "?") .. ":" .. tostring(spec or 0), rot and rot.file and ("file:" .. rot.file) or nil }
+	for i = 1, 3 do
+		local rules = keys[i] and all[keys[i]]
+		if rules then
+			merged = merged or { block = {}, require = {}, move = {}, add = {} }
+			for kind, list in pairs(rules) do
+				if merged[kind] then
+					for _, r in ipairs(list) do
+						merged[kind][#merged[kind] + 1] = r
+					end
+				end
+			end
+		end
+	end
+	return merged
+end
+
+local function indexOf(list, id)
+	for i, item in ipairs(list) do
+		if item.id == id then
+			return i
+		end
+	end
+	return nil
+end
+
+-- The rotation's list with the tuning applied (cached per rotation).
+function Sim.ListFor(rot, token, spec)
+	local rules = Sim.TuningFor(rot, token, spec)
+	if not rules then
+		return rot.list, nil
+	end
+	local cached = tunedCache[rot]
+	if cached and cached.key == (token or "?") .. ":" .. tostring(spec) then
+		return cached.list, rules
+	end
+	local need = {}
+	for _, r in ipairs(rules.require) do
+		need[r.id] = need[r.id] and { k = "and", v = { need[r.id], r.c } } or r.c
+	end
+	local list = {}
+	for _, item in ipairs(rot.list) do
+		if item.id and need[item.id] and not item.cancel then
+			local copy = {}
+			for k, v in pairs(item) do
+				copy[k] = v
+			end
+			copy.c = item.c and { k = "and", v = { item.c, need[item.id] } } or need[item.id]
+			list[#list + 1] = copy
+		else
+			list[#list + 1] = item
+		end
+	end
+	for _, m in ipairs(rules.move) do
+		local from = indexOf(list, m.id)
+		if from then
+			local item = table.remove(list, from)
+			if m.before then
+				local at = indexOf(list, m.before)
+				table.insert(list, at or (#list + 1), item)
+			elseif m.to == "top" then
+				table.insert(list, 1, item)
+			else
+				list[#list + 1] = item
+			end
+		end
+	end
+	for _, a in ipairs(rules.add) do
+		local item = { id = a.id, c = a.c }
+		if need[a.id] then
+			item.c = item.c and { k = "and", v = { item.c, need[a.id] } } or need[a.id]
+		end
+		if a.before then
+			table.insert(list, indexOf(list, a.before) or (#list + 1), item)
+		elseif a.at == "top" then
+			table.insert(list, 1, item)
+		else
+			list[#list + 1] = item
+		end
+	end
+	tunedCache[rot] = { key = (token or "?") .. ":" .. tostring(spec), list = list }
+	return list, rules
+end
+
 -- ------------------------------------------------------------------ queue
 function Sim.BeginPass()
 	pass = { now = GetTime() }
 end
 
+-- Spells on the stance bar (seals, presences, stances, forms): the spell ID of
+-- each slot, and which one is active. Seals and presences live there rather
+-- than on action bars, so "only suggest spells on my bars" lets them through.
+local function stanceSlots()
+	if pass.stances then
+		return pass.stances
+	end
+	local list = { active = nil, ids = {} }
+	local n = num(call(GetNumShapeshiftForms), 0)
+	for i = 1, n do
+		local _, active, _, sid = call(GetShapeshiftFormInfo, i)
+		sid = num(sid, 0)
+		if sid > 0 then
+			list.ids[sid] = true
+			if active then
+				list.active = sid
+			end
+		end
+	end
+	list.index = num(call(GetShapeshiftForm), 0)
+	pass.stances = list
+	return list
+end
+Sim.StanceSlots = stanceSlots
+
 local function onBar(id)
 	if ns.db and ns.db.barOnly == false then
+		return true
+	end
+	if stanceSlots().ids[id] then
 		return true
 	end
 	if ns.SpellOnBar then
@@ -1126,14 +1297,32 @@ function Sim.BuildQueue(rot)
 		return nil
 	end
 	Sim.BeginPass()
+	local _, token, spec = Sim.Rotations()
+	local list, rules = Sim.ListFor(rot, token, spec)
+	tuningBlock = {}
+	if rules then
+		for _, id in ipairs(rules.block) do
+			tuningBlock[id] = true
+		end
+	end
 	local q, seen = {}, {}
-	for _, item in ipairs(rot.list) do
+	for _, item in ipairs(list) do
 		if #q >= 3 then
 			break
 		end
 		if item.hold then
 			if test(item.c) and #q == 0 then
 				break
+			end
+		elseif item.cancel then
+			-- "Cancel" lines (end Metamorphosis): only while its aura is up;
+			-- press the same button again. Shown with a CANCEL label.
+			local rid = resolve(item.id)
+			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and V.auraIsActive({ id = item.id, unit = "player" }) and test(item.c) then
+				q[#q + 1] = rid
+				seen[rid] = true
+				q.cancel = q.cancel or {}
+				q.cancel[rid] = true
 			end
 		elseif item.id then
 			local rid = resolve(item.id)
@@ -1143,7 +1332,48 @@ function Sim.BuildQueue(rot)
 			end
 		end
 	end
+	if #q < 3 and not (ns.db and ns.db.simLookahead == false) then
+		Sim.FillComingUp(list, q, seen)
+	end
 	return q
+end
+
+-- "Coming up": when fewer than three spells are castable right now, fill the
+-- rest with rotation spells that come off cooldown within LOOKAHEAD seconds,
+-- soonest first, so the HUD shows what to press next instead of going blank
+-- (WoWSims rotations "wait" for a cooldown rather than naming the next spell).
+-- They pass the same checks as a normal suggestion apart from the cooldown,
+-- and are marked in q.soon so they don't flash until they're ready.
+Sim.LOOKAHEAD = 6
+function Sim.FillComingUp(list, q, seen)
+	local soon = {}
+	for _, item in ipairs(list) do
+		if item.id and not item.hold then
+			local rid = resolve(item.id)
+			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and onBar(rid) then
+				local cd = cooldownRemain(rid)
+				local usable = ns.GAME == "forever" or usableNow(rid) ~= false
+				if cd > 0 and cd <= Sim.LOOKAHEAD and usable and test(item.c) then
+					soon[#soon + 1] = { rid = rid, cd = cd, order = #soon }
+					seen[rid] = true
+				end
+			end
+		end
+	end
+	table.sort(soon, function(a, b)
+		if a.cd ~= b.cd then
+			return a.cd < b.cd
+		end
+		return a.order < b.order
+	end)
+	for _, s in ipairs(soon) do
+		if #q >= 3 then
+			break
+		end
+		q[#q + 1] = s.rid
+		q.soon = q.soon or {}
+		q.soon[s.rid] = true
+	end
 end
 
 -- ------------------------------------------------------------------ events

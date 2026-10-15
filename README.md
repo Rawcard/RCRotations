@@ -33,6 +33,7 @@ RCRotations only uses **WoWSims** rotations. On **MoP Classic** they come bundle
 - **Automatic releases:** set the repository variable `AUTO_RELEASE` to `true` (Settings → Secrets and variables → Actions → Variables). Then a rotation update that passes the safety check (tests pass, no rotation removed, nothing unsupported) is committed, the patch version is bumped, and a release is published to GitHub and, when configured, CurseForge/Wago. Anything that fails the check still arrives as a pull request.
 - Your own rotations: export one from wowsims.com (Rotation tab → Export → JSON) and save it as `rotations/mists/<class>/<spec>/<name>.json`. Pushing it starts the sync job, which opens a PR adding it next to the WoWSims ones (shown as "(custom)" in the picker). See `rotations/mists/README.md`.
 - Import in game: Options → Rotation → **Import WoWSims** (or `/rcr import`). Paste a rotation exported from wowsims.com; it's converted in game (same rules as the Python converter, checked by the tests) and saved account-wide for the current spec.
+- **Tuning layer:** `rotations/tuning/mists.json` holds per-spec fixes on top of WoWSims (extra conditions, moves, additions, blocks) in a short readable syntax like `pet.buff(91342).stacks >= 5`. They apply to every rotation for the spec, bundled or imported, and survive WoWSims updates. See `rotations/tuning/README.md`.
 - Never-suggest list: spells WoWSims uses for simulation value but a player saves (defensives, raid cooldowns) are skipped by default; right-click a HUD spell to add more, `/rcr unblock <spell>` to undo. Applied on top of every rotation, so WoWSims updates don't undo it.
 - In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker.
 - Tests: `pip install lupa && python3 tools/test_sim.py`.
@@ -182,3 +183,12 @@ Report RCRotations problems to Rob, not to the original project.
 ## License
 
 [MIT](LICENSE). Original work © Vohnka / wow-forever.fr; RCRotations modifications © Rob. Free to use, modify, fork, and redistribute, as long as the copyright notices and license are kept.
+
+## RCRotations Workshop (Windows app)
+
+Edit any WoWSims rotation on your computer (turn lines on or off, reorder them, add spells) and
+save it straight into the addon. Download it from the
+[Workshop release](https://github.com/Rawcard/RCRotations/releases/tag/workshop), run it, choose
+your World of Warcraft folder, edit, **Save to WoW**, then `/reload` in game. Your rotation shows
+in the rotation list as "(Workshop)". The app is a separate download because addon sites don't
+allow programs inside addon packages.

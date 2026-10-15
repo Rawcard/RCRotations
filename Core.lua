@@ -613,12 +613,13 @@ function ns.Tick()
 			lastAlertWeapon = weapon
 		end
 	end
-	local sig = (queue[1] or 0) .. ":" .. (queue[2] or 0) .. ":" .. (queue[3] or 0) .. ":" .. (defense or 0) .. ":" .. (interrupt or 0) .. ":" .. (purge or 0) .. ":" .. (cleanse or 0) .. ":" .. (weapon or 0) .. ":" .. (weaponNeed and 1 or 0) .. ":" .. (noticeKey or "") .. ":" .. flagBit(ns.db.showRotation) .. flagBit(ns.db.showDefense) .. flagBit(ns.db.showInterrupt) .. flagBit(ns.db.showPurge) .. flagBit(ns.db.showCleanse) .. flagBit(ns.db.showWeapon) .. flagBit(ns.db.glow) .. flagBit(ns.db.spellFlash) .. flagBit(ns.db.showModes) .. flagBit(ns.db.showRange) .. (ns.db.locked == true and "1" or "0") .. flagBit(not idle)
+	local soon = queue.soon and queue[1] and queue.soon[queue[1]]
+	local sig = (queue[1] or 0) .. ":" .. (queue[2] or 0) .. ":" .. (queue[3] or 0) .. (soon and "s" or "") .. (queue.cancel and queue[1] and queue.cancel[queue[1]] and "c" or "") .. ":" .. (defense or 0) .. ":" .. (interrupt or 0) .. ":" .. (purge or 0) .. ":" .. (cleanse or 0) .. ":" .. (weapon or 0) .. ":" .. (weaponNeed and 1 or 0) .. ":" .. (noticeKey or "") .. ":" .. flagBit(ns.db.showRotation) .. flagBit(ns.db.showDefense) .. flagBit(ns.db.showInterrupt) .. flagBit(ns.db.showPurge) .. flagBit(ns.db.showCleanse) .. flagBit(ns.db.showWeapon) .. flagBit(ns.db.glow) .. flagBit(ns.db.spellFlash) .. flagBit(ns.db.showModes) .. flagBit(ns.db.showRange) .. (ns.db.locked == true and "1" or "0") .. flagBit(not idle)
 	if sig ~= lastTickSig then
 		lastTickSig = sig
 		ns.UI.Update(queue, defense, interrupt, purge, cleanse, weapon, weaponNeed, notice)
 		if ns.GlowSpell then
-			ns.GlowSpell(ns.db.showRotation ~= false and queue[1] or nil)
+			ns.GlowSpell((ns.db.showRotation ~= false and not soon) and queue[1] or nil)
 		end
 		if ns.GlowDef then
 			ns.GlowDef(defense)
@@ -1082,6 +1083,14 @@ SlashCmdList.RCROT = function(msg)
 		end
 		if ns.Tick then
 			ns.Tick()
+		end
+	elseif msg == "workshop" or msg == "app" then
+		ns.Print(ns.T("WORKSHOP_PRINT"):format(ns.WORKSHOP_URL))
+	elseif msg == "soon" then
+		ns.db.simLookahead = (ns.db.simLookahead == false)
+		ns.Print(ns.T(ns.db.simLookahead and "SOON_ON" or "SOON_OFF"))
+		if ns.InvalidateTick then
+			ns.InvalidateTick()
 		end
 	elseif msg == "menu" or msg == "options" or msg == "opt" then
 		ns.ToggleOptions()

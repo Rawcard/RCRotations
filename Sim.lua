@@ -117,10 +117,40 @@ local function resolve(id)
 	pass.resolved = pass.resolved or {}
 	local r = pass.resolved[id]
 	if r == nil then
-		r = (API.Resolve and API.Resolve(id)) or false
+		r = Sim.LiveSpell(id) or false
 		pass.resolved[id] = r
 	end
 	return r or nil
+end
+
+-- The spell a rotation line means right now, as the action bar shows it.
+-- - A base spell (Shadow Bolt) becomes its active override (Touch of Chaos
+--   during Metamorphosis), so the HUD icon matches the button you press.
+-- - An override spell (Touch of Chaos) only exists while its override is
+--   active; otherwise nil.
+function Sim.LiveSpell(id)
+	if not API.Resolve then
+		return nil
+	end
+	local baseOf = API.BaseSpell or function() return nil end
+	local overrideOf = API.CurrentOverride or function(x) return x end
+	local base = baseOf(id)
+	if base then
+		local known = API.Resolve(base)
+		if known then
+			local live = overrideOf(baseOf(known) or known)
+			if live == id then
+				return id
+			end
+			return nil
+		end
+		return API.Resolve(id)
+	end
+	local known = API.Resolve(id)
+	if not known then
+		return nil
+	end
+	return overrideOf(baseOf(known) or known)
 end
 
 local function gcdRemain()

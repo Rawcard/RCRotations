@@ -618,6 +618,41 @@ q = ns.Sim.BuildQueue(ret)
 check(31801 not in [q[i] for i in range(1, len(q) + 1)], "Ret with Seal of Truth on: no seal reminder")
 check(L.eval("function(ns) return ns.Sim.HANDLERS.playerStance({ id = 31801 }) end")(ns) is True, "stance(31801) true while Truth is active")
 
+# Metamorphosis: Shadow Bolt -> Touch of Chaos, Corruption -> Doom on the same buttons
+L = new_lua()
+ns = load_addon_files(L)
+L.execute("""
+function UnitClass() return "Warlock", "WARLOCK", 9 end
+WORLD.spec = 2; META = false
+OVER = { [686] = 103964, [172] = 603, [105174] = 124916, [6353] = 104027 }
+BASE = {}
+for b, o in pairs(OVER) do BASE[o] = b end
+for _, id in ipairs({686, 172, 105174, 6353, 103958, 1454, 113861, 104316}) do WORLD.known[id] = true end
+""")
+L.eval("""function(ns)
+	ns.ClassToken = function() return 'WARLOCK', 9 end
+	ns.API.BaseSpell = function(id) return BASE[id] end
+	ns.API.CurrentOverride = function(id) if META and OVER[id] then return OVER[id] end return id end
+	ns.API.Ready = function(id) return WORLD.known[id] or (META and BASE[id] and WORLD.known[BASE[id]]) or false end
+	ns.API.Resolve = function(id)
+		if META and OVER[id] and WORLD.known[id] then return OVER[id] end
+		if WORLD.known[id] then return id end
+		return nil
+	end
+end""")(ns)
+demo = ns.SimData.specs["WARLOCK"][2][1]
+def demo_q(setup):
+    L.execute(setup)
+    q = ns.Sim.BuildQueue(demo)
+    return [q[i] for i in range(1, len(q) + 1)] if q else []
+q = demo_q("META = false; WORLD.power[15] = 100; WORLD.auras.player = {}; WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}}")
+check(103964 not in q and 603 not in q, "Demo out of Meta: no Touch of Chaos / Doom (got %s)" % q)
+check(len(q) > 0, "Demo out of Meta: something to cast (got %s)" % q)
+q = demo_q("WORLD.cd[113861] = 60; WORLD.cd[104316] = 60; META = true; WORLD.power[15] = 600; WORLD.auras.player = {{id=103958, remain=60}}; WORLD.auras.target = {{id=172, remain=3, kind='HARMFUL'}, {id=603, remain=40, kind='HARMFUL'}}")
+check(q[:1] == [103964], "Demo in Meta, Corruption about to drop: Touch of Chaos first (got %s)" % q)
+check(686 not in q and 172 not in q, "Demo in Meta: icons follow the buttons (no Shadow Bolt / Corruption) (got %s)" % q)
+check(103958 not in q, "Demo in Meta: never suggests Metamorphosis again (it would cancel it) (got %s)" % q)
+
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j
 import shutil

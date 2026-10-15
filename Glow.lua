@@ -937,6 +937,17 @@ local function buttonsFor(spellID)
 			take(spellsByNorm[key])
 		end
 	end
+	-- Override spells (Touch of Chaos) sit on the base spell's button (Shadow Bolt).
+	if #out == 0 and API.BaseSpell then
+		local base = plainID(API.BaseSpell(id or spellID))
+		if base then
+			take(spells[base])
+			local baseName = spellName(base)
+			if baseName and not badNames[baseName] then
+				take(spellsByName[baseName])
+			end
+		end
+	end
 	local icons = spellIconKeys(id)
 	local more = spellIconKeys(resolved or spellID)
 	for key in pairs(more) do

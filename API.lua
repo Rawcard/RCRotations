@@ -674,6 +674,66 @@ local function playerKnows(id)
 	return false
 end
 
+-- Temporary overrides: Metamorphosis turns Shadow Bolt into Touch of Chaos,
+-- Corruption into Doom, and so on. The game reports these with
+-- FindBaseSpellByID / C_Spell.GetOverrideSpell; this table is the fallback
+-- for clients without them (override -> base).
+local OVERRIDE_BASE = {
+	[103964] = 686, -- Touch of Chaos <- Shadow Bolt
+	[603] = 172, -- Doom <- Corruption
+	[124916] = 105174, -- Chaos Wave <- Hand of Gul'dan
+	[104027] = 6353, -- Soul Fire (Metamorphosis) <- Soul Fire
+	[104025] = 1949, -- Immolation Aura <- Hellfire
+	[115422] = 77799, -- Void Ray <- Fel Flame
+}
+local BASE_OVERRIDE = {}
+for over, base in pairs(OVERRIDE_BASE) do
+	BASE_OVERRIDE[base] = BASE_OVERRIDE[base] or {}
+	BASE_OVERRIDE[base][#BASE_OVERRIDE[base] + 1] = over
+end
+ns.API.OVERRIDE_BASE = OVERRIDE_BASE
+
+-- The base spell of a temporary override (Touch of Chaos -> Shadow Bolt), or nil.
+function ns.API.BaseSpell(id)
+	if not id then
+		return nil
+	end
+	if FindBaseSpellByID then
+		local ok, base = pcall(FindBaseSpellByID, id)
+		if ok and type(base) == "number" and readable(base) and base > 0 and base ~= id then
+			return base
+		end
+	end
+	return OVERRIDE_BASE[id]
+end
+
+-- What a button holding this spell casts right now (Shadow Bolt -> Touch of
+-- Chaos during Metamorphosis). Never cached: overrides come and go.
+function ns.API.CurrentOverride(id)
+	if not id then
+		return id
+	end
+	local over
+	if C_Spell and C_Spell.GetOverrideSpell then
+		local ok, v = pcall(C_Spell.GetOverrideSpell, id)
+		if ok and type(v) == "number" and readable(v) and v > 0 then
+			over = v
+		end
+	end
+	if (not over or over == id) and FindSpellOverrideByID then
+		local ok, v = pcall(FindSpellOverrideByID, id)
+		if ok and type(v) == "number" and readable(v) and v > 0 then
+			over = v
+		end
+	end
+	return over or id
+end
+
+-- The overrides a base spell can turn into (for button lookups).
+function ns.API.OverridesOf(base)
+	return BASE_OVERRIDE[base]
+end
+
 function ns.API.Resolve(spellID)
 	if not spellID then
 		return nil
@@ -688,6 +748,11 @@ function ns.API.Resolve(spellID)
 		if ok and type(over) == "number" and readable(over) then
 			id = over
 		end
+	end
+	-- A temporary override (Metamorphosis) is answered but not cached, so the
+	-- base spell comes back when it ends.
+	if id ~= spellID and ns.API.BaseSpell(id) == spellID and playerKnows(id) then
+		return id
 	end
 	if playerKnows(id) then
 		resolveCache[spellID] = id

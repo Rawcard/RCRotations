@@ -1934,4 +1934,5 @@ ns.SimData.specs = {
 ns.SimData.tuning = {
 	["DEATHKNIGHT:3"] = { require = {{ c = { k = "cmp", op = ">=", v = {{ k = "auraNumStacks", id = 91342, unit = "pet" }, 5.0} }, id = 63560 }} },
 	["PALADIN:3"] = { add = {{ at = "top", c = { k = "and", v = {{ k = "cmp", op = "==", v = {{ k = "playerStance" }, 0.0} }, { k = "cmp", op = "<", v = {{ k = "numberTargets" }, 4.0} }} }, id = 31801 }, { at = "top", c = { k = "and", v = {{ k = "cmp", op = "==", v = {{ k = "playerStance" }, 0.0} }, { k = "cmp", op = ">=", v = {{ k = "numberTargets" }, 4.0} }} }, id = 20154 }} },
+	["WARLOCK:2"] = { require = {{ c = { k = "auraIsInactive", id = 103958, unit = "player" }, id = 103958 }} },
 }

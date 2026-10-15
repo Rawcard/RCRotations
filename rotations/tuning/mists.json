@@ -24,5 +24,14 @@
         "why": "No seal and 4+ targets: Seal of Righteousness"
       }
     ]
+  },
+  "warlock/demonology": {
+    "require": [
+      {
+        "spell": 103958,
+        "when": "buff(103958).down",
+        "why": "Pressing Metamorphosis while it's up cancels it; WoWSims never re-casts it during Meta, but in game the button stays usable"
+      }
+    ]
   }
 }

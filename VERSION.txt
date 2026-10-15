@@ -15,6 +15,11 @@ Tuning layer.
   coming off cooldown within 6 seconds, soonest first, with their cooldown timer. They don't
   flash until they're ready. /rcr soon turns it off.
 - New tuning syntax: stance and stance(id).
+- Spells that change while a form is up now follow your bars: during Metamorphosis the HUD shows
+  Touch of Chaos, Doom, Chaos Wave and Soul Fire (Meta) instead of Shadow Bolt, Corruption, Hand of
+  Gul'dan and Soul Fire, and the flash finds them on the base spell's button. Before, Meta-only
+  spells were never suggested, so Demonology in Meta fell back to the wrong list.
+- Demonology: never suggests Metamorphosis while it's already up (pressing it cancels Meta).
 - The Damage / PvE toolbar under the HUD is gone. Role and profile are set in the menu (/rcr):
   the profile buttons at the top, and a new Role button next to them.
 - A mistake in the tuning file stops the build with a clear message; the sync report lists every

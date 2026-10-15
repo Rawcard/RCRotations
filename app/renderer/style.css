@@ -108,3 +108,32 @@ html, body { height: 100%; }
 .savedrow button:hover { color: var(--danger); background: var(--gold-soft); }
 select { font: 13px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
 .savepanel { display: grid; gap: 8px; border: 1px solid var(--gold); background: var(--gold-soft); border-radius: 6px; padding: 10px 12px; }
+
+/* tabs + builder */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tab { border: 1px solid transparent; border-bottom: 0; background: transparent; color: var(--muted); font: 600 14px var(--body); padding: 8px 14px; border-radius: 6px 6px 0 0; cursor: pointer; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); background: var(--panel); border-color: var(--line); }
+.builder { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 820px) { .builder { grid-template-columns: minmax(0, 1fr); } }
+.palette, .canvas { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.palette { position: sticky; top: 12px; max-height: calc(100vh - 40px); overflow: auto; }
+.spells { display: grid; gap: 4px; }
+.spellchip { display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--bg); cursor: grab; font-weight: 500; }
+.spellchip:active { cursor: grabbing; }
+.spellchip button { border: 0; background: var(--gold); color: var(--panel); border-radius: 4px; width: 24px; height: 22px; font-weight: 700; cursor: pointer; }
+.drop { min-height: 120px; display: grid; gap: 8px; border: 2px dashed var(--line); border-radius: 8px; padding: 10px; align-content: start; }
+.drop.over { border-color: var(--gold); background: var(--gold-soft); }
+.drop .empty { color: var(--muted); text-align: center; padding: 24px 8px; }
+.bline { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 8px 10px; display: grid; gap: 6px; }
+.bline.dragging { opacity: .4; }
+.bline.overline { box-shadow: 0 -3px 0 var(--gold); }
+.bhead { display: flex; align-items: center; gap: 8px; }
+.grip { cursor: grab; color: var(--muted); font-size: 16px; user-select: none; }
+.bhead .nm { font-weight: 600; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.bhead button, .cond-row button { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 5px; height: 26px; min-width: 26px; padding: 0 6px; cursor: pointer; }
+.conds { display: grid; gap: 6px; padding-left: 26px; }
+.cond-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.cond-row input[type=number] { width: 70px; font: 13px var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 6px; }
+.cond-row input[type=text] { width: 180px; }
+.cond-and { font: 600 11px var(--body); color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.addcond { justify-self: start; border: 0; background: transparent; color: var(--gold); font: 600 12.5px var(--body); cursor: pointer; padding: 2px 0; }

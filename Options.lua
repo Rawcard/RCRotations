@@ -1714,7 +1714,7 @@ function ns.RefreshOptions()
 			row.del.index = index
 			row.del.mode = mode
 		end
-		row.icon:SetTexture(API.SpellIcon(step.id) or (IMG .. "skull"))
+		row.icon:SetTexture(API.SpellIcon(step.id) or (IMG .. "skull-idle"))
 		local name = API.SpellLabel(step.id) or step.key
 		if step.racial then
 			name = ns.T("RACIAL_PREFIX"):format(name)

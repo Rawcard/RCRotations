@@ -1316,11 +1316,16 @@ local function paint(slot, spellID, dim, cancel)
 	if not slot then
 		return
 	end
+	-- The main slot always shows (a skull when there's nothing to press);
+	-- the two "next" slots only show when there's a next spell.
+	if dim then
+		slot:SetShown(spellID ~= nil)
+	end
 	setCancel(slot, spellID and cancel)
 	slot.spellID = spellID
 	slot.texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	if not spellID then
-		slot.texture:SetTexture(IMG .. "skull")
+		slot.texture:SetTexture(IMG .. "skull-idle")
 		slot.texture:SetVertexColor(1, 1, 1, 0.35)
 		slot.cooldown:Hide()
 		if slot.filter then
@@ -1333,7 +1338,7 @@ local function paint(slot, spellID, dim, cancel)
 	if icon then
 		slot.texture:SetTexture(icon)
 	else
-		slot.texture:SetTexture(IMG .. "skull")
+		slot.texture:SetTexture(IMG .. "skull-idle")
 	end
 	slot.texture:SetVertexColor(1, 1, 1, dim and (hudStyle() == "compact" and 0.85 or 0.55) or 1)
 	if slot.filter then

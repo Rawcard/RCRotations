@@ -34,6 +34,8 @@ EXTRA_NAMES = {
     114852: "Holy Prism", 114916: "Execution Sentence", 120696: "Halo", 122128: "Divine Star",
     127632: "Cascade", 129197: "Mind Flay (Insanity)", 129597: "Arcane Torrent", 103964: "Touch of Chaos",
     603: "Doom", 124916: "Chaos Wave", 104027: "Soul Fire (Metamorphosis)",
+    588: "Inner Fire", 73413: "Inner Will", 81700: "Archangel", 81661: "Evangelism", 47540: "Penance",
+    129250: "Power Word: Solace", 14914: "Holy Fire", 585: "Smite",
 }
 
 

@@ -1,40 +1,38 @@
-1.4.0
+1.4.1
+
+# 1.4.1
+
+- Discipline Priest has a rotation ("Atonement"): Shadow Word: Pain, Penance, Holy Fire or Power
+  Word: Solace, Archangel at 5 Evangelism, Mindbender or Shadowfiend for mana, Smite as filler and
+  Mind Sear on 4+ targets. WoWSims has no Discipline rotation, so this one is ours.
+- HUD: the main icon always shows; the two next-spell icons only appear when there's a next spell.
+  The empty icon is a centered skull without the frame lines.
+- Workshop app 1.1.0: a new "Build a new rotation" tab. Pick your class and spec, drag spells into
+  your rotation, add conditions from a list (buff missing, debuff under N seconds, resource,
+  target health, number of targets, moving and more), then Save to WoW.
 
 # 1.4.0
 
-Tuning layer.
+Smarter rotations for real play, a cleaner HUD and the Workshop app.
 
-- Per-spec fixes on top of WoWSims rotations live in rotations/tuning/mists.json: require (extra
-  condition), block, move and add, written in a short readable syntax (pet.buff(91342).stacks >= 5).
-  They apply to every rotation for the spec, bundled or imported, and survive WoWSims updates.
-- First fix: Unholy Dark Transformation waits for 5 Shadow Infusion stacks on the ghoul.
-- Retribution: reminds you to put a seal on when you have none (Seal of Truth, or Seal of
-  Righteousness on 4+ targets). WoWSims starts every fight with a seal, so it never asked.
-  Seals and other stance-bar spells are suggested even with "only spells on my bars" on.
-- Coming up: when fewer than three spells are ready, the HUD fills in the next rotation spells
-  coming off cooldown within 6 seconds, soonest first, with their cooldown timer. They don't
-  flash until they're ready. /rcr soon turns it off.
-- New tuning syntax: stance and stance(id).
-- RCRotations Workshop, a free Windows app: edit any WoWSims rotation and save it straight into
-  RCRotations (it shows in your rotation list as "(Workshop)"). Download:
-  https://github.com/Rawcard/RCRotations/releases/tag/workshop (also in /rcr options > Rotation).
-- Spells that change while a form is up now follow your bars: during Metamorphosis the HUD shows
-  Touch of Chaos, Doom, Chaos Wave and Soul Fire (Meta) instead of Shadow Bolt, Corruption, Hand of
-  Gul'dan and Soul Fire, and the flash finds them on the base spell's button. Before, Meta-only
-  spells were never suggested, so Demonology in Meta fell back to the wrong list.
-- Death Knight: presence reminder (Blood / Frost / Unholy Presence) when you're in the wrong one
-  or none, and Horn of Winter when no attack power buff is up (yours, Battle Shout or Trueshot
-  Aura). Blood also keeps Bone Shield up and puts Death Strike first at 40% health or lower.
-  WoWSims does all of these before the pull, so it never asked for them.
-- Warlock (all specs): suggests Curse of the Elements when the target has no 5% magic damage
-  debuff from anyone. WoWSims assumes the raid already has it up.
-- Demonology: Metamorphosis is never suggested while it's up, except by the rotation's own
-  "cancel Metamorphosis" line (low fury, no Dark Soul, Meta ready again soon), which now works and
-  shows the Meta icon with a red CANCEL label.
-- The Damage / PvE toolbar under the HUD is gone. Role and profile are set in the menu (/rcr):
-  the profile buttons at the top, and a new Role button next to them.
-- A mistake in the tuning file stops the build with a clear message; the sync report lists every
-  fix applied and any spell it targets that isn't in the rotations.
+- Rotations are tuned for real play on top of WoWSims. Simulators assume you did some things before
+  the pull, so RCRotations now reminds you in combat:
+  - Retribution: a seal when you have none (Seal of Truth, or Righteousness on 4+ targets).
+  - Death Knight: the right presence, Horn of Winter when no attack power buff is up, and for Blood,
+    Bone Shield upkeep and Death Strike first at 40% health or lower.
+  - Warlock: Curse of the Elements when nobody has the 5% magic damage debuff on the target.
+- Demonology Metamorphosis: the HUD shows Touch of Chaos, Doom, Chaos Wave and Soul Fire to match
+  your bars, never suggests Metamorphosis while it's up, and shows a red CANCEL label when it's time
+  to end it.
+- Unholy: Dark Transformation waits for 5 Shadow Infusion stacks.
+- Coming up: when fewer than three spells are ready, the HUD shows the next spells coming off
+  cooldown with their timer instead of going blank. /rcr soon turns it off.
+- The Damage / PvE toolbar under the HUD is gone. Role and profile are in the menu (/rcr).
+- RCRotations Workshop, a free Windows app: edit any WoWSims rotation and save it straight into the
+  addon (it shows in your rotation list as "(Workshop)"). Download:
+  https://github.com/Rawcard/RCRotations/releases/tag/workshop (also in /rcr options > Rotation,
+  or /rcr workshop).
+- Pasting a NAG rotation into /rcr import now explains that only WoWSims rotations import.
 
 # 1.3.0
 

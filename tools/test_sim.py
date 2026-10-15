@@ -198,6 +198,8 @@ def scenario(setup):
         L.execute("WORLD.known[%d] = true" % sid)
     L.execute("WORLD.spec = 2; WORLD.power[6] = 20")
     L.execute(setup)
+    if not L.eval("NO_HORN"):
+        L.execute("table.insert(WORLD.auras.player, {id=57330, remain=300})")  # raid AP buff up
     if L.eval("NS_UNBLOCK"):
         ns.db.simBlock = L.table_from({48707: False})
     rot = None
@@ -227,6 +229,18 @@ q = scenario(cds + "WORLD.cd[77575]=50; WORLD.auras.target = {{id=55095, remain=
              "WORLD.power[6] = 95; for s=1,6 do WORLD.runes[s] = {remain=6} end")
 check(len(q) > 0 and q[0] == FROST["frost_strike"],
       "diseases up, no runes, runic power capped -> Frost Strike first (got %s)" % q)
+
+# DK upkeep reminders WoWSims leaves to the pre-pull
+q = scenario("NO_HORN = true")
+check(q[:1] == [57330], "Frost: Horn of Winter first when no attack power buff is up (got %s)" % q)
+q = scenario("NO_HORN = true; WORLD.auras.player = {{id=6673, remain=300}}")
+check(57330 not in q[:1], "Frost: no Horn of Winter reminder when a warrior's Battle Shout is up (got %s)" % q)
+q = scenario("WORLD.known[48266] = true; function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 0 end; "
+             "function GetShapeshiftFormInfo(i) return 'i', false, true, ({48263, 48266, 48265})[i] end")
+check(q[:1] == [48266], "Frost: Frost Presence first when in no presence (got %s)" % q)
+q = scenario("WORLD.known[48266] = true; function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 2 end; "
+             "function GetShapeshiftFormInfo(i) return 'i', i == 2, true, ({48263, 48266, 48265})[i] end")
+check(48266 not in q, "Frost: no presence reminder while in Frost Presence (got %s)" % q)
 
 # never-suggest defaults: AMS / Army are simulator picks, not player picks
 q = scenario("")

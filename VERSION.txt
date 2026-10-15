@@ -19,6 +19,10 @@ Tuning layer.
   Touch of Chaos, Doom, Chaos Wave and Soul Fire (Meta) instead of Shadow Bolt, Corruption, Hand of
   Gul'dan and Soul Fire, and the flash finds them on the base spell's button. Before, Meta-only
   spells were never suggested, so Demonology in Meta fell back to the wrong list.
+- Death Knight: presence reminder (Blood / Frost / Unholy Presence) when you're in the wrong one
+  or none, and Horn of Winter when no attack power buff is up (yours, Battle Shout or Trueshot
+  Aura). Blood also keeps Bone Shield up and puts Death Strike first at 40% health or lower.
+  WoWSims does all of these before the pull, so it never asked for them.
 - Warlock (all specs): suggests Curse of the Elements when the target has no 5% magic damage
   debuff from anyone. WoWSims assumes the raid already has it up.
 - Demonology: Metamorphosis is never suggested while it's up, except by the rotation's own

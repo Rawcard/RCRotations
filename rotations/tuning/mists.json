@@ -7,6 +7,20 @@
         "when": "pet.buff(91342).stacks >= 5",
         "why": "Dark Transformation needs 5 Shadow Infusion stacks on the ghoul"
       }
+    ],
+    "add": [
+      {
+        "spell": 48265,
+        "at": "top",
+        "when": "not stance(48265)",
+        "why": "WoWSims puts Unholy Presence on before the pull, so it never asks for it in combat. Remind me if I'm in the wrong presence"
+      },
+      {
+        "spell": 57330,
+        "at": "top",
+        "when": "not buff(57330) and not buff(6673) and not buff(19506)",
+        "why": "WoWSims assumes the raid's attack power buff is up. Suggest Horn of Winter when nobody (you, a warrior's Battle Shout, a hunter's Trueshot Aura) provides it"
+      }
     ]
   },
   "paladin/retribution": {
@@ -59,6 +73,50 @@
         "at": "top",
         "when": "not target.buff(1490) and not target.buff(116202) and not target.buff(93068) and not target.buff(34889) and not target.buff(24844)",
         "why": "WoWSims assumes the raid's 5% magic damage debuff is already on the target, so it never asks for Curse of the Elements. Suggest it when nobody (you, a rogue's Master Poisoner, a hunter pet's Fire/Lightning Breath, or Meta's Aura of the Elements) has it up"
+      }
+    ]
+  },
+  "death_knight/blood": {
+    "add": [
+      {
+        "spell": 48263,
+        "at": "top",
+        "when": "not stance(48263)",
+        "why": "WoWSims puts Blood Presence on before the pull, so it never asks for it in combat. Remind me if I'm in the wrong presence"
+      },
+      {
+        "spell": 57330,
+        "at": "top",
+        "when": "not buff(57330) and not buff(6673) and not buff(19506)",
+        "why": "WoWSims assumes the raid's attack power buff is up. Suggest Horn of Winter when nobody (you, a warrior's Battle Shout, a hunter's Trueshot Aura) provides it"
+      },
+      {
+        "spell": 49222,
+        "before": 49998,
+        "when": "buff(49222).down",
+        "why": "Keep Bone Shield up; WoWSims only recasts it on specific boss mechanics"
+      },
+      {
+        "spell": 49998,
+        "at": "top",
+        "when": "health.pct <= 40%",
+        "why": "Tanking: Death Strike first when I'm at 40% health or lower"
+      }
+    ]
+  },
+  "death_knight/frost": {
+    "add": [
+      {
+        "spell": 48266,
+        "at": "top",
+        "when": "not stance(48266)",
+        "why": "WoWSims puts Frost Presence on before the pull, so it never asks for it in combat. Remind me if I'm in the wrong presence"
+      },
+      {
+        "spell": 57330,
+        "at": "top",
+        "when": "not buff(57330) and not buff(6673) and not buff(19506)",
+        "why": "WoWSims assumes the raid's attack power buff is up. Suggest Horn of Winter when nobody (you, a warrior's Battle Shout, a hunter's Trueshot Aura) provides it"
       }
     ]
   }

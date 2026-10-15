@@ -347,7 +347,7 @@ end
 -- Current specialization index (1-4), or 0. Newer clients moved the old
 -- globals into C_SpecializationInfo, so try that first.
 function Sim.Spec()
-	local api = C_SpecializationInfo
+	local api = type(C_SpecializationInfo) == "table" and C_SpecializationInfo or nil
 	if api and api.GetSpecialization then
 		local s = num(call(api.GetSpecialization), 0)
 		if s > 0 then
@@ -363,7 +363,7 @@ end
 
 -- Localized spec name for an index, or nil.
 function Sim.SpecName(spec)
-	local api = C_SpecializationInfo
+	local api = type(C_SpecializationInfo) == "table" and C_SpecializationInfo or nil
 	local fns = { api and api.GetSpecializationInfo or false, GetSpecializationInfo or false }
 	for i = 1, 2 do
 		local fn = fns[i]

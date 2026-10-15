@@ -495,6 +495,37 @@ L.execute("C_SpecializationInfo = nil; GetSpecialization = function() return 3 e
 check(ns.Sim.Rotations()[2] == 3 and ns.Sim.SpecName(3) == "Unholy", "old global API still works")
 L.execute("GetSpecialization = nil; GetSpecializationInfo = nil")
 check(ns.Sim.Spec() == 0 and str(ns.Sim.NoSpecMessage()) == "SIM_IMPORT_NOSPEC", "MoP with no readable spec -> 'pick a spec' message")
+# Workshop app rotations (companion addon global)
+L, ns = picker_world()
+L.execute("WORLD.spec = 2")
+L.execute("""RCRotations_MyRotations = {
+  { class = "DEATHKNIGHT", spec = 2, name = "My Frost", json = '{"type":"TypeAPL","priorityList":[{"action":{"castSpell":{"spellId":{"spellId":49020}}}},{"hide":true,"action":{"castSpell":{"spellId":{"spellId":49143}}}}]}' },
+  { class = "DEATHKNIGHT", spec = 3, name = "Other spec", json = '{"priorityList":[]}' },
+  { class = "DEATHKNIGHT", spec = 2, name = "Broken", json = 'not json' },
+}""")
+rots_now = ns.Sim.Rotations()[0]
+names_now = [rots_now[i].name for i in range(1, len(rots_now) + 1)]
+check(any(n.startswith("My Frost") for n in names_now), "workshop: app rotation listed for its spec (%s)" % names_now)
+check(not any(n.startswith("Other spec") or n.startswith("Broken") for n in names_now), "workshop: other specs and broken entries skipped")
+ws = next(rots_now[i] for i in range(1, len(rots_now) + 1) if rots_now[i].name.startswith("My Frost"))
+check(len(list(ws.list.keys())) == 1 and ws.list[1].id == 49020, "workshop: lines turned off in the app are left out")
+L.execute("RCRotations_MyRotations = nil")
+# the app's real output file loads in the addon (needs node)
+import shutil as _sh, subprocess as _sp
+if _sh.which("node"):
+    lua_out = _sp.run(["node", "-e", """
+const wow = require(process.argv[1]);
+process.stdout.write(wow.buildLua([{ token: "DEATHKNIGHT", specIndex: 2, name: 'Rob\\'s "Frost" ]]==]',
+  rotation: { priorityList: [{ action: { castSpell: { spellId: { spellId: 49143 } } } }] } }]));
+""", os.path.join(ROOT, "app", "wow.js")], capture_output=True, text=True, check=True).stdout
+    L, ns = picker_world()
+    L.execute("WORLD.spec = 2")
+    L.execute(lua_out)
+    rl = ns.Sim.Rotations()[0]
+    got = [rl[i].name for i in range(1, len(rl) + 1)]
+    check(any("Frost" in n and ("(Workshop)" in n or "SIM_WORKSHOP_TAG" in n) for n in got), "app: MyRotations.lua written by the app loads in game (%s)" % got)
+else:
+    print("SKIP app file round trip (no node)")
 # --------------------------------------------------------------- 6b. WoWSims only: empty specs, Era/TBC imports
 L, ns = picker_world()
 L.execute("WORLD.spec = 2; ns_db_reset = true")

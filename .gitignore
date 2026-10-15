@@ -14,3 +14,6 @@ old-simdata.lua
 sim-summary.json
 guard.txt
 pr-body.md
+
+app/node_modules/
+app/dist/

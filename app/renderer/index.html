@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'">
+<title>RCRotations Workshop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="badge">RC</span>
+    <h1>Rotations Workshop</h1>
+    <p class="lede">Pick a rotation, turn lines on or off, move them, then <b>Save to WoW</b>. Type <code>/reload</code> in game and it's in your rotation list.</p>
+  </header>
+
+  <div class="bar">
+    <div class="grp">
+      <button class="btn" id="wowBtn">Choose WoW folder</button>
+      <span class="path" id="wowPath">No WoW folder chosen yet</span>
+    </div>
+    <div class="grp" id="flavors"></div>
+    <div class="status" id="dataStatus">Getting the latest rotations…</div>
+  </div>
+
+  <div class="app">
+    <aside class="rail" aria-label="Rotation library">
+      <div class="label">Class</div>
+      <div class="chips" id="classChips"></div>
+      <div class="list" id="rotList"><p class="sub">Loading rotations…</p></div>
+      <div>
+        <div class="label">Saved to WoW</div>
+        <div id="savedList"><p class="sub">Nothing saved yet.</p></div>
+      </div>
+      <details class="box" id="pasteBox">
+        <summary>Open your own WoWSims export</summary>
+        <div style="display:grid;gap:8px">
+          <textarea id="pasteText" placeholder="Paste a rotation exported from wowsims.com (Rotation tab, export as JSON)"></textarea>
+          <div class="row">
+            <select id="pasteSpec" aria-label="Class and spec"></select>
+          </div>
+          <div class="row">
+            <input type="text" id="pasteName" placeholder="Name, e.g. My Demo" aria-label="Name for this rotation">
+            <button class="btn" id="pasteBtn">Open</button>
+          </div>
+          <div id="pasteMsg" aria-live="polite"></div>
+        </div>
+      </details>
+    </aside>
+    <main class="main" id="main"><p class="sub">Loading…</p></main>
+  </div>
+
+  <p class="foot">Rotations from WoWSims MoP (MIT), refreshed from the RCRotations GitHub each time the app starts. RCRotations' own fixes (seals, curses, presences, Metamorphosis and the rest) apply in game on top of every rotation, so you don't add them here.</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>

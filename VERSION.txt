@@ -15,6 +15,8 @@ Tuning layer.
   coming off cooldown within 6 seconds, soonest first, with their cooldown timer. They don't
   flash until they're ready. /rcr soon turns it off.
 - New tuning syntax: stance and stance(id).
+- RCRotations Workshop (desktop app, in app/): rotations you save in the app are written to the
+  companion addon RCRotations_MyRotations and show in your rotation list as "(Workshop)".
 - Spells that change while a form is up now follow your bars: during Metamorphosis the HUD shows
   Touch of Chaos, Doom, Chaos Wave and Soul Fire (Meta) instead of Shadow Bolt, Corruption, Hand of
   Gul'dan and Soul Fire, and the flash finds them on the base spell's button. Before, Meta-only

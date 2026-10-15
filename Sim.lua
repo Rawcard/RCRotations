@@ -942,11 +942,15 @@ function Sim.Rotations()
 	local data = ns.SimData
 	local base = data and data.specs and data.specs[token] and data.specs[token][spec]
 	local imported = Sim.Imported and Sim.Imported(token, spec) or {}
-	if #imported == 0 then
+	local workshop = Sim.Workshop and Sim.Workshop(token, spec) or {}
+	if #imported == 0 and #workshop == 0 then
 		return base, token, spec
 	end
 	local list = {}
 	for _, rot in ipairs(base or {}) do
+		list[#list + 1] = rot
+	end
+	for _, rot in ipairs(workshop) do
 		list[#list + 1] = rot
 	end
 	for _, rot in ipairs(imported) do

@@ -4,6 +4,7 @@ ignore:
   - docs
   - tools
   - rotations
+  - app
   - README.md
   - .github
   - .pkgmeta

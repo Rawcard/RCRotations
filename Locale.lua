@@ -86,6 +86,7 @@ L.enUS = {
 	SIM_IMPORT_BUTTON = "Import",
 	SIM_IMPORT_CANCEL = "Cancel",
 	SIM_IMPORT_TAG = "(imported)",
+	SIM_WORKSHOP_TAG = "(Workshop)",
 	SIM_IMPORT_DEFAULTNAME = "Imported",
 	SIM_IMPORT_OK = "Imported %s: %d spells (%d approximated, %d skipped). Now active for this spec.",
 	SIM_IMPORT_NOSPEC = "Couldn't read your specialization. Pick one in the talent window, then try again.",

@@ -601,6 +601,42 @@ function Sim.Imported(token, spec)
 	return store()[token .. ":" .. spec] or {}
 end
 
+-- Rotations saved by the RCRotations Workshop desktop app. The app writes the
+-- companion addon RCRotations_MyRotations, whose file sets the global
+-- RCRotations_MyRotations = { { class = "WARLOCK", spec = 2, name = "...", json = "..." }, ... }.
+-- They're converted once per session and listed as "(Workshop)".
+local workshopCache = {}
+function Sim.Workshop(token, spec)
+	local src = _G.RCRotations_MyRotations
+	if type(src) ~= "table" or not token then
+		return {}
+	end
+	local out = {}
+	for i, e in ipairs(src) do
+		if type(e) == "table" and e.class == token and tonumber(e.spec) == tonumber(spec) and type(e.json) == "string" then
+			local key = token .. ":" .. tostring(spec) .. ":" .. i .. ":" .. #e.json .. ":" .. tostring(e.name)
+			local rot = workshopCache[key]
+			if rot == nil then
+				rot = false
+				local raw = jsonDecode(e.json)
+				local found = raw and findRotation(raw)
+				if found then
+					local ok, list = pcall(Sim.ConvertRotation, found)
+					if ok and type(list) == "table" and #list > 0 then
+						local name = tostring(e.name or "Workshop")
+						rot = { name = name .. " " .. ns.T("SIM_WORKSHOP_TAG"), file = "workshop/" .. name:lower():gsub("[^%w]+", "_"), list = list, workshop = true }
+					end
+				end
+				workshopCache[key] = rot
+			end
+			if rot then
+				out[#out + 1] = rot
+			end
+		end
+	end
+	return out
+end
+
 local function countKeys(t)
 	local n = 0
 	for _, c in pairs(t) do

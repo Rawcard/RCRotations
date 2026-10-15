@@ -1316,6 +1316,11 @@ local function paint(slot, spellID, dim, cancel)
 	if not slot then
 		return
 	end
+	-- The main slot always shows (a skull when there's nothing to press);
+	-- the two "next" slots only show when there's a next spell.
+	if dim then
+		slot:SetShown(spellID ~= nil)
+	end
 	setCancel(slot, spellID and cancel)
 	slot.spellID = spellID
 	slot.texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)

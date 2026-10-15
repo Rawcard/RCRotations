@@ -31,7 +31,8 @@ Tuning layer.
 - Demonology: Metamorphosis is never suggested while it's up, except by the rotation's own
   "cancel Metamorphosis" line (low fury, no Dark Soul, Meta ready again soon), which now works and
   shows the Meta icon with a red CANCEL label.
-- Empty HUD slots show just the skull, centered, without the frame lines.
+- HUD: the main slot always shows (a centered skull when there's nothing to press); the two
+  next-spell slots only appear when there's a next spell.
 - The Damage / PvE toolbar under the HUD is gone. Role and profile are set in the menu (/rcr):
   the profile buttons at the top, and a new Role button next to them.
 - A mistake in the tuning file stops the build with a clear message; the sync report lists every

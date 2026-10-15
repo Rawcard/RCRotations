@@ -25,7 +25,14 @@
     <div class="status" id="dataStatus">Getting the latest rotations…</div>
   </div>
 
-  <div class="app">
+  <nav class="tabs" role="tablist" aria-label="Workshop sections">
+    <button class="tab" role="tab" id="tabEdit" aria-selected="true">Rotations</button>
+    <button class="tab" role="tab" id="tabBuild" aria-selected="false">Build a new rotation</button>
+  </nav>
+
+  <section class="builder" id="builder" hidden></section>
+
+  <div class="app" id="editorApp">
     <aside class="rail" aria-label="Rotation library">
       <div class="label">Class</div>
       <div class="chips" id="classChips"></div>
@@ -56,5 +63,6 @@
 </div>
 <div class="toast" id="toast" hidden></div>
 <script src="app.js"></script>
+<script src="builder.js"></script>
 </body>
 </html>

@@ -1,4 +1,15 @@
-1.4.0
+1.4.1
+
+# 1.4.1
+
+- Discipline Priest has a rotation ("Atonement"): Shadow Word: Pain, Penance, Holy Fire or Power
+  Word: Solace, Archangel at 5 Evangelism, Mindbender or Shadowfiend for mana, Smite as filler and
+  Mind Sear on 4+ targets. WoWSims has no Discipline rotation, so this one is ours.
+- HUD: the main icon always shows; the two next-spell icons only appear when there's a next spell.
+  The empty icon is a centered skull without the frame lines.
+- Workshop app 1.1.0: a new "Build a new rotation" tab. Pick your class and spec, drag spells into
+  your rotation, add conditions from a list (buff missing, debuff under N seconds, resource,
+  target health, number of targets, moving and more), then Save to WoW.
 
 # 1.4.0
 
@@ -14,13 +25,8 @@ Smarter rotations for real play, a cleaner HUD and the Workshop app.
   your bars, never suggests Metamorphosis while it's up, and shows a red CANCEL label when it's time
   to end it.
 - Unholy: Dark Transformation waits for 5 Shadow Infusion stacks.
-- Discipline Priest now has a rotation ("Atonement"): Shadow Word: Pain, Penance, Holy Fire or
-  Power Word: Solace, Archangel at 5 Evangelism, Mindbender or Shadowfiend for mana, Smite as
-  filler and Mind Sear on 4+ targets. WoWSims has no Discipline rotation, so this one is ours.
 - Coming up: when fewer than three spells are ready, the HUD shows the next spells coming off
   cooldown with their timer instead of going blank. /rcr soon turns it off.
-- HUD: the main icon always shows; the two next-spell icons only appear when there's a next spell.
-  The empty icon is a centered skull without the frame lines.
 - The Damage / PvE toolbar under the HUD is gone. Role and profile are in the menu (/rcr).
 - RCRotations Workshop, a free Windows app: edit any WoWSims rotation and save it straight into the
   addon (it shows in your rotation list as "(Workshop)"). Download:

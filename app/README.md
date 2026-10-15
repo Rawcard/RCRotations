@@ -3,6 +3,7 @@
 Windows desktop app for the WoWSims rotations in RCRotations.
 
 - Browse every bundled rotation, turn lines on or off, reorder them, add spells.
+- Build a new rotation from scratch: drag spells in, add conditions from a list.
 - **Save to WoW** writes the rotation into the companion addon
   `RCRotations_MyRotations` in your WoW folder. `/reload` in game and it shows in
   your rotation list as "(Workshop)".

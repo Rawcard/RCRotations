@@ -366,5 +366,10 @@
     const last = store.get("last");
     const start = ROTS.find((x) => x.file === last) || ROTS[0];
     cls = start.cls; renderChips(); open(start);
+    window.RCW = {
+      rots: () => ROTS, names: () => NAMES, CLASS, SPECS, esc, toast, pretty, specLabel,
+      setSaved: (list) => { SAVED = list; renderSaved(); },
+    };
+    document.dispatchEvent(new Event("rcw-ready"));
   })();
 })();

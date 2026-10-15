@@ -425,6 +425,21 @@ def lua(v, indent=0):
     raise TypeError(type(v))
 
 
+def find_rotation(raw):
+    """Accept a bare rotation export or a full WoWSims settings export."""
+    if not isinstance(raw, dict):
+        return None
+    if "priorityList" in raw:
+        return raw
+    for path in (("rotation",), ("player", "rotation"), ("settings", "player", "rotation")):
+        node = raw
+        for key in path:
+            node = node.get(key) if isinstance(node, dict) else None
+        if isinstance(node, dict) and "priorityList" in node:
+            return node
+    return None
+
+
 def pretty_name(stem):
     return stem.replace("_", " ").replace("-", " ").title()
 
@@ -444,29 +459,44 @@ def main():
     ap.add_argument("--out", default="SimData_Mists.lua")
     ap.add_argument("--report", default=None)
     ap.add_argument("--game", default="mists")
+    ap.add_argument("--custom", default=None,
+                    help="folder of your own rotations: <class>/<spec>/<name>.json (exported from WoWSims)")
     args = ap.parse_args()
 
     conv = Converter()
     sha, date = git_head(args.sims)
     data = defaultdict(lambda: defaultdict(list))
     rows = []
-    files = sorted(glob.glob(os.path.join(args.sims, "ui", "specs", "*", "*", "apls", "*.apl.json")))
-    for path in files:
+    sources = []
+    for path in sorted(glob.glob(os.path.join(args.sims, "ui", "specs", "*", "*", "apls", "*.apl.json"))):
         parts = path.split(os.sep)
-        cls_dir, spec_dir, stem = parts[-4], parts[-3], os.path.basename(path)[: -len(".apl.json")]
+        sources.append((path, parts[-4], parts[-3], os.path.basename(path)[: -len(".apl.json")], ""))
+    if args.custom and os.path.isdir(args.custom):
+        # Your own rotations: <custom>/<class>/<spec>/<name>.json, e.g.
+        # rotations/mists/death_knight/frost/my_obliterate.json
+        for path in sorted(glob.glob(os.path.join(args.custom, "*", "*", "*.json"))):
+            parts = path.split(os.sep)
+            stem = re.sub(r"(\.apl)?\.json$", "", os.path.basename(path))
+            sources.append((path, parts[-3], parts[-2], stem, "custom/"))
+    for path, cls_dir, spec_dir, stem, prefix in sources:
         if cls_dir not in SPECS or spec_dir not in SPECS[cls_dir][1]:
+            if prefix:
+                conv.unsupported["custom file in unknown class/spec folder: " + path] += 1
             continue
         token, specmap = SPECS[cls_dir]
         with open(path, encoding="utf-8") as f:
             raw = json.load(f)
-        if raw.get("type") != "TypeAPL":
+        raw = find_rotation(raw)
+        if not raw or raw.get("type", "TypeAPL") != "TypeAPL" or not raw.get("priorityList"):
+            if prefix:
+                conv.unsupported["custom file has no APL rotation: " + path] += 1
             continue
         before = sum(conv.unsupported.values())
         items, skipped = conv.rotation(raw)
         casts = sum(1 for i in items if "id" in i)
-        rel = "%s/%s/%s" % (cls_dir, spec_dir, stem)
+        rel = "%s%s/%s/%s" % (prefix, cls_dir, spec_dir, stem)
         data[token][specmap[spec_dir]].append({
-            "name": pretty_name(stem), "file": rel, "list": items,
+            "name": pretty_name(stem) + (" (custom)" if prefix else ""), "file": rel, "list": items,
         })
         rows.append((rel, casts, skipped, sum(conv.unsupported.values()) - before))
 

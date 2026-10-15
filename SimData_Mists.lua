@@ -1272,10 +1272,6 @@ ns.SimData.specs = {
 		},
 	},
 	PRIEST = {
-		[1] = {
-			{ name = "Default", file = "priest/discipline/default", list = {
-			} },
-		},
 		[2] = {
 			{ name = "Default", file = "priest/holy/default", list = {
 				{ c = { k = "cmp", op = ">=", v = {{ k = "remainingTime" }, 0} }, id = 34433 },

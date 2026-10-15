@@ -4,8 +4,8 @@
 
 WoWSims rotations on MoP Classic.
 
-- Every MoP class gets real rotations, generated from WoWSims (wowsims/mop, MIT): 74 rotations
-  covering all DPS and tank specs plus Discipline and Holy Priest. The rotation follows your
+- Every MoP class gets real rotations, generated from WoWSims (wowsims/mop, MIT): 73 rotations
+  covering all DPS and tank specs plus Holy Priest. The rotation follows your
   current specialization automatically.
 - Rotation picker: when your spec has more than one WoWSims rotation (Frost DK: Obliterate or
   Masterfrost), a window asks on login or spec change. The choice is saved per character and spec

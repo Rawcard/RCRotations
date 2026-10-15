@@ -123,6 +123,12 @@ missing_in_py = handlers - conv.SUPPORTED
 check(not missing_in_lua, "every SUPPORTED kind has a Sim.lua handler %s" % (sorted(missing_in_lua) or ""))
 check(not missing_in_py, "every Sim.lua handler is in SUPPORTED %s" % (sorted(missing_in_py) or ""))
 
+# custom rotation exports: bare rotation and full WoWSims settings export both work
+rot = {"type": "TypeAPL", "priorityList": [{"action": {"castSpell": {"spellId": {"spellId": 49020}}}}]}
+check(conv.find_rotation(rot) is rot, "custom import: bare rotation export accepted")
+check(conv.find_rotation({"player": {"rotation": rot}}) is rot, "custom import: full settings export accepted")
+check(conv.find_rotation({"player": {}}) is None, "custom import: file without a rotation rejected")
+
 # --------------------------------------------------------------- 2. data loads
 for path in glob.glob(os.path.join(ROOT, "SimData_*.lua")):
     L2 = new_lua()

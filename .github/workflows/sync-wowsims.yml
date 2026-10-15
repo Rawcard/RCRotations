@@ -1,8 +1,14 @@
 name: Sync WoWSims rotations
 
-# Daily: regenerate SimData_Mists.lua from the latest WoWSims MoP rotations.
+# Daily, and whenever you add a rotation under rotations/: regenerate SimData_Mists.lua
+# from the latest WoWSims MoP rotations plus your own (rotations/mists/<class>/<spec>/*.json).
 # If anything changed, open (or update) a pull request with the import report.
 on:
+  push:
+    branches: [main]
+    paths:
+      - "rotations/**"
+      - "tools/wowsims_convert.py"
   schedule:
     - cron: "17 9 * * *" # daily, 09:17 UTC (3:17 am Alberta time)
   workflow_dispatch:
@@ -29,7 +35,7 @@ jobs:
 
       - name: Convert
         run: |
-          python3 tools/wowsims_convert.py --sims wowsims-mop --out SimData_Mists.lua --report sim-report.md
+          python3 tools/wowsims_convert.py --sims wowsims-mop --custom rotations/mists --out SimData_Mists.lua --report sim-report.md
           echo "SIMS_SHA=$(git -C wowsims-mop rev-parse --short=10 HEAD)" >> "$GITHUB_ENV"
 
       - name: Test

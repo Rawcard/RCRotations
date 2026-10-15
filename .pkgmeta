@@ -3,6 +3,7 @@ package-as: RCRotations
 ignore:
   - docs
   - tools
+  - rotations
   - README.md
   - .github
   - .pkgmeta

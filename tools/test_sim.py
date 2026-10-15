@@ -438,8 +438,28 @@ L.execute("C_SpecializationInfo = nil; GetSpecialization = function() return 3 e
 check(ns.Sim.Rotations()[2] == 3 and ns.Sim.SpecName(3) == "Unholy", "old global API still works")
 L.execute("GetSpecialization = nil; GetSpecializationInfo = nil")
 check(ns.Sim.Spec() == 0 and str(ns.Sim.NoSpecMessage()) == "SIM_IMPORT_NOSPEC", "MoP with no readable spec -> 'pick a spec' message")
+# --------------------------------------------------------------- 6b. WoWSims only: empty specs, Era/TBC imports
+L, ns = picker_world()
+L.execute("WORLD.spec = 2; ns_db_reset = true")
+ns.SimData = None  # a spec with no bundled WoWSims rotation
+L.execute("FIRE('PLAYER_ENTERING_WORLD', true, false)")
+pf = L.globals().RCRotationsPicker
+check(pf is not None and pf.shown and pf.importBtn is not None and pf.importBtn.shown is not False,
+      "no WoWSims rotation for the spec -> first login opens the picker with Import")
+pf.shown = False
+L.execute("FIRE('PLAYER_ENTERING_WORLD', false, true)")
+check(not pf.shown, "...only once per character and spec")
+check(ns.Sim.Current() is None, "...and nothing else is suggested (no built-in fallback)")
+
+L, ns = picker_world()
 ns.GAME = "tbc"
-check(str(ns.Sim.NoSpecMessage()).startswith("SIM_NOT_THIS_CLIENT"), "TBC/Era -> 'WoWSims rotations are for MoP Classic' message")
+L.execute("GetSpecialization = nil; C_SpecializationInfo = nil; WORLD.known[1752] = true")
+era = '{"type":"TypeAPL","priorityList":[{"action":{"castSpell":{"spellId":{"spellId":1752}}}}]}'
+r = ns.Sim.ImportText(era, "Combat")
+check(r[0] is True, "TBC (no specs): import accepted (%s)" % (r[1],))
+check(L.globals().RCRotationsDB.simImports["DEATHKNIGHT:0"] is not None, "TBC: saved per class (spec 0)")
+q = ns.Sim.BuildQueue()
+check(q is not None and q[1] == 1752, "TBC: the imported rotation drives the HUD")
 
 # --------------------------------------------------------------- 7. flash targeting (Glow.lua)
 Lg = lupa_mod.LuaRuntime()

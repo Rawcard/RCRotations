@@ -548,6 +548,67 @@ local function ensureOptions()
 	rotation:SetPoint("BOTTOMRIGHT", -8, 8)
 	rotation:Hide()
 
+	-- Rotation tab: WoWSims only (SimPicker.lua / SimImport.lua). The list
+	-- editor frame above is now used by the Defense tab alone.
+	local simPage = CreateFrame("Frame", nil, content)
+	simPage:SetPoint("TOPLEFT", 8, -72)
+	simPage:SetPoint("BOTTOMRIGHT", -8, 8)
+	simPage:Hide()
+	frame.simPage = simPage
+	local simCard = makeCard(simPage, "OPT_CARD_SIM", 8, -4, 648, 220)
+	local simLines = {}
+	for i = 1, 4 do
+		local line = simCard:CreateFontString(nil, "OVERLAY", i == 2 and "GameFontHighlight" or "GameFontHighlightSmall")
+		line:SetPoint("TOPLEFT", 16, -34 - (i - 1) * 24)
+		line:SetPoint("RIGHT", -16, 0)
+		line:SetJustifyH("LEFT")
+		simLines[i] = line
+	end
+	local simChoose = makeGoldBtn(simCard, 170, 24, ns.T("OPT_SIM_PICK"))
+	simChoose:SetPoint("BOTTOMLEFT", 16, 16)
+	simChoose:SetScript("OnClick", function()
+		if ns.Sim and ns.Sim.ShowPicker then
+			ns.Sim.ShowPicker(true)
+		end
+	end)
+	local simImportBtn = makeGoldBtn(simCard, 170, 24, ns.T("OPT_SIM_IMPORT"))
+	simImportBtn:SetPoint("LEFT", simChoose, "RIGHT", 8, 0)
+	simImportBtn:SetScript("OnClick", function()
+		if ns.Sim and ns.Sim.ShowImport then
+			ns.Sim.ShowImport()
+		end
+	end)
+	local simNote = simPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	simNote:SetPoint("TOPLEFT", simCard, "BOTTOMLEFT", 8, -14)
+	simNote:SetPoint("RIGHT", simPage, "RIGHT", -16, 0)
+	simNote:SetJustifyH("LEFT")
+	simNote:SetTextColor(0.65, 0.65, 0.65)
+	function frame.RefreshSim()
+		local Sim = ns.Sim
+		if not Sim then
+			return
+		end
+		local list, token, spec = Sim.Rotations()
+		list = list or {}
+		local who = (spec and spec > 0 and Sim.SpecName and Sim.SpecName(spec)) or (ns.ClassLabel and ns.ClassLabel()) or token or "?"
+		simLines[1]:SetText(ns.T("OPT_SIM_FOR"):format(who, ns.GAME_LABEL or "?"))
+		local rot = Sim.Current()
+		if rot then
+			simLines[2]:SetText("|cffffd100" .. rot.name .. "|r")
+			local from = rot.imported and ns.T("OPT_SIM_FROM_IMPORT")
+				or ns.T("OPT_SIM_FROM_BUNDLE"):format(ns.SimData and ns.SimData.source or "WoWSims")
+			simLines[3]:SetText(from)
+		elseif not Sim.Ready() then
+			simLines[2]:SetText(ns.T("SIM_IMPORT_NOSPEC"))
+			simLines[3]:SetText("")
+		else
+			simLines[2]:SetText("|cffff6060" .. ns.T("OPT_SIM_NONE") .. "|r")
+			simLines[3]:SetText(ns.T("OPT_SIM_NONE_HINT"))
+		end
+		simLines[4]:SetText(ns.T("OPT_SIM_COUNT"):format(#list))
+		simNote:SetText(ns.T("OPT_SIM_NOTE"))
+	end
+
 	local extra = CreateFrame("Frame", nil, content)
 	extra:SetPoint("TOPLEFT", 8, -72)
 	extra:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -570,6 +631,7 @@ local function ensureOptions()
 	frame.optGlow = addSwitch(hudCard, "glow", ns.T("OPT_GLOW"))
 	frame.optRange = addSwitch(hudCard, "showRange", ns.T("OPT_RANGE"))
 	frame.optModes = addSwitch(hudCard, "showModes", ns.T("OPT_MODES"))
+	frame.optModes:Hide() -- mode buttons only drove the removed built-in lists
 
 	local winCard = makeCard(general, "OPT_CARD_WINDOWS", 338, -4, 318, 172)
 	frame.optDef = addSwitch(winCard, "showDefense", ns.T("OPT_DEFENSE"))
@@ -743,23 +805,6 @@ local function ensureOptions()
 		ns.RefreshOptions()
 	end)
 
-	-- WoWSims: open the rotation picker / import a rotation (SimPicker.lua, SimImport.lua).
-	local simImport = makeGoldBtn(rotation, 120, 22, ns.T("OPT_SIM_IMPORT"))
-	simImport:SetPoint("TOPRIGHT", rotation, "TOPRIGHT", -8, -48)
-	simImport:SetScript("OnClick", function()
-		if ns.Sim and ns.Sim.ShowImport then
-			ns.Sim.ShowImport()
-		end
-	end)
-	frame.simImport = simImport
-	local simPick = makeGoldBtn(rotation, 120, 22, ns.T("OPT_SIM_PICK"))
-	simPick:SetPoint("RIGHT", simImport, "LEFT", -6, 0)
-	simPick:SetScript("OnClick", function()
-		if ns.Sim and ns.Sim.ShowPicker then
-			ns.Sim.ShowPicker(true)
-		end
-	end)
-	frame.simPick = simPick
 
 	local listCard = CreateFrame("Frame", nil, rotation, "BackdropTemplate")
 	listCard:SetPoint("TOPLEFT", 4, -100)
@@ -1183,9 +1228,14 @@ local function ensureOptions()
 
 	function frame.ShowTab(which)
 		frame.activeTab = which
-		listKind = which == "def" and "def" or "apl"
+		-- Built-in rotation lists are gone: the editor only serves Defense.
+		listKind = "def"
 		general:SetShown(which == "general")
-		rotation:SetShown(which == "rotation" or which == "def")
+		rotation:SetShown(which == "def")
+		simPage:SetShown(which == "rotation")
+		if which == "rotation" and frame.RefreshSim then
+			frame.RefreshSim()
+		end
 		extra:SetShown(which == "extra")
 		info:SetShown(which == "info")
 		local titles = {

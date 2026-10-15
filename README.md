@@ -23,7 +23,7 @@ One folder works on every Classic client:
 
 Retail is not supported: since Midnight, combat state is hidden from addons, so a rotation helper can't make decisions there.
 
-On **MoP Classic**, rotations come from [WoWSims](https://github.com/wowsims/mop) (MIT): every class, every DPS and tank spec, plus Holy Priest, picked from your current specialization. On the other clients the built-in Classic Era lists are used (all nine Classic classes). Spells resolve by **name + spellbook**, so ranks and remapped IDs still match.
+RCRotations only uses **WoWSims** rotations. On **MoP Classic** they come bundled from [WoWSims](https://github.com/wowsims/mop) (MIT): every class, every DPS and tank spec, plus Holy Priest, picked from your current specialization, and they update with the addon. On other clients (Era, TBC, Forever), and for MoP specs WoWSims doesn't cover, you import the rotation you want from wowsims.com; on first login with nothing to use, a window offers the import. There are no built-in rotation lists. Spells resolve by **name + spellbook**, so ranks and remapped IDs still match.
 
 ## WoWSims rotations
 
@@ -32,7 +32,7 @@ On **MoP Classic**, rotations come from [WoWSims](https://github.com/wowsims/mop
 - A GitHub Action (`Sync WoWSims rotations`) runs daily. When WoWSims changes a rotation, it opens a pull request with the new data and an import report: what converted, what was approximated (simulator-only values like trinket-proc tracking), and anything unsupported. Merge it, tag a release, done.
 - Your own rotations: export one from wowsims.com (Rotation tab → Export → JSON) and save it as `rotations/mists/<class>/<spec>/<name>.json`. Pushing it starts the sync job, which opens a PR adding it next to the WoWSims ones (shown as "(custom)" in the picker). See `rotations/mists/README.md`.
 - Import in game: Options → Rotation → **Import WoWSims** (or `/rcr import`). Paste a rotation exported from wowsims.com; it's converted in game (same rules as the Python converter, checked by the tests) and saved account-wide for the current spec.
-- In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker; `/rcr sim` turns WoWSims rotations off to use the built-in lists.
+- In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker.
 - Tests: `pip install lupa && python3 tools/test_sim.py`.
 
 
@@ -52,7 +52,7 @@ Pushing a version tag (for example `v1.2.0`) to GitHub builds the addon zip with
 
 | Surface | Role |
 | --- | --- |
-| **Rotation HUD** | Next 3 combat abilities from your checked list |
+| **Rotation HUD** | Next 3 combat abilities from your WoWSims rotation |
 | **Defense** | Missing long buffs / auras, plus emergency buttons when health is low |
 | **Weapon** | Missing weapon imbue (shaman / rogue poisons, etc.) |
 | **Interrupt / Purge / Cleanse** | Target interrupt, enemy magic purge, dispellable debuffs |

@@ -565,10 +565,13 @@ function Sim.ConvertRotation(raw)
 end
 
 function Sim.NoSpecMessage()
-	if Sim.NoSpecReason() == "client" then
-		return ns.T("SIM_NOT_THIS_CLIENT"):format(ns.GAME_LABEL or "this client")
-	end
 	return ns.T("SIM_IMPORT_NOSPEC")
+end
+
+-- Localized class name for messages.
+function ns.ClassLabel()
+	local _, _, localized = ns.ClassToken and ns.ClassToken()
+	return localized
 end
 
 -- ------------------------------------------------------------------ storage
@@ -596,7 +599,7 @@ end
 -- Import pasted text for the current class/spec. Returns ok, message, rot.
 function Sim.ImportText(text, name)
 	local _, token, spec = Sim.Rotations()
-	if not token or not spec or spec == 0 then
+	if not token or not Sim.Ready() then
 		return false, Sim.NoSpecMessage()
 	end
 	text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
@@ -646,6 +649,9 @@ function Sim.ImportText(text, name)
 	if ns.InvalidateTick then
 		ns.InvalidateTick()
 	end
+	if ns.UI and ns.UI.options and ns.UI.options.RefreshSim then
+		pcall(ns.UI.options.RefreshSim)
+	end
 	return true, msg, entry
 end
 
@@ -662,6 +668,9 @@ function Sim.RemoveImport(token, spec, file)
 			end
 			if ns.InvalidateTick then
 				ns.InvalidateTick()
+			end
+			if ns.UI and ns.UI.options and ns.UI.options.RefreshSim then
+				pcall(ns.UI.options.RefreshSim)
 			end
 			return true
 		end
@@ -834,14 +843,14 @@ end
 
 function Sim.ShowImport()
 	local _, token, spec = Sim.Rotations()
-	if not token or not spec or spec == 0 then
+	if not token or not Sim.Ready() then
 		if ns.Print then
 			ns.Print(Sim.NoSpecMessage())
 		end
 		return false
 	end
 	ensureWindow()
-	win.sub:SetText(ns.T("SIM_IMPORT_HELP"):format(specLabel(spec)))
+	win.sub:SetText(ns.T("SIM_IMPORT_HELP"):format(spec > 0 and specLabel(spec) or (ns.ClassLabel and ns.ClassLabel() or token)))
 	win.status:SetText("")
 	win.nameBox:SetText("")
 	win:Show()

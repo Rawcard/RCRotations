@@ -282,6 +282,13 @@ local function sfIsStance(button)
 end
 
 local function sfOnUpdate(self, elapsed)
+	-- The flash lives on UIParent, so mirror the button: hide while it's hidden.
+	local owner = self.owner
+	if owner and owner.IsVisible and not owner:IsVisible() then
+		self:SetAlpha(0)
+		return
+	end
+	self:SetAlpha(1)
 	self.animTime = (self.animTime or 0) + elapsed
 	local pulse = (math.sin(self.animTime * 3) + 1) / 2
 	local alpha = 0.3 + (pulse * 0.4)
@@ -297,6 +304,7 @@ local function sfFrame(button, key)
 		return flash
 	end
 	flash = CreateFrame("Frame", nil, UIParent)
+	flash.owner = button
 	flash:SetAllPoints(button)
 	flash:SetFrameStrata("HIGH")
 	flash:SetFrameLevel(sfIsStance(button) and 200 or 100)
@@ -971,23 +979,28 @@ local function isVisible(button)
 end
 
 local function flashTargets(spellID)
-	local all = buttonsFor(spellID)
-	local visible, addon = {}, {}
-	for _, button in ipairs(all) do
+	local visible = {}
+	for _, button in ipairs(buttonsFor(spellID)) do
 		if isVisible(button) then
 			visible[#visible + 1] = button
 		end
+	end
+	return visible
+end
+
+-- Keybind lookup can still use a hidden button (same slot, same key).
+local function bindingTargets(spellID)
+	local list = flashTargets(spellID)
+	if #list > 0 then
+		return list
+	end
+	local all, addon = buttonsFor(spellID), {}
+	for _, button in ipairs(all) do
 		if isAddonBar(button) then
 			addon[#addon + 1] = button
 		end
 	end
-	if #visible > 0 then
-		return visible
-	end
-	if #addon > 0 then
-		return addon
-	end
-	return all
+	return #addon > 0 and addon or all
 end
 
 function ns.GlowClear()
@@ -1450,7 +1463,7 @@ function ns.SpellBinding(spellID)
 	end
 	-- Read the keybind from the button actually flashed (a hidden Blizzard
 	-- button under RCDiabloUI/ElvUI may carry a different key).
-	local list = flashTargets(spellID)
+	local list = bindingTargets(spellID)
 	for _, button in ipairs(list) do
 		local hot = button.HotKey
 		if hot and hot.GetText then

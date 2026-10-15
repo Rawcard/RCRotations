@@ -380,10 +380,16 @@ end
 -- Why there's no spec to work with: "client" (this client has no WoWSims
 -- rotations / no specs) or "spec" (MoP client, but no spec chosen or readable).
 function Sim.NoSpecReason()
-	if ns.GAME == "mists" then
-		return "spec"
+	return "spec"
+end
+
+-- True when rotations can be stored/picked right now (MoP needs a spec).
+function Sim.Ready()
+	local token = ns.ClassToken and ns.ClassToken()
+	if not token then
+		return false
 	end
-	return "client"
+	return not Sim.UsesSpecs() or Sim.Spec() > 0
 end
 
 -- ------------------------------------------------------------------ evaluate
@@ -846,12 +852,21 @@ V.totemRemainingTime = function(n)
 end
 
 -- ------------------------------------------------------------------ rotation pick
+-- Does this client have specializations that pick the rotation? (MoP yes;
+-- Era/TBC/Forever no: their imported rotations are kept per class, spec 0.)
+function Sim.UsesSpecs()
+	return ns.GAME == "mists"
+end
+
 -- WoWSims rotations for the current class/spec, plus any imported in game
 -- (SimImport.lua). Returns list (or nil), class token, spec index.
 function Sim.Rotations()
 	local token = ns.ClassToken and ns.ClassToken()
 	local spec = Sim.Spec()
-	if not token or spec == 0 then
+	if not Sim.UsesSpecs() then
+		spec = 0
+	end
+	if not token or (spec == 0 and Sim.UsesSpecs()) then
 		return nil, token, spec
 	end
 	local data = ns.SimData
@@ -871,9 +886,6 @@ function Sim.Rotations()
 end
 
 function Sim.Current()
-	if ns.db and ns.db.useSim == false then
-		return nil
-	end
 	local list, token, spec = Sim.Rotations()
 	if not list or #list == 0 then
 		return nil

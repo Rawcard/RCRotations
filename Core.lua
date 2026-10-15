@@ -1015,12 +1015,6 @@ SlashCmdList.RCROT = function(msg)
 		ns.SetProfile("base")
 	elseif msg == "custom" or msg == "customs" then
 		ns.SetProfile("custom")
-	elseif msg == "sim" then
-		ns.db.useSim = (ns.db.useSim == false)
-		ns.Print(ns.T(ns.db.useSim and "SIM_ON" or "SIM_OFF"))
-		if ns.InvalidateTick then
-			ns.InvalidateTick()
-		end
 	elseif msg == "apl" then
 		-- Open the rotation picker (WoWSims rotations for the current spec).
 		if ns.Sim and ns.Sim.ShowPicker then

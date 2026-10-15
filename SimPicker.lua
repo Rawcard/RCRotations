@@ -74,6 +74,9 @@ local function choose(rot, token, spec)
 	if ns.Tick then
 		pcall(ns.Tick)
 	end
+	if ns.UI and ns.UI.options and ns.UI.options.RefreshSim then
+		pcall(ns.UI.options.RefreshSim)
+	end
 end
 
 local function styleButton(btn, selected)
@@ -164,25 +167,34 @@ end
 function Sim.ShowPicker(force)
 	local list, token, spec = Sim.Rotations()
 	list = list or {}
-	if not token or not spec or spec == 0 then
+	if not token or not Sim.Ready() then
 		if force and ns.Print then
 			ns.Print(Sim.NoSpecMessage and Sim.NoSpecMessage() or T("SIM_IMPORT_NOSPEC", "Rotations need a specialization."))
 		end
 		return false
 	end
-	if not force and #list < 2 then
-		return false
-	end
-	if not force and savedPick(token, spec) then
-		return false
+	if not force then
+		if #list == 0 then
+			-- Nothing to use yet: offer an import once per class/spec on this character.
+			ns.db.simPrompted = ns.db.simPrompted or {}
+			if ns.db.simPrompted[pickKey(token, spec)] then
+				return false
+			end
+		elseif #list < 2 or savedPick(token, spec) then
+			return false
+		end
 	end
 	if InCombatLockdown and InCombatLockdown() then
 		pendingAfterCombat = true
 		return false
 	end
 	ensureFrame()
+	if #list == 0 then
+		ns.db.simPrompted = ns.db.simPrompted or {}
+		ns.db.simPrompted[pickKey(token, spec)] = true
+	end
 	local current = Sim.Current()
-	local name = specName(spec)
+	local name = spec > 0 and specName(spec) or (ns.ClassLabel and ns.ClassLabel())
 	frame.sub:SetText(name and T("SIM_PICK_TITLE", "Choose your %s rotation"):format(name) or T("SIM_PICK_TITLE_GENERIC", "Choose your rotation"))
 	frame.hint:SetText(T("SIM_PICK_HINT", "Saved for this character. Change it any time with /rcr apl."))
 	local width = 300
@@ -239,11 +251,13 @@ function Sim.ShowPicker(force)
 		end)
 	end
 	if frame.importBtn then
+		frame.importBtn:Show()
 		frame.importBtn:ClearAllPoints()
 		frame.importBtn:SetPoint("TOP", frame, "TOP", 0, -58 - #list * 32 - 4)
 	end
 	if #list == 0 then
-		frame.sub:SetText(T("SIM_PICK_EMPTY", "No WoWSims rotation for this spec yet. Import one:"))
+		frame.sub:SetText(T("SIM_PICK_EMPTY", "No WoWSims rotation for %s yet. Import one:"):format(name or "?"))
+		frame.hint:SetText(T("SIM_PICK_EMPTY_HINT", "Until then the HUD stays empty. Import later with /rcr import."))
 	end
 	frame:SetSize(width, 58 + #list * 32 + 36 + 40)
 	frame:Show()

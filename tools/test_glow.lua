@@ -84,12 +84,21 @@ end
 setup(false, true)
 check(flashing("RCUI32_bar2Button6") and not flashing("ActionButton6"), "RCDiabloUI visible, Blizzard hidden -> only the RCDiabloUI button flashes")
 setup(false, false)
-check(flashing("RCUI32_bar2Button6") and not flashing("ActionButton6"), "both hidden -> addon bar preferred over Blizzard")
+check(not flashing("RCUI32_bar2Button6") and not flashing("ActionButton6"), "every button hidden -> nothing flashes (no stray flash on the screen)")
 setup(true, false)
 check(flashing("ActionButton6") and not flashing("RCUI32_bar2Button6"), "plain Blizzard UI -> Blizzard button flashes")
 local ns = setup(false, true)
 local out = ns.GlowDebug(20271)
 check(#out == 2 and table.concat(out, ","):find("%*RCUI32_bar2Button6") ~= nil and not table.concat(out, ","):find("%*ActionButton6"), "/rcr why marks only the flashed button: " .. table.concat(out, ", "))
+local nsv = setup(false, true)
+local b = _G["RCUI32_bar2Button6"]
+b.IsVisible = function() return false end
+local fl = b.RCRFlash.next
+fl.onOnUpdate(fl, 0.1)
+check(fl.alpha == 0, "button hides after flashing (bar fade) -> flash goes invisible too")
+b.IsVisible = function() return true end
+fl.onOnUpdate(fl, 0.1)
+check(fl.alpha == 1, "button shows again -> flash comes back")
 setup(false, nil, true)
 check(flashing("SomeBarsButton6") and not flashing("ActionButton6"), "unknown bar addon (LibActionButton) found by the generic scan and flashed")
 print(fails == 0 and "ALL PASS" or (fails .. " FAILED"))

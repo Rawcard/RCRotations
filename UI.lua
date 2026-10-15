@@ -846,7 +846,9 @@ function ns.UI.RefreshModes()
 	if not ns.UI.toolbar then
 		return
 	end
-	local showMode = ns.db.showModes ~= false
+	-- Auto/Single/AoE/Burst only switched the old built-in lists; WoWSims
+	-- rotations handle target count themselves, so these buttons stay hidden.
+	local showMode = false
 	local selected = ns.CombatMode and ns.CombatMode() or "auto"
 	local manual = ns.db.lastManualMode or "single"
 	if manual ~= "single" and manual ~= "aoe" and manual ~= "burst" then

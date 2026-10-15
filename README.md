@@ -32,6 +32,7 @@ RCRotations only uses **WoWSims** rotations. On **MoP Classic** they come bundle
 - A GitHub Action (`Sync WoWSims rotations`) runs daily. When WoWSims changes a rotation, it opens a pull request with the new data and an import report: what converted, what was approximated (simulator-only values like trinket-proc tracking), and anything unsupported. Merge it, tag a release, done.
 - Your own rotations: export one from wowsims.com (Rotation tab → Export → JSON) and save it as `rotations/mists/<class>/<spec>/<name>.json`. Pushing it starts the sync job, which opens a PR adding it next to the WoWSims ones (shown as "(custom)" in the picker). See `rotations/mists/README.md`.
 - Import in game: Options → Rotation → **Import WoWSims** (or `/rcr import`). Paste a rotation exported from wowsims.com; it's converted in game (same rules as the Python converter, checked by the tests) and saved account-wide for the current spec.
+- Never-suggest list: spells WoWSims uses for simulation value but a player saves (defensives, raid cooldowns) are skipped by default; right-click a HUD spell to add more, `/rcr unblock <spell>` to undo. Applied on top of every rotation, so WoWSims updates don't undo it.
 - In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker.
 - Tests: `pip install lupa && python3 tools/test_sim.py`.
 

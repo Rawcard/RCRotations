@@ -26,6 +26,12 @@ WoWSims rotations on MoP Classic.
   LibActionButton). Only visible buttons flash, and a flash hides while its button is hidden,
   so there are no stray flashes where a bar addon hid Blizzard's buttons.
 - /rcr why lists the suggestions and the buttons each one flashes.
+- Spells the game says you can't cast right now (Dark Transformation without 5 Shadow Infusion,
+  procs, forms, resources) are never suggested.
+- Never-suggest list, applied on top of every rotation so WoWSims updates can't bring them back:
+  personal defensives and raid cooldowns by default (Anti-Magic Shell, Icebound Fortitude,
+  Army of the Dead, Bloodlust/Heroism/Time Warp, ...). Right-click a spell on the HUD to add it;
+  /rcr unblock <spell> to remove; /rcr blocked to list; Options > Rotation shows it with a reset.
 
 # 1.2.0
 

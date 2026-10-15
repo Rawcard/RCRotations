@@ -197,6 +197,8 @@ def scenario(setup):
         L.execute("WORLD.known[%d] = true" % sid)
     L.execute("WORLD.spec = 2; WORLD.power[6] = 20")
     L.execute(setup)
+    if L.eval("NS_UNBLOCK"):
+        ns.db.simBlock = L.table_from({48707: False})
     rot = None
     rots = ns.SimData.specs["DEATHKNIGHT"][2]
     for i in range(1, len(rots) + 1):
@@ -225,11 +227,51 @@ q = scenario(cds + "WORLD.cd[77575]=50; WORLD.auras.target = {{id=55095, remain=
 check(len(q) > 0 and q[0] == FROST["frost_strike"],
       "diseases up, no runes, runic power capped -> Frost Strike first (got %s)" % q)
 
+# never-suggest defaults: AMS / Army are simulator picks, not player picks
+q = scenario("")
+check(48707 not in q and 42650 not in q, "AMS and Army of the Dead never suggested by default (got %s)" % q)
+q = scenario("WORLD.cd[51271]=60")
+q2 = scenario("WORLD.cd[51271]=60; NS_UNBLOCK = true")
+check(48707 in q2, "/rcr unblock brings AMS back (got %s)" % q2)
+
 q = scenario(cds + "WORLD.known[49020] = nil")
 check(FROST["obliterate"] not in q, "unknown spells never suggested (got %s)" % q)
 
 q = scenario(cds + "WORLD.unusable = true")
 check(q == [], "nothing usable -> empty queue (got %s)" % q)
+
+# game says "not usable" (Dark Transformation without 5 Shadow Infusion) -> never suggested
+def unholy(setup):
+    L = new_lua()
+    ns = load_addon_files(L)
+    L.execute("WORLD.spec = 3; WORLD.power[6] = 40")
+    rots = ns.SimData.specs["DEATHKNIGHT"][3]
+    rot = rots[1]
+    ids = set()
+    for i in range(1, len(rot.list) + 1):
+        if rot.list[i].id:
+            ids.add(rot.list[i].id)
+    for sid in ids:
+        L.execute("WORLD.known[%d] = true" % sid)
+    L.execute("for id in pairs(WORLD.known) do if id ~= 63560 then WORLD.cd[id] = 30 end end")
+    L.execute(setup)
+    q = ns.Sim.BuildQueue(rot)
+    return [q[i] for i in range(1, len(q) + 1)] if q else [], 63560 in ids
+q, has_dt = unholy("C_Spell.IsSpellUsable = function(id) if id == 63560 then return false, false end return true, false end")
+check(has_dt and 63560 not in q, "Dark Transformation not usable (no 5 stacks) -> not suggested, even right after a cast (got %s)" % q)
+q, _ = unholy("C_Spell.IsSpellUsable = function(id) return true, false end; WORLD.auras.pet = {{id=91342, stacks=5}}")
+check(63560 in q, "Dark Transformation usable -> suggested (got %s)" % q)
+
+# right-click / slash blocking
+L, ns = new_lua(), None
+ns = load_addon_files(L)
+L.execute("WORLD.known[49020] = true; WORLD.known[49143] = true")
+L.eval("function(ns) ns.Print = function() end end")(ns)
+check(ns.Sim.ToggleBlock(49020) is True and ns.Sim.IsBlocked(49020), "right-click blocks a spell")
+check(ns.Sim.ToggleBlock(49020) is False and not ns.Sim.IsBlocked(49020), "right-click again unblocks it")
+check(ns.Sim.FindSpell("anti-magic shell") == 48707 and ns.Sim.FindSpell("48707") == 48707, "/rcr block finds spells by name or ID")
+names = [b.name for b in ns.Sim.BlockedList().values()]
+check(len(names) == len(list(ns.Sim.DEFAULT_BLOCK.keys())) and ("Spell48707" in names or "Anti-Magic Shell" in names), "blocked list shows the defaults (%d)" % len(names))
 
 # --------------------------------------------------------------- 4. rotation picker
 UI_STUB = r'''

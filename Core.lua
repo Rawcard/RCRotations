@@ -989,6 +989,27 @@ SLASH_RCROT2 = "/rcrot"
 SLASH_RCROT3 = "/rcrotations"
 SlashCmdList.RCROT = function(msg)
 	msg = strtrim(strlower(msg or ""))
+	local blockCmd, blockArg = msg:match("^(un?block)%s+(.+)$")
+	if blockCmd and ns.Sim and ns.Sim.FindSpell then
+		local id = ns.Sim.FindSpell(blockArg)
+		if not id then
+			ns.Print(ns.T("SIM_BLOCK_UNKNOWN"):format(blockArg))
+		else
+			local want = blockCmd == "block"
+			ns.Sim.SetBlocked(id, want)
+			local name = (ns.db.simBlockNames and ns.db.simBlockNames[id]) or blockArg
+			ns.Print(ns.T(want and "SIM_BLOCKED" or "SIM_UNBLOCKED"):format(name))
+		end
+		return
+	end
+	if msg == "blocked" and ns.Sim and ns.Sim.BlockedList then
+		local names = {}
+		for _, b in ipairs(ns.Sim.BlockedList()) do
+			names[#names + 1] = b.name
+		end
+		ns.Print(ns.T("SIM_BLOCKED_LIST"):format(#names > 0 and table.concat(names, ", ") or "-"))
+		return
+	end
 	if msg == "unlock" then
 		ns.UI.SetLocked(false)
 		ns.Print(ns.T("UNLOCKED"))

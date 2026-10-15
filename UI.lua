@@ -199,6 +199,15 @@ function ns.UI.Create()
 		end
 		makeMovable(slot, "queue", root)
 		bindTip(slot, tipKeys[i][1], tipKeys[i][2])
+		-- Right-click a suggestion: never suggest that spell again (per character).
+		slot:SetScript("OnMouseUp", function(self, button)
+			if button == "RightButton" and self.spellID and ns.Sim and ns.Sim.ToggleBlock then
+				ns.Sim.ToggleBlock(self.spellID)
+				if ns.Tick then
+					pcall(ns.Tick)
+				end
+			end
+		end)
 		ns.UI.slots[i] = slot
 		local font = slot.bind:GetFont()
 		if font then

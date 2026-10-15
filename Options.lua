@@ -578,8 +578,23 @@ local function ensureOptions()
 			ns.Sim.ShowImport()
 		end
 	end)
+	local blockCard = makeCard(simPage, "OPT_CARD_BLOCK", 8, -236, 648, 110)
+	local blockText = blockCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	blockText:SetPoint("TOPLEFT", 16, -30)
+	blockText:SetPoint("RIGHT", -16, 0)
+	blockText:SetJustifyH("LEFT")
+	local blockReset = makeGoldBtn(blockCard, 190, 22, ns.T("OPT_SIM_RESET_BLOCKS"))
+	blockReset:SetPoint("BOTTOMLEFT", 16, 12)
+	blockReset:SetScript("OnClick", function()
+		if ns.Sim and ns.Sim.ResetBlocks then
+			ns.Sim.ResetBlocks()
+			if frame.RefreshSim then
+				frame.RefreshSim()
+			end
+		end
+	end)
 	local simNote = simPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	simNote:SetPoint("TOPLEFT", simCard, "BOTTOMLEFT", 8, -14)
+	simNote:SetPoint("TOPLEFT", blockCard, "BOTTOMLEFT", 8, -14)
 	simNote:SetPoint("RIGHT", simPage, "RIGHT", -16, 0)
 	simNote:SetJustifyH("LEFT")
 	simNote:SetTextColor(0.65, 0.65, 0.65)
@@ -606,6 +621,11 @@ local function ensureOptions()
 			simLines[3]:SetText(ns.T("OPT_SIM_NONE_HINT"))
 		end
 		simLines[4]:SetText(ns.T("OPT_SIM_COUNT"):format(#list))
+		local names = {}
+		for _, b in ipairs(Sim.BlockedList and Sim.BlockedList() or {}) do
+			names[#names + 1] = b.name
+		end
+		blockText:SetText(ns.T("OPT_SIM_BLOCKED"):format(#names > 0 and table.concat(names, ", ") or "-"))
 		simNote:SetText(ns.T("OPT_SIM_NOTE"))
 	end
 

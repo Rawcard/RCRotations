@@ -160,6 +160,28 @@ local function cooldownRemain(id)
 	return remain
 end
 
+-- The game's own "can I press this" answer. True/false, or nil if unknown.
+-- Catches spells that need a proc or stacks (Dark Transformation needs 5
+-- Shadow Infusion), forms, targets and resources.
+local function usableNow(rid)
+	local usable, noPower
+	if C_Spell and C_Spell.IsSpellUsable then
+		usable, noPower = call(C_Spell.IsSpellUsable, rid)
+	end
+	if usable == nil and IsUsableSpell then
+		usable, noPower = call(IsUsableSpell, rid)
+	end
+	if not readable(usable) then
+		return nil
+	end
+	if usable == true and noPower ~= true then
+		return true
+	elseif usable == false or noPower == true then
+		return false
+	end
+	return nil
+end
+
 local function canCast(id)
 	local rid = resolve(id)
 	if not rid then
@@ -167,6 +189,14 @@ local function canCast(id)
 	end
 	if cooldownRemain(rid) > 0.2 then
 		return false
+	end
+	-- Forever marks every spell unusable during the GCD, so it keeps the
+	-- original lenient check; every other client trusts the game's answer.
+	if ns.GAME ~= "forever" then
+		local u = usableNow(rid)
+		if u ~= nil then
+			return u
+		end
 	end
 	return API.Ready(rid, nil, true) and true or false
 end
@@ -924,6 +954,143 @@ function Sim.Cycle()
 	return nextRot, #list
 end
 
+-- ------------------------------------------------------------------ never suggest
+-- Spells WoWSims uses for simulation value but a player saves for the right
+-- moment: personal defensives and raid-wide cooldowns. Applied on top of every
+-- rotation (bundled or imported), so WoWSims updates never bring them back.
+-- Players can add or remove spells per character (HUD right-click, /rcr block).
+Sim.DEFAULT_BLOCK = {
+	[48707] = "Anti-Magic Shell",
+	[48792] = "Icebound Fortitude",
+	[51052] = "Anti-Magic Zone",
+	[42650] = "Army of the Dead",
+	[61999] = "Raise Ally",
+	[2825] = "Bloodlust",
+	[32182] = "Heroism",
+	[80353] = "Time Warp",
+	[90355] = "Ancient Hysteria",
+	[120668] = "Stormlash Totem",
+	[114207] = "Skull Banner",
+	[20484] = "Rebirth",
+}
+
+local function blockState(id)
+	if not id then
+		return nil
+	end
+	local user = ns.db and ns.db.simBlock
+	if user and user[id] ~= nil then
+		return user[id]
+	end
+	if Sim.DEFAULT_BLOCK[id] then
+		return true
+	end
+	return nil
+end
+
+-- Blocked by ID (as written in the rotation or as resolved) or by name.
+function Sim.IsBlocked(id, rid)
+	local state = blockState(id)
+	if state == nil and rid and rid ~= id then
+		state = blockState(rid)
+	end
+	if state ~= nil then
+		return state
+	end
+	local names = ns.db and ns.db.simBlockNames
+	local name = spellName(rid or id)
+	if names and name then
+		for bid, bname in pairs(names) do
+			if bname == name then
+				local s = blockState(bid)
+				if s ~= nil then
+					return s
+				end
+			end
+		end
+	end
+	return false
+end
+
+function Sim.SetBlocked(id, blocked)
+	ns.db.simBlock = ns.db.simBlock or {}
+	ns.db.simBlockNames = ns.db.simBlockNames or {}
+	ns.db.simBlock[id] = blocked and true or false
+	ns.db.simBlockNames[id] = spellName(id) or Sim.DEFAULT_BLOCK[id]
+	if ns.InvalidateTick then
+		ns.InvalidateTick()
+	end
+end
+
+-- HUD right-click: stop suggesting this spell.
+function Sim.ToggleBlock(id)
+	local now = not Sim.IsBlocked(id)
+	Sim.SetBlocked(id, now)
+	if ns.Print then
+		local name = spellName(id) or tostring(id)
+		ns.Print(ns.T(now and "SIM_BLOCKED" or "SIM_UNBLOCKED"):format(name))
+	end
+	return now
+end
+
+-- Everything currently blocked: { {id=, name=, default=bool}, ... } sorted by name.
+function Sim.BlockedList()
+	local out, seen = {}, {}
+	local function add(id)
+		if not seen[id] and blockState(id) then
+			seen[id] = true
+			out[#out + 1] = { id = id, name = (ns.db.simBlockNames and ns.db.simBlockNames[id]) or spellName(id) or Sim.DEFAULT_BLOCK[id] or tostring(id),
+				default = Sim.DEFAULT_BLOCK[id] ~= nil }
+		end
+	end
+	for id in pairs(Sim.DEFAULT_BLOCK) do
+		add(id)
+	end
+	for id in pairs(ns.db and ns.db.simBlock or {}) do
+		add(id)
+	end
+	table.sort(out, function(a, b)
+		return tostring(a.name) < tostring(b.name)
+	end)
+	return out
+end
+
+function Sim.ResetBlocks()
+	ns.db.simBlock = nil
+	ns.db.simBlockNames = nil
+	if ns.InvalidateTick then
+		ns.InvalidateTick()
+	end
+end
+
+-- Resolve "/rcr block <name or id>" text to a spell ID.
+function Sim.FindSpell(text)
+	text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	local id = tonumber(text)
+	if id then
+		return id
+	end
+	if text == "" then
+		return nil
+	end
+	for bid, bname in pairs(ns.db and ns.db.simBlockNames or {}) do
+		if type(bname) == "string" and bname:lower() == text:lower() then
+			return bid
+		end
+	end
+	for bid, bname in pairs(Sim.DEFAULT_BLOCK) do
+		if bname:lower() == text:lower() then
+			return bid
+		end
+	end
+	local info = C_Spell and C_Spell.GetSpellInfo and call(C_Spell.GetSpellInfo, text)
+	if type(info) == "table" and info.spellID then
+		return info.spellID
+	end
+	local _, _, _, _, _, _, sid = call(GetSpellInfo, text)
+	return sid
+end
+
 -- ------------------------------------------------------------------ queue
 function Sim.BeginPass()
 	pass = { now = GetTime() }
@@ -970,7 +1137,7 @@ function Sim.BuildQueue(rot)
 			end
 		elseif item.id then
 			local rid = resolve(item.id)
-			if rid and not seen[rid] and canCast(rid) and onBar(rid) and test(item.c) then
+			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and canCast(rid) and onBar(rid) and test(item.c) then
 				q[#q + 1] = rid
 				seen[rid] = true
 			end

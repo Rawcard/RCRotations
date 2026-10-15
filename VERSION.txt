@@ -15,6 +15,8 @@ Tuning layer.
   coming off cooldown within 6 seconds, soonest first, with their cooldown timer. They don't
   flash until they're ready. /rcr soon turns it off.
 - New tuning syntax: stance and stance(id).
+- The Damage / PvE toolbar under the HUD is gone. Role and profile are set in the menu (/rcr):
+  the profile buttons at the top, and a new Role button next to them.
 - A mistake in the tuning file stops the build with a clear message; the sync report lists every
   fix applied and any spell it targets that isn't in the rotations.
 

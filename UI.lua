@@ -582,6 +582,9 @@ function ns.UI.Create()
 	bar:SetBackdropBorderColor(cr, cg, cb, 0.75)
 	makeMovable(bar, "toolbar")
 	ns.UI.toolbar = bar
+	-- The role/profile toolbar under the HUD is never shown: role and profile
+	-- are set in the menu (/rcr). The frame stays so older code paths work.
+	bar:Hide()
 	ns.UI.ClassColor = classColor
 	ns.UI.toolbarWidthFull = TOOLBAR_W_FULL
 	ns.UI.toolbarWidthCompact = TOOLBAR_W_COMPACT
@@ -1193,6 +1196,10 @@ function ns.UI.RefreshModes()
 		ns.UI.ApplyChrome()
 	end
 	ns.UI.toolbar:SetWidth(showMode and (ns.UI.toolbarWidthFull or 332) or (ns.UI.toolbarWidthCompact or 188))
+	ns.UI.toolbar:Hide()
+	if ns.OptionsRefreshRole then
+		ns.OptionsRefreshRole()
+	end
 end
 
 function ns.UI.ApplyMouse()

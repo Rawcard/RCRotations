@@ -539,6 +539,25 @@ local function ensureOptions()
 		frame.profileButtons[i] = btn
 	end
 
+	-- Role (Damage / Tank / Healer / Hybrid...) lives here now; the toolbar
+	-- under the HUD is gone.
+	local roleBtn = makeGoldBtn(content, 120, 22, "")
+	roleBtn:SetPoint("TOPLEFT", 16 + 4 * 94 + 12, -42)
+	roleBtn:SetScript("OnClick", function()
+		if ns.CycleRole then
+			ns.CycleRole()
+		end
+		if ns.OptionsRefreshRole then
+			ns.OptionsRefreshRole()
+		end
+	end)
+	frame.roleBtn = roleBtn
+	function ns.OptionsRefreshRole()
+		local role = (ns.db and ns.db.role) or "damage"
+		roleBtn:SetText(ns.T("TIP_ROLE"):format(ns.T("ROLE_" .. role:upper())))
+	end
+	ns.OptionsRefreshRole()
+
 	local general = CreateFrame("Frame", nil, content)
 	general:SetPoint("TOPLEFT", 8, -72)
 	general:SetPoint("BOTTOMRIGHT", -8, 8)
@@ -1491,6 +1510,9 @@ function ns.RefreshOptions()
 		end
 		if frame.optHideIdle then
 			frame.optHideIdle:SetChecked(ns.db.hideIdle ~= false)
+		end
+		if ns.OptionsRefreshRole then
+			ns.OptionsRefreshRole()
 		end
 		if frame.optPhysics then
 			frame.optPhysics:SetChecked(ns.db.showPhysics ~= false)

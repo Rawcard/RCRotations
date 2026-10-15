@@ -568,6 +568,56 @@ q = ns.Sim.BuildQueue(rot)
 q = [q[i] for i in range(1, len(q) + 1)]
 check(12345 not in q, "tuning: added line respects its 'when' (got %s)" % q)
 
+# "coming up": with nothing castable, the HUD names the spell that's ready soonest
+cds_short = cds + "WORLD.cd[77575]=50; WORLD.auras.target = {{id=55095, remain=20}, {id=55078, remain=20}}; WORLD.power[6] = 5; "
+q = scenario(cds_short + "WORLD.cd[123693]=30; WORLD.cd[45462]=30; WORLD.known[49143] = nil; WORLD.cd[49020]=2; WORLD.cd[49184]=4")
+check(q[:1] == [49020], "coming up: nothing castable -> Obliterate (ready in 2s) shown instead of a blank HUD (got %s)" % q)
+q = scenario(cds_short + "WORLD.cd[49020]=9")
+check(49020 not in q, "coming up: nothing further away than %ss (got %s)" % (6, q))
+L = new_lua()
+ns = load_addon_files(L)
+for sid in (49020, 49143):
+    L.execute("WORLD.known[%d] = true" % sid)
+L.execute("WORLD.cd[49020] = 3; WORLD.cd[49143] = 0")
+lst = L.eval("{ { id = 49143 }, { id = 49020 } }")
+q = ns.Sim.BuildQueue(L.eval("function(l) return { name = 't', file = 't', list = l } end")(lst))
+check(q[1] == 49143 and q[2] == 49020 and q.soon[49020] and not q.soon[49143],
+      "coming up: castable spell first, then the next one marked 'soon'")
+ns.db.simLookahead = False
+q = ns.Sim.BuildQueue(L.eval("function(l) return { name = 't', file = 't', list = l } end")(lst))
+check(q[2] is None, "coming up: can be turned off")
+L.execute("C_Spell.IsSpellUsable = function(id) return id ~= 49020, false end")
+ns.db.simLookahead = None
+q = ns.Sim.BuildQueue(L.eval("function(l) return { name = 't', file = 't', list = l } end")(lst))
+check(q[2] is None, "coming up: never shows a spell the game says isn't usable")
+
+# stance: seal reminder for Retribution (seals sit on the stance bar)
+for text, want in (("stance == 0", {"k": "cmp"}), ("stance(31801)", {"k": "playerStance", "id": 31801})):
+    node = tun.parse_condition(text)
+    check(all(node.get(k) == v for k, v in want.items()), "tuning syntax: %s" % text)
+check("PALADIN:3" in shipped, "shipped tuning has the Retribution seal reminder")
+L = new_lua()
+ns = load_addon_files(L)
+L.execute("""
+function UnitClass() return "Paladin", "PALADIN", 2 end
+WORLD.spec = 3; WORLD.known[31801] = true; WORLD.known[20154] = true; WORLD.known[35395] = true
+STANCE = 0
+function GetNumShapeshiftForms() return 2 end
+function GetShapeshiftForm() return STANCE end
+function GetShapeshiftFormInfo(i) return 'icon', STANCE == i, true, ({31801, 20154})[i] end
+""")
+L.eval("function(ns) ns.ClassToken = function() return 'PALADIN', 2 end; ns.db.barOnly = true; ns.SpellOnBar = function(id) return id == 35395 end end")(ns)
+ret = ns.SimData.specs["PALADIN"][3][1]
+q = ns.Sim.BuildQueue(ret)
+check(q[1] == 31801, "Ret with no seal: Seal of Truth first, even though seals aren't on action bars (got %s)" % q[1])
+L.execute("WORLD.enemies = 5")
+q = ns.Sim.BuildQueue(ret)
+check(q[1] == 20154, "Ret with no seal on 5 targets: Seal of Righteousness (got %s)" % q[1])
+L.execute("STANCE = 1; WORLD.enemies = 1")
+q = ns.Sim.BuildQueue(ret)
+check(31801 not in [q[i] for i in range(1, len(q) + 1)], "Ret with Seal of Truth on: no seal reminder")
+check(L.eval("function(ns) return ns.Sim.HANDLERS.playerStance({ id = 31801 }) end")(ns) is True, "stance(31801) true while Truth is active")
+
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j
 import shutil

@@ -8,6 +8,13 @@ Tuning layer.
   condition), block, move and add, written in a short readable syntax (pet.buff(91342).stacks >= 5).
   They apply to every rotation for the spec, bundled or imported, and survive WoWSims updates.
 - First fix: Unholy Dark Transformation waits for 5 Shadow Infusion stacks on the ghoul.
+- Retribution: reminds you to put a seal on when you have none (Seal of Truth, or Seal of
+  Righteousness on 4+ targets). WoWSims starts every fight with a seal, so it never asked.
+  Seals and other stance-bar spells are suggested even with "only spells on my bars" on.
+- Coming up: when fewer than three spells are ready, the HUD fills in the next rotation spells
+  coming off cooldown within 6 seconds, soonest first, with their cooldown timer. They don't
+  flash until they're ready. /rcr soon turns it off.
+- New tuning syntax: stance and stance(id).
 - A mistake in the tuning file stops the build with a clear message; the sync report lists every
   fix applied and any spell it targets that isn't in the rotations.
 

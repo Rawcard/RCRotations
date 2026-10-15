@@ -60,6 +60,7 @@ Class and spec names match WoWSims: `death_knight/frost`, `paladin/retribution`,
 | `holy_power shadow_orbs soul_shards demonic_fury burning_embers` | class resource |
 | `runes.blood runes.frost runes.unholy runes.death` | ready runes |
 | `targets combat_time time_to_die execute(20) moving gcd.ready` | fight state |
+| `stance` / `stance(31801)` | active stance-bar slot (0 = none, e.g. no seal) / that seal, presence or stance is on |
 
 Numbers: `5`, `2.5s`, `500ms`, `35%`, `true`, `false`. Operators: `and or not`,
 `== != < <= > >=`, `+ - * /`, parentheses.

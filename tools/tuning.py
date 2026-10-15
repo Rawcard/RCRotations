@@ -53,6 +53,7 @@ import re
 #   holy_power shadow_orbs soul_shards demonic_fury burning_embers
 #   runes.blood runes.frost runes.unholy runes.death
 #   targets  combat_time  time_to_die  execute(20)  moving  gcd.ready
+#   stance (0 = none, e.g. no seal)   stance(31801) seal/presence/stance active
 #   numbers: 5  2.5s  500ms  35%  ·  true false
 #   operators: and or not  == != < <= > >=  + - * /  ( )
 # --------------------------------------------------------------------------
@@ -289,6 +290,10 @@ class Parser:
             if prop == "remains":
                 return {"k": "gcdTimeToReady"}
             raise TuningError("gcd.%s isn't a thing; use gcd.ready or gcd.remains" % prop)
+        if name == "stance":
+            if self.peek("op", "("):
+                return {"k": "playerStance", "id": self.arg()}
+            return {"k": "playerStance"}
         if name == "moving":
             return {"k": "unitIsMoving", "unit": unit or "player"}
         if name in RESOURCES:

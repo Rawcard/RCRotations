@@ -749,6 +749,16 @@ end
 V.unitIsMoving = function(n)
 	return num(call(GetUnitSpeed, n.unit or "player"), 0) > 0
 end
+-- Tuning only: "stance" is the active stance-bar slot (0 = none, e.g. no
+-- seal); "stance(31801)" is true while that seal/presence/stance is active.
+V.playerStance = function(n)
+	local st = Sim.StanceSlots()
+	if n.id then
+		local rid = resolve(n.id) or n.id
+		return st.active ~= nil and (st.active == n.id or st.active == rid)
+	end
+	return st.index
+end
 
 -- spells
 V.spellIsKnown = function(n)
@@ -1195,8 +1205,36 @@ function Sim.BeginPass()
 	pass = { now = GetTime() }
 end
 
+-- Spells on the stance bar (seals, presences, stances, forms): the spell ID of
+-- each slot, and which one is active. Seals and presences live there rather
+-- than on action bars, so "only suggest spells on my bars" lets them through.
+local function stanceSlots()
+	if pass.stances then
+		return pass.stances
+	end
+	local list = { active = nil, ids = {} }
+	local n = num(call(GetNumShapeshiftForms), 0)
+	for i = 1, n do
+		local _, active, _, sid = call(GetShapeshiftFormInfo, i)
+		sid = num(sid, 0)
+		if sid > 0 then
+			list.ids[sid] = true
+			if active then
+				list.active = sid
+			end
+		end
+	end
+	list.index = num(call(GetShapeshiftForm), 0)
+	pass.stances = list
+	return list
+end
+Sim.StanceSlots = stanceSlots
+
 local function onBar(id)
 	if ns.db and ns.db.barOnly == false then
+		return true
+	end
+	if stanceSlots().ids[id] then
 		return true
 	end
 	if ns.SpellOnBar then
@@ -1250,7 +1288,48 @@ function Sim.BuildQueue(rot)
 			end
 		end
 	end
+	if #q < 3 and not (ns.db and ns.db.simLookahead == false) then
+		Sim.FillComingUp(list, q, seen)
+	end
 	return q
+end
+
+-- "Coming up": when fewer than three spells are castable right now, fill the
+-- rest with rotation spells that come off cooldown within LOOKAHEAD seconds,
+-- soonest first, so the HUD shows what to press next instead of going blank
+-- (WoWSims rotations "wait" for a cooldown rather than naming the next spell).
+-- They pass the same checks as a normal suggestion apart from the cooldown,
+-- and are marked in q.soon so they don't flash until they're ready.
+Sim.LOOKAHEAD = 6
+function Sim.FillComingUp(list, q, seen)
+	local soon = {}
+	for _, item in ipairs(list) do
+		if item.id and not item.hold then
+			local rid = resolve(item.id)
+			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and onBar(rid) then
+				local cd = cooldownRemain(rid)
+				local usable = ns.GAME == "forever" or usableNow(rid) ~= false
+				if cd > 0 and cd <= Sim.LOOKAHEAD and usable and test(item.c) then
+					soon[#soon + 1] = { rid = rid, cd = cd, order = #soon }
+					seen[rid] = true
+				end
+			end
+		end
+	end
+	table.sort(soon, function(a, b)
+		if a.cd ~= b.cd then
+			return a.cd < b.cd
+		end
+		return a.order < b.order
+	end)
+	for _, s in ipairs(soon) do
+		if #q >= 3 then
+			break
+		end
+		q[#q + 1] = s.rid
+		q.soon = q.soon or {}
+		q.soon[s.rid] = true
+	end
 end
 
 -- ------------------------------------------------------------------ events

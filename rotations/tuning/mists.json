@@ -1,10 +1,28 @@
 {
   "_about": "RCRotations tuning for MoP Classic: fixes applied on top of every WoWSims rotation (bundled and imported). Syntax: rotations/tuning/README.md. Keys: \"*\" = every spec, \"class/spec\", or \"class/spec/rotation\".",
-
   "death_knight/unholy": {
     "require": [
-      { "spell": 63560, "when": "pet.buff(91342).stacks >= 5",
-        "why": "Dark Transformation needs 5 Shadow Infusion stacks on the ghoul" }
+      {
+        "spell": 63560,
+        "when": "pet.buff(91342).stacks >= 5",
+        "why": "Dark Transformation needs 5 Shadow Infusion stacks on the ghoul"
+      }
+    ]
+  },
+  "paladin/retribution": {
+    "add": [
+      {
+        "spell": 31801,
+        "at": "top",
+        "when": "stance == 0 and targets < 4",
+        "why": "WoWSims starts every fight with a seal already on, so it never asks for one. Remind me when I have no seal: Seal of Truth for 1-3 targets"
+      },
+      {
+        "spell": 20154,
+        "at": "top",
+        "when": "stance == 0 and targets >= 4",
+        "why": "No seal and 4+ targets: Seal of Righteousness"
+      }
     ]
   }
 }

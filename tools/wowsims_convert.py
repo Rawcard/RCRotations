@@ -70,7 +70,7 @@ SUPPORTED = {
     "currentGenericResource", "monkCurrentChi", "monkMaxChi", "brewmasterMonkCurrentStaggerPercent",
     "currentRuneCount", "currentNonDeathRuneCount", "currentRuneDeath", "currentRuneActive",
     "runeCooldown", "nextRuneCooldown", "runeSlotCooldown", "fullRuneCooldown",
-    "gcdIsReady", "gcdTimeToReady", "remainingCastTime", "unitIsMoving",
+    "gcdIsReady", "gcdTimeToReady", "remainingCastTime", "unitIsMoving", "playerStance",
     "spellIsKnown", "spellCanCast", "spellIsReady", "spellTimeToReady", "spellCastTime",
     "spellIsChanneling", "spellCurrentCost", "spellNumCharges", "spellTimeToCharge",
     "spellGcdHastedDuration", "spellFullCooldown", "spellIsCasting",

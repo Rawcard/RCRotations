@@ -1360,3 +1360,15 @@ function ns.GlowClearAllStyles()
 		ns.InvalidateTick()
 	end
 end
+
+-- /rcr why: what the flash is matching, for troubleshooting.
+function ns.GlowDebug(spellID)
+	local out = {}
+	for _, button in ipairs(buttonsFor(spellID)) do
+		local name = button.GetName and button:GetName() or "?"
+		local slot = buttonSlots[button]
+		local shown = button.IsVisible and button:IsVisible() and "visible" or "hidden"
+		out[#out + 1] = tostring(name) .. (slot and ("(slot " .. slot .. ")") or "") .. " " .. shown
+	end
+	return out
+end

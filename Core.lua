@@ -1026,6 +1026,23 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Sim and ns.Sim.ShowPicker then
 			ns.Sim.ShowPicker(true)
 		end
+	elseif msg == "why" then
+		-- Troubleshooting: the current suggestions and which bar buttons each one flashes.
+		local queue = ns.BuildQueue and ns.BuildQueue() or {}
+		local rot = ns.Sim and ns.Sim.Current and ns.Sim.Current()
+		ns.Print(("client=%s spec=%s source=%s flash=%s"):format(tostring(ns.GAME), tostring(ns.Sim and ns.Sim.Spec and ns.Sim.Spec() or "?"),
+			rot and ("WoWSims " .. rot.name) or "built-in list", ns.db.spellFlash == false and "skull" or "spellflash"))
+		if ns.GlowFetch then
+			ns.GlowFetch(true)
+		end
+		if #queue == 0 then
+			ns.Print("no suggestion right now")
+		end
+		for i, id in ipairs(queue) do
+			local name = ns.API and ns.API.SpellName and ns.API.SpellName(id) or "?"
+			local buttons = ns.GlowDebug and ns.GlowDebug(id) or {}
+			ns.Print(("%d. %s (%s) -> %s"):format(i, tostring(name), tostring(id), #buttons > 0 and table.concat(buttons, ", ") or "NO BUTTON FOUND"))
+		end
 	elseif msg == "import" then
 		if ns.Sim and ns.Sim.ShowImport then
 			ns.Sim.ShowImport()

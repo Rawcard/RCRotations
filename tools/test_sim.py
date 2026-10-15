@@ -497,6 +497,8 @@ check(ns.Sim.Current() is None, "...and nothing else is suggested (no built-in f
 L, ns = picker_world()
 ns.GAME = "tbc"
 L.execute("GetSpecialization = nil; C_SpecializationInfo = nil; WORLD.known[1752] = true")
+r = ns.Sim.ImportText("NAG_ROTATION:WARLOCK:2:1.0:eyJhIjoxfQ==", "x")
+check(r[0] is False and r[1] == "SIM_IMPORT_NAG", "import: a NAG rotation string gets a clear message (got %s)" % (r[1],))
 era = '{"type":"TypeAPL","priorityList":[{"action":{"castSpell":{"spellId":{"spellId":1752}}}}]}'
 r = ns.Sim.ImportText(era, "Combat")
 check(r[0] is True, "TBC (no specs): import accepted (%s)" % (r[1],))

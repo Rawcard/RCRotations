@@ -606,6 +606,9 @@ function Sim.ImportText(text, name)
 	if text == "" then
 		return false, ns.T("SIM_IMPORT_EMPTY")
 	end
+	if text:find("^NAG_ROTATION:") or text:find("NAG:Cast", 1, true) or text:find("NAG:", 1, true) == 1 then
+		return false, ns.T("SIM_IMPORT_NAG")
+	end
 	local raw, jerr = jsonDecode(text)
 	if raw == nil then
 		return false, ns.T("SIM_IMPORT_BADJSON"):format(jerr or "?")

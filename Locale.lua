@@ -89,6 +89,7 @@ L.enUS = {
 	SIM_IMPORT_OK = "Imported %s: %d spells (%d approximated, %d skipped). Now active for this spec.",
 	SIM_IMPORT_NOSPEC = "Couldn't read your specialization. Pick one in the talent window, then try again.",
 	SIM_IMPORT_EMPTY = "Paste a rotation first.",
+	SIM_IMPORT_NAG = "That's a NAG rotation. RCRotations only imports WoWSims rotations: on wowsims.com, open your class sim, go to the Rotation tab and export it as JSON.",
 	SIM_IMPORT_BADJSON = "That isn't valid JSON (%s). Copy the whole export.",
 	SIM_IMPORT_NOROT = "No rotation found. Export from the Rotation tab, with the APL rotation type.",
 	SIM_IMPORT_NOCASTS = "That rotation has no spells in it.",

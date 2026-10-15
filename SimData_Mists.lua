@@ -1272,6 +1272,24 @@ ns.SimData.specs = {
 		},
 	},
 	PRIEST = {
+		[1] = {
+			{ name = "Atonement (custom)", file = "custom/priest/discipline/atonement", list = {
+				{ c = { k = "and", v = {{ k = "auraIsInactive", id = 588, unit = "player" }, { k = "auraIsInactive", id = 73413, unit = "player" }} }, id = 588 },
+				{ id = 10060 },
+				{ c = { k = "cmp", op = "<=", v = {{ k = "currentManaPercent", unit = "player" }, 0.8} }, id = 123040 },
+				{ c = { k = "cmp", op = "<=", v = {{ k = "currentManaPercent", unit = "player" }, 0.75} }, id = 34433 },
+				{ c = { k = "cmp", op = ">=", v = {{ k = "auraNumStacks", id = 81661, unit = "player" }, 5} }, id = 81700 },
+				{ c = { k = "or", v = {{ k = "not", v = {{ k = "dotIsActive", id = 589, unit = "target" }} }, { k = "cmp", op = "<", v = {{ k = "dotRemainingTime", id = 589, unit = "target" }, 3} }} }, id = 589 },
+				{ id = 47540 },
+				{ id = 129250 },
+				{ id = 14914 },
+				{ id = 120517 },
+				{ id = 121135 },
+				{ id = 110744 },
+				{ c = { k = "cmp", op = ">=", v = {{ k = "numberTargets" }, 4} }, ch = true, id = 48045 },
+				{ id = 585 },
+			} },
+		},
 		[2] = {
 			{ name = "Default", file = "priest/holy/default", list = {
 				{ c = { k = "cmp", op = ">=", v = {{ k = "remainingTime" }, 0} }, id = 34433 },

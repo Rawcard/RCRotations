@@ -709,6 +709,30 @@ check(q[:1] == [1490], "Warlock: Curse of the Elements first when the target has
 q = demo_q("WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}, {id=34889, remain=20, kind='HARMFUL'}}")
 check(1490 not in q, "Warlock: no Curse of the Elements when a hunter pet's Fire Breath covers it (got %s)" % q)
 
+# Discipline (our own Atonement rotation; WoWSims has none)
+L = new_lua()
+ns = load_addon_files(L)
+L.execute("""
+function UnitClass() return "Priest", "PRIEST", 5 end
+WORLD.spec = 1
+for _, id in ipairs({588, 10060, 34433, 81700, 589, 47540, 14914, 585}) do WORLD.known[id] = true end
+""")
+L.eval("function(ns) ns.ClassToken = function() return 'PRIEST', 5 end end")(ns)
+discs = ns.SimData.specs["PRIEST"][1]
+disc = discs[1]
+check(str(disc.file) == "custom/priest/discipline/atonement", "Discipline has a rotation (%s)" % disc.file)
+def disc_q(setup):
+    L.execute(setup)
+    q = ns.Sim.BuildQueue(disc)
+    return [q[i] for i in range(1, len(q) + 1)] if q else []
+base = "WORLD.cd[10060] = 60; WORLD.cd[34433] = 60; WORLD.power[0] = 100; WORLD.powerMax[0] = 100; "
+q = disc_q(base + "WORLD.auras.player = {}; WORLD.auras.target = {}")
+check(q[:2] == [588, 589], "Disc: Inner Fire, then Shadow Word: Pain when missing (got %s)" % q)
+q = disc_q(base + "WORLD.auras.player = {{id=588, remain=900}, {id=81661, stacks=5}}; WORLD.auras.target = {{id=589, remain=15, kind='HARMFUL'}}")
+check(q[:3] == [81700, 47540, 14914], "Disc: Archangel at 5 Evangelism, then Penance, Holy Fire (got %s)" % q)
+q = disc_q(base + "WORLD.cd[81700] = 60; WORLD.cd[47540] = 8; WORLD.cd[14914] = 8; WORLD.auras.player = {{id=588, remain=900}}")
+check(q[:1] == [585], "Disc: Smite as filler (got %s)" % q)
+
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j
 import shutil

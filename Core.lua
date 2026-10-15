@@ -72,20 +72,16 @@ local function defaults()
 	if ns.db.showRotation == nil then
 		ns.db.showRotation = true
 	end
-	if ns.db.showDefense == nil then
-		ns.db.showDefense = true
-	end
-	if ns.db.showInterrupt == nil then
-		ns.db.showInterrupt = true
-	end
-	if ns.db.showPurge == nil then
-		ns.db.showPurge = true
-	end
-	if ns.db.showCleanse == nil then
-		ns.db.showCleanse = true
-	end
-	if ns.db.showWeapon == nil then
-		ns.db.showWeapon = true
+	-- Side windows (defense, interrupt, purge, cleanse, weapon buff) start OFF.
+	-- One-time switch-off for characters that already had them on from an
+	-- earlier build; after that, whatever the player sets is kept.
+	if ns.db.windowsOffV1 ~= true then
+		ns.db.showDefense = false
+		ns.db.showInterrupt = false
+		ns.db.showPurge = false
+		ns.db.showCleanse = false
+		ns.db.showWeapon = false
+		ns.db.windowsOffV1 = true
 	end
 	if ns.db.showRange == nil then
 		ns.db.showRange = true

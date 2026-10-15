@@ -33,6 +33,8 @@ WoWSims rotations on MoP Classic.
 - Compact style replaces the padlock with a thin "Click to lock" bar under the icons. It disappears
   once locked; unlock from Options > General > Lock (or the minimap button).
 - The RC badge on the main icon is a button: click it to open the options.
+- The defense, interrupt, purge, cleanse and weapon-buff windows are off by default (switched off
+  once on existing characters too). Turn them on in Options > General > Windows.
 - Suggestion icons stay clickable while locked (right-click = never suggest); dragging still
   needs the HUD unlocked.
 - Spells the game says you can't cast right now (Dark Transformation without 5 Shadow Infusion,

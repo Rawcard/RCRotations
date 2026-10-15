@@ -692,6 +692,21 @@ local function ensureOptions()
 	end)
 	frame.langBtn = langBtn
 
+	local styleBtn = makeGoldBtn(displayCard, 120, 22, "")
+	styleBtn:SetPoint("LEFT", langBtn, "RIGHT", 8, 0)
+	local function styleLabel()
+		local style = ns.UI.HudStyle and ns.UI.HudStyle() or "compact"
+		return ns.T(style == "classic" and "OPT_HUD_CLASSIC" or "OPT_HUD_COMPACT")
+	end
+	styleBtn:SetText(styleLabel())
+	styleBtn:SetScript("OnClick", function(self)
+		if ns.UI.CycleStyle then
+			ns.UI.CycleStyle()
+		end
+		self:SetText(styleLabel())
+	end)
+	frame.styleBtn = styleBtn
+
 	local resetPos = makeGoldBtn(displayCard, 140, 22, ns.T("OPT_RESET_POS"))
 	resetPos:SetPoint("TOPLEFT", 12, -132)
 	resetPos:SetScript("OnClick", function()

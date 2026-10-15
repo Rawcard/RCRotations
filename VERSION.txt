@@ -26,6 +26,9 @@ WoWSims rotations on MoP Classic.
   LibActionButton). Only visible buttons flash, and a flash hides while its button is hidden,
   so there are no stray flashes where a bar addon hid Blizzard's buttons.
 - /rcr why lists the suggestions and the buttons each one flashes.
+- New default HUD style "Compact": a big square main icon with a thin gold edge, no panel behind
+  it, a large keybind in the bottom-left and a small RC badge, with the next two spells smaller
+  beside it. Switch back with Options > General > Display ("HUD: Classic") or /rcr style.
 - Spells the game says you can't cast right now (Dark Transformation without 5 Shadow Infusion,
   procs, forms, resources) are never suggested.
 - Never-suggest list, applied on top of every rotation so WoWSims updates can't bring them back:

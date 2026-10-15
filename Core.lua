@@ -1041,6 +1041,11 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Sim and ns.Sim.ShowPicker then
 			ns.Sim.ShowPicker(true)
 		end
+	elseif msg == "style" then
+		if ns.UI.CycleStyle then
+			local style = ns.UI.CycleStyle()
+			ns.Print(ns.T(style == "classic" and "OPT_HUD_CLASSIC" or "OPT_HUD_COMPACT"))
+		end
 	elseif msg == "why" then
 		-- Troubleshooting: the current suggestions and which bar buttons each one flashes.
 		local queue = ns.BuildQueue and ns.BuildQueue() or {}

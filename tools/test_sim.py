@@ -652,6 +652,10 @@ q = demo_q("WORLD.cd[113861] = 60; WORLD.cd[104316] = 60; META = true; WORLD.pow
 check(q[:1] == [103964], "Demo in Meta, Corruption about to drop: Touch of Chaos first (got %s)" % q)
 check(686 not in q and 172 not in q, "Demo in Meta: icons follow the buttons (no Shadow Bolt / Corruption) (got %s)" % q)
 check(103958 not in q, "Demo in Meta: never suggests Metamorphosis again (it would cancel it) (got %s)" % q)
+q = demo_q("WORLD.known[1490] = true; META = false; WORLD.auras.player = {}; WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}}")
+check(q[:1] == [1490], "Warlock: Curse of the Elements first when the target has no magic-damage debuff (got %s)" % q)
+q = demo_q("WORLD.auras.target = {{id=172, remain=20, kind='HARMFUL'}, {id=34889, remain=20, kind='HARMFUL'}}")
+check(1490 not in q, "Warlock: no Curse of the Elements when a hunter pet's Fire Breath covers it (got %s)" % q)
 
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j

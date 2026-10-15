@@ -19,6 +19,8 @@ Tuning layer.
   Touch of Chaos, Doom, Chaos Wave and Soul Fire (Meta) instead of Shadow Bolt, Corruption, Hand of
   Gul'dan and Soul Fire, and the flash finds them on the base spell's button. Before, Meta-only
   spells were never suggested, so Demonology in Meta fell back to the wrong list.
+- Warlock (all specs): suggests Curse of the Elements when the target has no 5% magic damage
+  debuff from anyone. WoWSims assumes the raid already has it up.
 - Demonology: never suggests Metamorphosis while it's already up (pressing it cancels Meta).
 - The Damage / PvE toolbar under the HUD is gone. Role and profile are set in the menu (/rcr):
   the profile buttons at the top, and a new Role button next to them.

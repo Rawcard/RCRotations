@@ -32,6 +32,34 @@
         "when": "buff(103958).down",
         "why": "Pressing Metamorphosis while it's up cancels it; WoWSims never re-casts it during Meta, but in game the button stays usable"
       }
+    ],
+    "add": [
+      {
+        "spell": 1490,
+        "at": "top",
+        "when": "not target.buff(1490) and not target.buff(116202) and not target.buff(93068) and not target.buff(34889) and not target.buff(24844)",
+        "why": "WoWSims assumes the raid's 5% magic damage debuff is already on the target, so it never asks for Curse of the Elements. Suggest it when nobody (you, a rogue's Master Poisoner, a hunter pet's Fire/Lightning Breath, or Meta's Aura of the Elements) has it up"
+      }
+    ]
+  },
+  "warlock/affliction": {
+    "add": [
+      {
+        "spell": 1490,
+        "at": "top",
+        "when": "not target.buff(1490) and not target.buff(116202) and not target.buff(93068) and not target.buff(34889) and not target.buff(24844)",
+        "why": "WoWSims assumes the raid's 5% magic damage debuff is already on the target, so it never asks for Curse of the Elements. Suggest it when nobody (you, a rogue's Master Poisoner, a hunter pet's Fire/Lightning Breath, or Meta's Aura of the Elements) has it up"
+      }
+    ]
+  },
+  "warlock/destruction": {
+    "add": [
+      {
+        "spell": 1490,
+        "at": "top",
+        "when": "not target.buff(1490) and not target.buff(116202) and not target.buff(93068) and not target.buff(34889) and not target.buff(24844)",
+        "why": "WoWSims assumes the raid's 5% magic damage debuff is already on the target, so it never asks for Curse of the Elements. Suggest it when nobody (you, a rogue's Master Poisoner, a hunter pet's Fire/Lightning Breath, or Meta's Aura of the Elements) has it up"
+      }
     ]
   }
 }

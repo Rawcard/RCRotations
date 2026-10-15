@@ -183,3 +183,12 @@ Report RCRotations problems to Rob, not to the original project.
 ## License
 
 [MIT](LICENSE). Original work © Vohnka / wow-forever.fr; RCRotations modifications © Rob. Free to use, modify, fork, and redistribute, as long as the copyright notices and license are kept.
+
+## RCRotations Workshop (Windows app)
+
+Edit any WoWSims rotation on your computer (turn lines on or off, reorder them, add spells) and
+save it straight into the addon. Download it from the
+[Workshop release](https://github.com/Rawcard/RCRotations/releases/tag/workshop), run it, choose
+your World of Warcraft folder, edit, **Save to WoW**, then `/reload` in game. Your rotation shows
+in the rotation list as "(Workshop)". The app is a separate download because addon sites don't
+allow programs inside addon packages.

@@ -1,9 +1,11 @@
 name: Build Workshop app
 
-# Builds the RCRotations Workshop desktop app for Windows.
-# - Push a tag like app-v1.0.1 to publish a GitHub release with the .exe.
-# - Or run it by hand (Actions > Build Workshop app > Run workflow) to get the
-#   .exe as a downloadable build artifact.
+# Builds the RCRotations Workshop desktop app for Windows and puts it on the
+# fixed download page https://github.com/Rawcard/RCRotations/releases/tag/workshop
+# (the address the addon shows players in /rcr options > Rotation).
+# - Push a tag like app-v1.0.1 (version from the tag), or
+# - run it by hand: Actions > Build Workshop app > Run workflow.
+# The "workshop" release is never marked Latest, so addon releases stay on top.
 on:
   push:
     tags: ["app-v*"]
@@ -46,12 +48,23 @@ jobs:
           name: RCRotations-Workshop
           path: app/dist/*.exe
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/app-v')
+      - name: Update the Workshop download page
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.exe \
-            --title "RCRotations Workshop ${GITHUB_REF_NAME#app-v}" \
-            --notes "Windows desktop app for editing WoWSims rotations and saving them straight into RCRotations. Download the .exe and run it; Windows may ask you to confirm because the app isn't code-signed."
+          VERSION=$(node -p "require('./package.json').version")
+          cp dist/*.exe RCRotations-Workshop.exe
+          NOTES="RCRotations Workshop $VERSION for Windows: edit WoWSims rotations and save them straight into RCRotations.
+
+          1. Download RCRotations-Workshop.exe and run it. Windows may warn that it isn't code-signed: click More info, then Run anyway.
+          2. Click Choose WoW folder and pick your World of Warcraft folder.
+          3. Edit a rotation, click Save to WoW, then type /reload in game. It shows in your rotation list as (Workshop).
+
+          Needs RCRotations 1.4.0 or newer."
+          if gh release view workshop >/dev/null 2>&1; then
+            gh release edit workshop --title "RCRotations Workshop (Windows app) $VERSION" --notes "$NOTES" --latest=false
+          else
+            gh release create workshop --title "RCRotations Workshop (Windows app) $VERSION" --notes "$NOTES" --latest=false --target "$GITHUB_SHA"
+          fi
+          gh release upload workshop RCRotations-Workshop.exe --clobber

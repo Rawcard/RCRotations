@@ -51,3 +51,6 @@ function ns.IsGame(...)
 	end
 	return false
 end
+
+-- Where to download the RCRotations Workshop desktop app (Windows).
+ns.WORKSHOP_URL = "https://github.com/Rawcard/RCRotations/releases/tag/workshop"

@@ -1084,6 +1084,8 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Tick then
 			ns.Tick()
 		end
+	elseif msg == "workshop" or msg == "app" then
+		ns.Print(ns.T("WORKSHOP_PRINT"):format(ns.WORKSHOP_URL))
 	elseif msg == "soon" then
 		ns.db.simLookahead = (ns.db.simLookahead == false)
 		ns.Print(ns.T(ns.db.simLookahead and "SOON_ON" or "SOON_OFF"))

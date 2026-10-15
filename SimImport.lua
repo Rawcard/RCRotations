@@ -564,6 +564,13 @@ function Sim.ConvertRotation(raw)
 	return out, rep
 end
 
+function Sim.NoSpecMessage()
+	if Sim.NoSpecReason() == "client" then
+		return ns.T("SIM_NOT_THIS_CLIENT"):format(ns.GAME_LABEL or "this client")
+	end
+	return ns.T("SIM_IMPORT_NOSPEC")
+end
+
 -- ------------------------------------------------------------------ storage
 local function store()
 	RCRotationsDB = RCRotationsDB or {}
@@ -590,7 +597,7 @@ end
 function Sim.ImportText(text, name)
 	local _, token, spec = Sim.Rotations()
 	if not token or not spec or spec == 0 then
-		return false, ns.T("SIM_IMPORT_NOSPEC")
+		return false, Sim.NoSpecMessage()
 	end
 	text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
 	if text == "" then
@@ -703,6 +710,9 @@ Sim.GoldButton = goldButton
 local win
 
 local function specLabel(spec)
+	if Sim.SpecName and Sim.SpecName(spec) then
+		return Sim.SpecName(spec)
+	end
 	if GetSpecializationInfo then
 		local ok, _, name = pcall(GetSpecializationInfo, spec)
 		if ok and type(name) == "string" then
@@ -826,7 +836,7 @@ function Sim.ShowImport()
 	local _, token, spec = Sim.Rotations()
 	if not token or not spec or spec == 0 then
 		if ns.Print then
-			ns.Print(ns.T("SIM_IMPORT_NOSPEC"))
+			ns.Print(Sim.NoSpecMessage())
 		end
 		return false
 	end

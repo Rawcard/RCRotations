@@ -332,7 +332,7 @@ local function genericResource()
 	elseif token == "MONK" then
 		return power("chi")
 	elseif token == "WARLOCK" then
-		local spec = num(call(GetSpecialization), 0)
+		local spec = Sim.Spec()
 		if spec == 2 then
 			return power("fury")
 		elseif spec == 3 then
@@ -341,6 +341,49 @@ local function genericResource()
 		return power("shards")
 	end
 	return 0
+end
+
+-- ------------------------------------------------------------------ spec
+-- Current specialization index (1-4), or 0. Newer clients moved the old
+-- globals into C_SpecializationInfo, so try that first.
+function Sim.Spec()
+	local api = C_SpecializationInfo
+	if api and api.GetSpecialization then
+		local s = num(call(api.GetSpecialization), 0)
+		if s > 0 then
+			return s
+		end
+	end
+	local s = num(call(GetSpecialization), 0)
+	if s > 0 then
+		return s
+	end
+	return 0
+end
+
+-- Localized spec name for an index, or nil.
+function Sim.SpecName(spec)
+	local api = C_SpecializationInfo
+	local fns = { api and api.GetSpecializationInfo or false, GetSpecializationInfo or false }
+	for i = 1, 2 do
+		local fn = fns[i]
+		if type(fn) == "function" then
+			local _, name = call(fn, spec)
+			if type(name) == "string" and name ~= "" then
+				return name
+			end
+		end
+	end
+	return nil
+end
+
+-- Why there's no spec to work with: "client" (this client has no WoWSims
+-- rotations / no specs) or "spec" (MoP client, but no spec chosen or readable).
+function Sim.NoSpecReason()
+	if ns.GAME == "mists" then
+		return "spec"
+	end
+	return "client"
 end
 
 -- ------------------------------------------------------------------ evaluate
@@ -807,7 +850,7 @@ end
 -- (SimImport.lua). Returns list (or nil), class token, spec index.
 function Sim.Rotations()
 	local token = ns.ClassToken and ns.ClassToken()
-	local spec = num(call(GetSpecialization), 0)
+	local spec = Sim.Spec()
 	if not token or spec == 0 then
 		return nil, token, spec
 	end

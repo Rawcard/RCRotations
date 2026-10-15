@@ -42,6 +42,9 @@ local function T(key, fallback)
 end
 
 local function specName(spec)
+	if Sim.SpecName and Sim.SpecName(spec) then
+		return Sim.SpecName(spec)
+	end
 	if GetSpecializationInfo then
 		local ok, _, name = pcall(GetSpecializationInfo, spec)
 		if ok and type(name) == "string" and name ~= "" then
@@ -163,7 +166,7 @@ function Sim.ShowPicker(force)
 	list = list or {}
 	if not token or not spec or spec == 0 then
 		if force and ns.Print then
-			ns.Print(T("SIM_IMPORT_NOSPEC", "Rotations need a specialization."))
+			ns.Print(Sim.NoSpecMessage and Sim.NoSpecMessage() or T("SIM_IMPORT_NOSPEC", "Rotations need a specialization."))
 		end
 		return false
 	end

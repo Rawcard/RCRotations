@@ -427,6 +427,20 @@ L.execute("WORLD.spec = 2")
 check(ns.Sim.ShowImport() and L.globals().RCRotationsImport.shown, "import window opens")
 check(ns.Sim.ShowPicker(True) and L.globals().RCRotationsPicker.importBtn is not None, "picker has an Import button")
 
+# --------------------------------------------------------------- 6. spec detection across clients
+L, ns = picker_world()
+L.execute("GetSpecialization = nil; C_SpecializationInfo = { GetSpecialization = function() return 2 end, "
+          "GetSpecializationInfo = function(i) return i, 'Frost' end }")
+r = ns.Sim.Rotations()
+check(r[0] is not None and r[2] == 2, "spec read through C_SpecializationInfo when the old global is gone")
+check(ns.Sim.SpecName(2) == "Frost", "spec name read through C_SpecializationInfo")
+L.execute("C_SpecializationInfo = nil; GetSpecialization = function() return 3 end; GetSpecializationInfo = function(i) return i, 'Unholy' end")
+check(ns.Sim.Rotations()[2] == 3 and ns.Sim.SpecName(3) == "Unholy", "old global API still works")
+L.execute("GetSpecialization = nil; GetSpecializationInfo = nil")
+check(ns.Sim.Spec() == 0 and str(ns.Sim.NoSpecMessage()) == "SIM_IMPORT_NOSPEC", "MoP with no readable spec -> 'pick a spec' message")
+ns.GAME = "tbc"
+check(str(ns.Sim.NoSpecMessage()).startswith("SIM_NOT_THIS_CLIENT"), "TBC/Era -> 'WoWSims rotations are for MoP Classic' message")
+
 print()
 print("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS))
 sys.exit(1 if FAILS else 0)

@@ -55,7 +55,7 @@ jobs:
         run: |
           cp SimData_Mists.lua old-simdata.lua
           python3 tools/wowsims_convert.py --sims wowsims-mop --custom rotations/mists \
-            --out SimData_Mists.lua --report sim-report.md --summary sim-summary.json
+            --tuning rotations/tuning/mists.json --out SimData_Mists.lua --report sim-report.md --summary sim-summary.json
           echo "SIMS_SHA=$(git -C wowsims-mop rev-parse --short=10 HEAD)" >> "$GITHUB_ENV"
 
       - name: Test

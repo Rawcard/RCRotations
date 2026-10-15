@@ -1931,3 +1931,6 @@ ns.SimData.specs = {
 		},
 	},
 }
+ns.SimData.tuning = {
+	["DEATHKNIGHT:3"] = { require = {{ c = { k = "cmp", op = ">=", v = {{ k = "auraNumStacks", id = 91342, unit = "pet" }, 5.0} }, id = 63560 }} },
+}

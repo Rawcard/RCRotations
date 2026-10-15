@@ -513,6 +513,61 @@ for line in Lg.globals().PRINTED.values():
     if line.startswith("PASS ") or line.startswith("FAIL "):
         check(line.startswith("PASS "), "flash: " + line[5:])
 
+# --------------------------------------------------------------- 9. tuning layer
+import tuning as tun
+STRUCT = {"and", "or", "not", "cmp", "math", "max", "min"}
+samples = ["pet.buff(91342).stacks >= 5", "runes.blood == 0 and runes.frost == 0", "not buff(51124) or target.health.pct < 35%",
+           "cooldown(49020).remains <= 1.5s", "debuff(55095).remains < 3s and targets >= 3", "execute(20)", "debuff(55095).down",
+           "spell(63560).usable and gcd.ready", "holy_power >= 3 or chi > 1", "mana.pct > 50% and not moving", "buff(81229).known",
+           "time_to_die > 20s and combat_time > 5", "cooldown(1).charges >= 1 and spell(1).cast_time < 1", "health < 10000 and target.buff(1).remains > 1"]
+kinds = set()
+for text in samples:
+    kinds |= tun.node_kinds(tun.parse_condition(text))
+check(kinds - STRUCT <= conv.SUPPORTED, "tuning syntax only produces conditions the evaluator supports %s" % sorted(kinds - STRUCT - conv.SUPPORTED))
+for bad in ("buff(5).bogus", "pet.buff(1).stacks >=", "runes.purple > 1", "wat > 1", "buff(1) and"):
+    try:
+        tun.parse_condition(bad)
+        check(False, "tuning syntax rejects %r" % bad)
+    except tun.TuningError:
+        check(True, "tuning syntax rejects %r" % bad)
+try:
+    tun.compile_tuning({"death_knight/purple": {"block": [1]}}, conv.SPECS)
+    check(False, "tuning: unknown spec rejected")
+except tun.TuningError:
+    check(True, "tuning: unknown spec rejected")
+shipped = tun.load(os.path.join(ROOT, "rotations", "tuning", "mists.json"), conv.SPECS)
+check("DEATHKNIGHT:3" in shipped, "shipped tuning file compiles (%s)" % ", ".join(sorted(shipped)))
+
+# shipped fix: Dark Transformation waits for 5 Shadow Infusion even if the game says usable
+q, _ = unholy("C_Spell.IsSpellUsable = function(id) return true, false end; WORLD.auras.pet = {{id=91342, stacks=3}}")
+check(63560 not in q, "tuning: Dark Transformation held at 3 Shadow Infusion stacks (got %s)" % q)
+
+# synthetic rules on Frost DK: block, move, add
+L = new_lua()
+ns = load_addon_files(L)
+for sid in (51271, 42650, 48707, 77575, 49184, 45462, 49020, 49143, 57330, 47568, 123693, 12345):
+    L.execute("WORLD.known[%d] = true" % sid)
+L.execute("WORLD.spec = 2; WORLD.power[6] = 20; WORLD.cd[51271] = 60; WORLD.cd[57330] = 20; WORLD.cd[47568] = 200")
+setrules = L.eval("""function(ns)
+	ns.SimData.tuning["DEATHKNIGHT:2"] = {
+		block = { 77575 },
+		move = { { id = 45462, to = "top" } },
+		add = { { id = 12345, at = "top", c = { k = "cmp", op = ">=", v = { { k = "currentRunicPower" }, 10 } } } },
+	}
+end""")
+setrules(ns)
+rots = ns.SimData.specs["DEATHKNIGHT"][2]
+rot = next(rots[i] for i in range(1, len(rots) + 1) if rots[i].file.endswith("obliterate"))
+q = ns.Sim.BuildQueue(rot)
+q = [q[i] for i in range(1, len(q) + 1)]
+check(q[:2] == [12345, 45462], "tuning: 'add at top' and 'move to top' take the first slots (got %s)" % q)
+check(77575 not in q, "tuning: blocked spell skipped (got %s)" % q)
+check(len(list(rot.list.keys())) == len(list(rot.list.keys())) and rot.list[1].id != 12345, "tuning never edits the original rotation")
+L.execute("WORLD.power[6] = 5")
+q = ns.Sim.BuildQueue(rot)
+q = [q[i] for i in range(1, len(q) + 1)]
+check(12345 not in q, "tuning: added line respects its 'when' (got %s)" % q)
+
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j
 import shutil

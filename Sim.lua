@@ -974,6 +974,9 @@ Sim.DEFAULT_BLOCK = {
 	[20484] = "Rebirth",
 }
 
+-- Spec blocks from the tuning file (set per queue build; see Sim.BuildQueue).
+local tuningBlock = {}
+
 local function blockState(id)
 	if not id then
 		return nil
@@ -982,7 +985,7 @@ local function blockState(id)
 	if user and user[id] ~= nil then
 		return user[id]
 	end
-	if Sim.DEFAULT_BLOCK[id] then
+	if Sim.DEFAULT_BLOCK[id] or tuningBlock[id] then
 		return true
 	end
 	return nil
@@ -1091,6 +1094,102 @@ function Sim.FindSpell(text)
 	return sid
 end
 
+-- ------------------------------------------------------------------ tuning
+-- Per-spec fixes from rotations/tuning/*.json, compiled into
+-- ns.SimData.tuning by the converter. Applied to every rotation for the spec,
+-- bundled or imported: require (extra condition), move, add, block.
+local tunedCache = setmetatable({}, { __mode = "k" })
+
+function Sim.TuningFor(rot, token, spec)
+	local all = ns.SimData and ns.SimData.tuning
+	if not all then
+		return nil
+	end
+	local merged
+	local keys = { "*", (token or "?") .. ":" .. tostring(spec or 0), rot and rot.file and ("file:" .. rot.file) or nil }
+	for i = 1, 3 do
+		local rules = keys[i] and all[keys[i]]
+		if rules then
+			merged = merged or { block = {}, require = {}, move = {}, add = {} }
+			for kind, list in pairs(rules) do
+				if merged[kind] then
+					for _, r in ipairs(list) do
+						merged[kind][#merged[kind] + 1] = r
+					end
+				end
+			end
+		end
+	end
+	return merged
+end
+
+local function indexOf(list, id)
+	for i, item in ipairs(list) do
+		if item.id == id then
+			return i
+		end
+	end
+	return nil
+end
+
+-- The rotation's list with the tuning applied (cached per rotation).
+function Sim.ListFor(rot, token, spec)
+	local rules = Sim.TuningFor(rot, token, spec)
+	if not rules then
+		return rot.list, nil
+	end
+	local cached = tunedCache[rot]
+	if cached and cached.key == (token or "?") .. ":" .. tostring(spec) then
+		return cached.list, rules
+	end
+	local need = {}
+	for _, r in ipairs(rules.require) do
+		need[r.id] = need[r.id] and { k = "and", v = { need[r.id], r.c } } or r.c
+	end
+	local list = {}
+	for _, item in ipairs(rot.list) do
+		if item.id and need[item.id] then
+			local copy = {}
+			for k, v in pairs(item) do
+				copy[k] = v
+			end
+			copy.c = item.c and { k = "and", v = { item.c, need[item.id] } } or need[item.id]
+			list[#list + 1] = copy
+		else
+			list[#list + 1] = item
+		end
+	end
+	for _, m in ipairs(rules.move) do
+		local from = indexOf(list, m.id)
+		if from then
+			local item = table.remove(list, from)
+			if m.before then
+				local at = indexOf(list, m.before)
+				table.insert(list, at or (#list + 1), item)
+			elseif m.to == "top" then
+				table.insert(list, 1, item)
+			else
+				list[#list + 1] = item
+			end
+		end
+	end
+	for _, a in ipairs(rules.add) do
+		local item = { id = a.id, c = a.c }
+		if need[a.id] then
+			item.c = item.c and { k = "and", v = { item.c, need[a.id] } } or need[a.id]
+		end
+		if a.before then
+			table.insert(list, indexOf(list, a.before) or (#list + 1), item)
+		elseif a.at == "top" then
+			table.insert(list, 1, item)
+		else
+			list[#list + 1] = item
+		end
+	end
+	tunedCache[rot] = { key = (token or "?") .. ":" .. tostring(spec), list = list }
+	return list, rules
+end
+
 -- ------------------------------------------------------------------ queue
 function Sim.BeginPass()
 	pass = { now = GetTime() }
@@ -1126,8 +1225,16 @@ function Sim.BuildQueue(rot)
 		return nil
 	end
 	Sim.BeginPass()
+	local _, token, spec = Sim.Rotations()
+	local list, rules = Sim.ListFor(rot, token, spec)
+	tuningBlock = {}
+	if rules then
+		for _, id in ipairs(rules.block) do
+			tuningBlock[id] = true
+		end
+	end
 	local q, seen = {}, {}
-	for _, item in ipairs(rot.list) do
+	for _, item in ipairs(list) do
 		if #q >= 3 then
 			break
 		end

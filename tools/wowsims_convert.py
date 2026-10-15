@@ -26,6 +26,10 @@ checks that this file's SUPPORTED set and Sim.lua's handlers agree.
 """
 
 import argparse
+import os.path as _osp
+import sys as _sys
+_sys.path.insert(0, _osp.dirname(_osp.abspath(__file__)))  # for tools/tuning.py
+
 import datetime
 import glob
 import json
@@ -459,12 +463,21 @@ def main():
     ap.add_argument("--out", default="SimData_Mists.lua")
     ap.add_argument("--report", default=None)
     ap.add_argument("--game", default="mists")
+    ap.add_argument("--tuning", default=None,
+                    help="tuning file of per-spec fixes (rotations/tuning/mists.json)")
     ap.add_argument("--summary", default=None, help="write counts as JSON (used by the sync job)")
     ap.add_argument("--custom", default=None,
                     help="folder of your own rotations: <class>/<spec>/<name>.json (exported from WoWSims)")
     args = ap.parse_args()
 
     conv = Converter()
+    tuning = {}
+    if args.tuning and os.path.exists(args.tuning):
+        import tuning as tuning_mod
+        try:
+            tuning = tuning_mod.load(args.tuning, SPECS)
+        except tuning_mod.TuningError as e:
+            sys.exit("tuning error: %s" % e)
     sha, date = git_head(args.sims)
     data = defaultdict(lambda: defaultdict(list))
     rows = []
@@ -529,6 +542,12 @@ def main():
             lines.append("\t\t},")
         lines.append("\t},")
     lines.append("}")
+    # Per-spec fixes from the tuning file, applied in game on top of every
+    # rotation for the spec (bundled or imported). See tools/tuning.py.
+    lines.append("ns.SimData.tuning = {")
+    for target in sorted(tuning):
+        lines.append("\t[%s] = %s," % (lua(target), lua(tuning[target])))
+    lines.append("}")
     with open(args.out, "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
 
@@ -552,6 +571,22 @@ def main():
           "These conditions/actions have no evaluator yet, so the rotation line using them was left out. Adding them to Sim.lua and SUPPORTED brings the line back.")
     block("Approximated", conv.approximated,
           "Simulator-only values replaced with a fixed stand-in (see STAND_IN in the converter).")
+    if tuning:
+        report.extend(["", "### Tuning applied", ""])
+        for target in sorted(tuning):
+            rules = tuning[target]
+            parts = ["%s %d" % (k, len(v)) for k, v in sorted(rules.items())]
+            ids_in = set()
+            for token in data:
+                for spec in data[token]:
+                    for rot in data[token][spec]:
+                        key = "%s:%d" % (token, spec)
+                        if target in ("*", key, "file:" + rot["file"]):
+                            ids_in.update(i["id"] for i in rot["list"] if "id" in i)
+            missing = sorted({r["id"] if isinstance(r, dict) else r for k in ("require", "move")
+                              for r in rules.get(k, [])} - ids_in)
+            note = (" (not in these rotations: %s)" % ", ".join(map(str, missing))) if missing and target != "*" else ""
+            report.append("- `%s`: %s%s" % (target, ", ".join(parts), note))
     block("Dropped actions", conv.dropped,
           "Actions a rotation helper can't recommend (item swaps, prepull, moves, potions).")
     text = "\n".join(report) + "\n"

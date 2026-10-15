@@ -1,0 +1,10 @@
+{
+  "_about": "RCRotations tuning for MoP Classic: fixes applied on top of every WoWSims rotation (bundled and imported). Syntax: rotations/tuning/README.md. Keys: \"*\" = every spec, \"class/spec\", or \"class/spec/rotation\".",
+
+  "death_knight/unholy": {
+    "require": [
+      { "spell": 63560, "when": "pet.buff(91342).stacks >= 5",
+        "why": "Dark Transformation needs 5 Shadow Infusion stacks on the ghoul" }
+    ]
+  }
+}

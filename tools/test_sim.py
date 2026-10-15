@@ -441,6 +441,15 @@ check(ns.Sim.Spec() == 0 and str(ns.Sim.NoSpecMessage()) == "SIM_IMPORT_NOSPEC",
 ns.GAME = "tbc"
 check(str(ns.Sim.NoSpecMessage()).startswith("SIM_NOT_THIS_CLIENT"), "TBC/Era -> 'WoWSims rotations are for MoP Classic' message")
 
+# --------------------------------------------------------------- 7. flash targeting (Glow.lua)
+Lg = lupa_mod.LuaRuntime()
+Lg.globals().GLOW_PATH = os.path.join(ROOT, "Glow.lua")
+Lg.execute("PRINTED = {} local p = print function print(m) PRINTED[#PRINTED + 1] = m end")
+Lg.execute(read(os.path.join("tools", "test_glow.lua")))
+for line in Lg.globals().PRINTED.values():
+    if line.startswith("PASS ") or line.startswith("FAIL "):
+        check(line.startswith("PASS "), "flash: " + line[5:])
+
 print()
 print("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS))
 sys.exit(1 if FAILS else 0)

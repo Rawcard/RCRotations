@@ -1033,8 +1033,9 @@ SlashCmdList.RCROT = function(msg)
 		ns.Print(("client=%s spec=%s source=%s flash=%s"):format(tostring(ns.GAME), tostring(ns.Sim and ns.Sim.Spec and ns.Sim.Spec() or "?"),
 			rot and ("WoWSims " .. rot.name) or "built-in list", ns.db.spellFlash == false and "skull" or "spellflash"))
 		if ns.GlowFetch then
-			ns.GlowFetch(true)
+			ns.GlowFetch(true, true) -- full scan now, so every bar is included
 		end
+		ns.Print("* = flashed")
 		if #queue == 0 then
 			ns.Print("no suggestion right now")
 		end

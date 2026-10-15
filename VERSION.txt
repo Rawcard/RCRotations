@@ -10,6 +10,10 @@ WoWSims rotations on MoP Classic.
 - Rotation picker: when your spec has more than one WoWSims rotation (Frost DK: Obliterate or
   Masterfrost), a window asks on login or spec change. The choice is saved per character and spec
   until you change it with /rcr apl. /rcr sim turns WoWSims rotations off.
+- Import rotations in game: Options > Rotation > "Import WoWSims" (or /rcr import, or the picker's
+  "Import a rotation..." button). Paste a rotation exported from wowsims.com; it's converted on
+  the spot, saved for all your characters under the current spec, and shown as "(imported)" in the
+  picker. The X next to it removes it.
 - Rotations update through the addon: a daily GitHub job pulls WoWSims changes into a pull request.
 - Simulator-only conditions (trinket procs, boss timers, scripted sequences) use stand-in values;
   everything else (auras, dots, cooldowns, runes, chi, holy power, energy...) is read live.

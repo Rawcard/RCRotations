@@ -39,6 +39,8 @@ jobs:
           echo "SIMS_SHA=$(git -C wowsims-mop rev-parse --short=10 HEAD)" >> "$GITHUB_ENV"
 
       - name: Test
+        env:
+          WOWSIMS_MOP: wowsims-mop
         run: |
           pip install lupa
           python3 tools/test_sim.py

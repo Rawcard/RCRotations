@@ -160,10 +160,14 @@ end
 -- Show the picker for the current spec. force = open even if already chosen.
 function Sim.ShowPicker(force)
 	local list, token, spec = Sim.Rotations()
-	if not list or #list < 2 or not token then
+	list = list or {}
+	if not token or not spec or spec == 0 then
 		if force and ns.Print then
-			ns.Print(T("SIM_NONE_CHOICE", "Only one WoWSims rotation for this spec, nothing to choose."))
+			ns.Print(T("SIM_IMPORT_NOSPEC", "Rotations need a specialization."))
 		end
+		return false
+	end
+	if not force and #list < 2 then
 		return false
 	end
 	if not force and savedPick(token, spec) then
@@ -183,13 +187,32 @@ function Sim.ShowPicker(force)
 		local btn = buttonAt(i)
 		btn:ClearAllPoints()
 		btn:SetPoint("TOPLEFT", frame, "TOPLEFT", 20, -58 - (i - 1) * 32)
-		btn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -20, -58 - (i - 1) * 32)
+		btn:SetPoint("TOPRIGHT", frame, "TOPRIGHT", rot.imported and -48 or -20, -58 - (i - 1) * 32)
+		if rot.imported then
+			local rm = btn.remove
+			if not rm then
+				rm = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+				rm:SetSize(24, 24)
+				btn.remove = rm
+			end
+			rm:ClearAllPoints()
+			rm:SetPoint("LEFT", btn, "RIGHT", 2, 0)
+			rm:SetScript("OnClick", function()
+				if Sim.RemoveImport(token, spec, rot.file) and ns.Print then
+					ns.Print(T("SIM_IMPORT_REMOVED", "Removed %s."):format(rot.name))
+				end
+				Sim.ShowPicker(true)
+			end)
+			rm:Show()
+		elseif btn.remove then
+			btn.remove:Hide()
+		end
 		local label = rot.name
 		if i == 1 then
 			label = label .. "  |cff888888" .. T("SIM_PICK_DEFAULT", "(default)") .. "|r"
 		end
 		btn.label:SetText(label)
-		btn.selected = (rot == current) and savedPick(token, spec) ~= nil
+		btn.selected = (rot == current) and (savedPick(token, spec) ~= nil or #list == 1)
 		styleButton(btn, btn.selected)
 		btn:SetScript("OnClick", function()
 			choose(rot, token, spec)
@@ -199,8 +222,27 @@ function Sim.ShowPicker(force)
 	end
 	for i = #list + 1, #frame.buttons do
 		frame.buttons[i]:Hide()
+		if frame.buttons[i].remove then
+			frame.buttons[i].remove:Hide()
+		end
 	end
-	frame:SetSize(width, 58 + #list * 32 + 40)
+	if not frame.importBtn and Sim.GoldButton then
+		frame.importBtn = Sim.GoldButton(frame, 180, T("SIM_IMPORT_OPEN", "Import a rotation..."))
+		frame.importBtn:SetScript("OnClick", function()
+			frame:Hide()
+			if Sim.ShowImport then
+				Sim.ShowImport()
+			end
+		end)
+	end
+	if frame.importBtn then
+		frame.importBtn:ClearAllPoints()
+		frame.importBtn:SetPoint("TOP", frame, "TOP", 0, -58 - #list * 32 - 4)
+	end
+	if #list == 0 then
+		frame.sub:SetText(T("SIM_PICK_EMPTY", "No WoWSims rotation for this spec yet. Import one:"))
+	end
+	frame:SetSize(width, 58 + #list * 32 + 36 + 40)
 	frame:Show()
 	return true
 end

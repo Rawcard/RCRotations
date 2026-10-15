@@ -1023,11 +1023,12 @@ SlashCmdList.RCROT = function(msg)
 		end
 	elseif msg == "apl" then
 		-- Open the rotation picker (WoWSims rotations for the current spec).
-		local list = ns.Sim and ns.Sim.Rotations and ns.Sim.Rotations()
-		if not list or #list == 0 then
-			ns.Print(ns.T("SIM_NONE"))
-		elseif ns.Sim.ShowPicker then
+		if ns.Sim and ns.Sim.ShowPicker then
 			ns.Sim.ShowPicker(true)
+		end
+	elseif msg == "import" then
+		if ns.Sim and ns.Sim.ShowImport then
+			ns.Sim.ShowImport()
 		end
 	elseif msg == "apl next" then
 		local rot, count = ns.Sim and ns.Sim.Cycle and ns.Sim.Cycle()

@@ -803,15 +803,28 @@ V.totemRemainingTime = function(n)
 end
 
 -- ------------------------------------------------------------------ rotation pick
+-- WoWSims rotations for the current class/spec, plus any imported in game
+-- (SimImport.lua). Returns list (or nil), class token, spec index.
 function Sim.Rotations()
-	local data = ns.SimData
-	if not data or not data.specs then
-		return nil
-	end
 	local token = ns.ClassToken and ns.ClassToken()
 	local spec = num(call(GetSpecialization), 0)
-	local byClass = token and data.specs[token]
-	return byClass and byClass[spec], token, spec
+	if not token or spec == 0 then
+		return nil, token, spec
+	end
+	local data = ns.SimData
+	local base = data and data.specs and data.specs[token] and data.specs[token][spec]
+	local imported = Sim.Imported and Sim.Imported(token, spec) or {}
+	if #imported == 0 then
+		return base, token, spec
+	end
+	local list = {}
+	for _, rot in ipairs(base or {}) do
+		list[#list + 1] = rot
+	end
+	for _, rot in ipairs(imported) do
+		list[#list + 1] = rot
+	end
+	return list, token, spec
 end
 
 function Sim.Current()

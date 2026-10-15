@@ -111,6 +111,8 @@ def load_addon_files(L, game="mists"):
     runner = L.eval("function(src, name, ns) return assert(loadstring(src, name))('RCRotations', ns) end")
     runner(read("SimData_Mists.lua"), "SimData_Mists.lua", ns)
     runner(read("Sim.lua"), "Sim.lua", ns)
+    L.eval("function(ns) ns.T = ns.T or function(k) return k end end")(ns)
+    runner(read("SimImport.lua"), "SimImport.lua", ns)
     return ns
 
 
@@ -245,7 +247,7 @@ local function region()
 	function r:RegisterEvent(e) local ev = rawget(self, 'events') or {} self.events = ev ev[e] = true EVENT_FRAMES[#EVENT_FRAMES + 1] = self end
 	function r:CreateFontString() return region() end
 	function r:CreateTexture() return region() end
-	setmetatable(r, { __index = function() return function() end end })
+	setmetatable(r, { __index = function(_, k) if type(k) == "string" and k:match("^%u") then return function() end end end })
 	return r
 end
 function CreateFrame(kind, name) local f = region() if name then _G[name] = f end return f end
@@ -316,6 +318,114 @@ L.execute("RCRotationsPicker = RCRotationsPicker or {}; RCRotationsPicker.shown 
 pf = L.globals().RCRotationsPicker
 check(pf.shown and "Blood" in str(pf.sub.text if pf.sub else "SIM_PICK_TITLE"),
       "changing spec to one with no saved choice -> picker opens for the new spec")
+
+# --------------------------------------------------------------- 5. in-game import
+SIMS = os.environ.get("WOWSIMS_MOP")
+
+
+def to_py(v):
+    """lupa table -> Python list/dict for comparison."""
+    if lupa_mod.lua_type(v) != "table":
+        return v
+    keys = list(v.keys())
+    if keys and all(isinstance(k, int) for k in keys) and sorted(keys) == list(range(1, len(keys) + 1)):
+        return [to_py(v[i]) for i in range(1, len(keys) + 1)]
+    if not keys:
+        return []
+    return {k: to_py(v[k]) for k in keys}
+
+
+def same(a, b, path="$"):
+    if isinstance(a, bool) or isinstance(b, bool):
+        return (a == b) or path
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return abs(a - b) < 1e-9 or path
+    if isinstance(a, dict) and isinstance(b, dict):
+        if set(a) != set(b):
+            return path + " keys %s vs %s" % (sorted(a), sorted(b))
+        for k in a:
+            r = same(a[k], b[k], path + "." + str(k))
+            if r is not True:
+                return r
+        return True
+    if isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            return path + " len %d vs %d" % (len(a), len(b))
+        for i, (x, y) in enumerate(zip(a, b)):
+            r = same(x, y, "%s[%d]" % (path, i))
+            if r is not True:
+                return r
+        return True
+    return (a == b) or (path + " %r vs %r" % (a, b))
+
+
+if SIMS and os.path.isdir(SIMS):
+    L, ns = picker_world()
+    lua_convert = L.eval("""function(ns, text)
+        local raw, err = ns.Sim.JSONDecode(text)
+        if raw == nil then return nil, err end
+        local rot = ns.Sim.FindRotation(raw)
+        if not rot then return nil, "no rotation" end
+        local list = ns.Sim.ConvertRotation(rot)
+        return list
+    end""")
+    files = sorted(glob.glob(os.path.join(SIMS, "ui", "specs", "*", "*", "apls", "*.apl.json")))
+    mismatches = []
+    compared = 0
+    import json as _json
+    for f in files:
+        text = open(f, encoding="utf-8").read()
+        raw = _json.loads(text)
+        if raw.get("type") != "TypeAPL" or not raw.get("priorityList"):
+            continue
+        py_list, _ = conv.Converter().rotation(raw)
+        res = lua_convert(ns, text)
+        lua_list = res[0] if isinstance(res, tuple) else res
+        if lua_list is None:
+            mismatches.append("%s: Lua failed (%s)" % (f, res[1] if isinstance(res, tuple) else "?"))
+            continue
+        r = same(_json.loads(_json.dumps(py_list)), to_py(lua_list))
+        compared += 1
+        if r is not True:
+            mismatches.append("%s: %s" % (f.split("specs/")[1], r))
+    check(not mismatches and compared > 0,
+          "in-game converter matches the Python converter on all %d WoWSims rotations %s" % (compared, mismatches[:3]))
+else:
+    print("SKIP converter parity (set WOWSIMS_MOP to a wowsims/mop checkout)")
+
+L, ns = picker_world()
+L.execute("RCRotationsDB = nil")
+export = '{"player": {"class": "ClassDeathKnight", "rotation": {"type": "TypeAPL", "priorityList": [' \
+         '{"action": {"condition": {"auraIsActive": {"auraId": {"spellId": 51124}}}, "castSpell": {"spellId": {"spellId": 49020}}}},' \
+         '{"action": {"castSpell": {"spellId": {"spellId": 49143}}}},' \
+         '{"action": {"castSpell": {"spellId": {"itemId": 76095}}}}]}}}'
+L.execute("for _, id in ipairs({49020, 49143}) do WORLD.known[id] = true end")
+res = ns.Sim.ImportText(export, "My Frost")
+ok = res[0] if isinstance(res, tuple) else res
+check(ok is True, "import: full WoWSims settings export accepted (%s)" % (res[1] if isinstance(res, tuple) else res))
+bucket = L.globals().RCRotationsDB.simImports["DEATHKNIGHT:2"]
+check(bucket is not None and len(bucket) == 1 and bucket[1].name.startswith("My Frost"),
+      "import: saved account-wide for Frost DK")
+check(ns.Sim.Current().file == "import/my_frost", "import: becomes the active rotation for the spec")
+rots = ns.Sim.Rotations()[0]
+check(len(rots) == len(ns.SimData.specs["DEATHKNIGHT"][2]) + 1, "import: listed after the WoWSims rotations")
+L.execute("WORLD.auras.player = {{id=51124, remain=8}}")
+q = ns.Sim.BuildQueue()
+check([q[i] for i in range(1, len(q) + 1)] == [49020, 49143], "import: the imported rotation drives the HUD (got %s)" % [q[i] for i in range(1, len(q) + 1)])
+res = ns.Sim.ImportText(export, "My Frost")
+check(len(L.globals().RCRotationsDB.simImports["DEATHKNIGHT:2"]) == 1, "import: same name replaces instead of duplicating")
+for bad, why in (("", "SIM_IMPORT_EMPTY"), ("{not json", "SIM_IMPORT_BADJSON"), ('{"player": {}}', "SIM_IMPORT_NOROT"),
+                 ('{"type":"TypeAPL","priorityList":[{"action":{"autocastOtherCooldowns":{}}}]}', "SIM_IMPORT_NOCASTS")):
+    r = ns.Sim.ImportText(bad, "x")
+    check(r[0] is False and str(r[1]).startswith(why), "import: rejects bad input with %s" % why)
+check(ns.Sim.RemoveImport("DEATHKNIGHT", 2, "import/my_frost") and ns.Sim.Current().file != "import/my_frost",
+      "import: remove deletes it and falls back to a WoWSims rotation")
+L.execute("WORLD.spec = 0")
+r = ns.Sim.ImportText(export, "x")
+check(r[0] is False, "import: refused without a specialization")
+L.execute("WORLD.spec = 2")
+check(ns.Sim.ShowImport() and L.globals().RCRotationsImport.shown, "import window opens")
+check(ns.Sim.ShowPicker(True) and L.globals().RCRotationsPicker.importBtn is not None, "picker has an Import button")
 
 print()
 print("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS))

@@ -743,6 +743,24 @@ local function ensureOptions()
 		ns.RefreshOptions()
 	end)
 
+	-- WoWSims: open the rotation picker / import a rotation (SimPicker.lua, SimImport.lua).
+	local simImport = makeGoldBtn(rotation, 120, 22, ns.T("OPT_SIM_IMPORT"))
+	simImport:SetPoint("TOPRIGHT", rotation, "TOPRIGHT", -8, -48)
+	simImport:SetScript("OnClick", function()
+		if ns.Sim and ns.Sim.ShowImport then
+			ns.Sim.ShowImport()
+		end
+	end)
+	frame.simImport = simImport
+	local simPick = makeGoldBtn(rotation, 120, 22, ns.T("OPT_SIM_PICK"))
+	simPick:SetPoint("RIGHT", simImport, "LEFT", -6, 0)
+	simPick:SetScript("OnClick", function()
+		if ns.Sim and ns.Sim.ShowPicker then
+			ns.Sim.ShowPicker(true)
+		end
+	end)
+	frame.simPick = simPick
+
 	local listCard = CreateFrame("Frame", nil, rotation, "BackdropTemplate")
 	listCard:SetPoint("TOPLEFT", 4, -100)
 	listCard:SetPoint("BOTTOMRIGHT", -4, 4)

@@ -13,7 +13,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Fetch WoWSims rotation files (for the converter parity test)
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/wowsims/mop wowsims-mop
+          git -C wowsims-mop sparse-checkout set --no-cone 'LICENSE' '/ui/specs/**/apls/*'
       - name: WoWSims pipeline tests
+        env:
+          WOWSIMS_MOP: wowsims-mop
         run: |
           pip install lupa
           python3 tools/test_sim.py

@@ -44,11 +44,7 @@ local function applyChrome(frame, locked)
 		return
 	elseif frame._rcCompact then
 		frame:SetBackdropColor(0, 0, 0, 0.6)
-		if frame._rcCompact == "main" then
-			frame:SetBackdropBorderColor(1, 0.82, 0.2, 1)
-		else
-			frame:SetBackdropBorderColor(0.62, 0.5, 0.2, 0.9)
-		end
+		frame:SetBackdropBorderColor(0, 0, 0, 1)
 		return
 	end
 	if frame._wfrChrome == "compact" then
@@ -797,7 +793,7 @@ end
 -- original Forever Rotation panel. Same frames either way, so everything
 -- anchored to the icons keeps working.
 -- ---------------------------------------------------------------------------
-local MAIN, SMALL, SPACE = 56, 38, 6
+local MAIN, SMALL, SPACE = 56, 38, 2
 
 local function hudStyle()
 	return (ns.db and ns.db.hudStyle == "classic") and "classic" or "compact"
@@ -925,9 +921,71 @@ function ns.UI.ApplyStyle()
 		end
 	end
 	ns.UI.ApplyChrome()
+	ns.UI.RefreshLockBar()
 	if ns.UI.FitFrame then
 		root:SetHeight((ns.UI.baseHeight or (8 + SIZE + 8)) + 0.01)
 		ns.UI.FitFrame()
+	end
+end
+
+-- Compact style: a thin "click to lock" bar under the icons replaces the
+-- padlock. It only shows while unlocked; unlocking is done from the menu
+-- (Options > General > Lock, the minimap button, or /rcr unlock).
+local function ensureLockBar()
+	local root = ns.UI.root
+	if ns.UI.lockBar or not root then
+		return ns.UI.lockBar
+	end
+	local bar = CreateFrame("Button", "RCRotationsLockBar", root, "BackdropTemplate")
+	bar:SetHeight(14)
+	bar:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, -3)
+	bar:SetPoint("TOPRIGHT", root, "BOTTOMRIGHT", 0, -3)
+	if bar.SetBackdrop then
+		bar:SetBackdrop(COMPACT_EDGE)
+		bar:SetBackdropColor(0, 0, 0, 0.75)
+		bar:SetBackdropBorderColor(0, 0, 0, 1)
+	end
+	local fill = bar:CreateTexture(nil, "ARTWORK")
+	fill:SetPoint("TOPLEFT", 2, -2)
+	fill:SetPoint("BOTTOMRIGHT", -2, 2)
+	fill:SetTexture("Interface\\Buttons\\WHITE8x8")
+	fill:SetVertexColor(0.83, 0.63, 0.09, 0.35)
+	bar.fill = fill
+	local text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	text:SetPoint("CENTER", 0, 0)
+	local font = text:GetFont()
+	if font then
+		text:SetFont(font, 9, "OUTLINE")
+	end
+	text:SetText(ns.T("LOCKBAR"))
+	bar.text = text
+	bar:SetScript("OnEnter", function(self)
+		self.fill:SetVertexColor(1, 0.82, 0.2, 0.6)
+	end)
+	bar:SetScript("OnLeave", function(self)
+		self.fill:SetVertexColor(0.83, 0.63, 0.09, 0.35)
+	end)
+	bar:RegisterForClicks("LeftButtonUp")
+	bar:SetScript("OnClick", function()
+		ns.UI.SetLocked(true)
+		if ns.Print then
+			ns.Print(ns.T("LOCKBAR_DONE"))
+		end
+	end)
+	bar:Hide()
+	ns.UI.lockBar = bar
+	return bar
+end
+
+function ns.UI.RefreshLockBar()
+	local compact = hudStyle() == "compact"
+	local locked = ns.db and ns.db.locked == true
+	local bar = compact and ensureLockBar() or ns.UI.lockBar
+	if bar then
+		bar:SetShown(compact and not locked)
+	end
+	if ns.UI.lockWrap then
+		ns.UI.lockWrap:SetShown(not compact)
 	end
 end
 
@@ -1165,6 +1223,9 @@ function ns.UI.SetLocked(locked)
 		ns.UI.lock:SetAlpha(0.9)
 	end
 	ns.UI.ApplyMouse()
+	if ns.UI.RefreshLockBar then
+		ns.UI.RefreshLockBar()
+	end
 end
 
 function ns.UI.RefreshCue()

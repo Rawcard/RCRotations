@@ -28,7 +28,10 @@ WoWSims rotations on MoP Classic.
 - /rcr why lists the suggestions and the buttons each one flashes.
 - New default HUD style "Compact": a big square main icon with a thin gold edge, no panel behind
   it, a large keybind in the bottom-left and a small RC badge, with the next two spells smaller
-  beside it. Switch back with Options > General > Display ("HUD: Classic") or /rcr style.
+  beside it, all with black borders. Switch back with Options > General > Display ("HUD: Classic")
+  or /rcr style.
+- Compact style replaces the padlock with a thin "Click to lock" bar under the icons. It disappears
+  once locked; unlock from Options > General > Lock (or the minimap button).
 - Spells the game says you can't cast right now (Dark Transformation without 5 Shadow Infusion,
   procs, forms, resources) are never suggested.
 - Never-suggest list, applied on top of every rotation so WoWSims updates can't bring them back:

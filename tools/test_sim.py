@@ -8,6 +8,7 @@
 Run from the repo root:  python3 tools/test_sim.py
 """
 import glob
+import re
 import os
 import sys
 
@@ -511,6 +512,40 @@ Lg.execute(read(os.path.join("tools", "test_glow.lua")))
 for line in Lg.globals().PRINTED.values():
     if line.startswith("PASS ") or line.startswith("FAIL "):
         check(line.startswith("PASS "), "flash: " + line[5:])
+
+# --------------------------------------------------------------- 8. auto-release helpers
+import json as _j
+import shutil
+import subprocess
+import tempfile
+tmp = tempfile.mkdtemp()
+try:
+    def write(name, text):
+        p = os.path.join(tmp, name)
+        open(p, "w").write(text)
+        return p
+    old = write("old.lua", 'file = "a/b/x"\nfile = "a/b/y"\n')
+    same = write("same.lua", 'file = "a/b/x"\nfile = "a/b/y"\nfile = "a/b/z"\n')
+    lost = write("lost.lua", 'file = "a/b/x"\n')
+    ok_sum = write("ok.json", _j.dumps({"unsupported": 0}))
+    bad_sum = write("bad.json", _j.dumps({"unsupported": 2}))
+    guard = [sys.executable, "-I", os.path.join(ROOT, "tools", "sync_release.py"), "guard"]
+    check(subprocess.run(guard + [old, same, ok_sum], capture_output=True).returncode == 0, "auto-release: added rotation is safe")
+    check(subprocess.run(guard + [old, lost, ok_sum], capture_output=True).returncode == 1, "auto-release: removed rotation needs review")
+    check(subprocess.run(guard + [old, same, bad_sum], capture_output=True).returncode == 1, "auto-release: unsupported items need review")
+    os.makedirs(os.path.join(tmp, "repo", "tools"))
+    for f in ("RCRotations.toc", "RCRotations_Camelot.toc", "VERSION.txt"):
+        shutil.copy(os.path.join(ROOT, f), os.path.join(tmp, "repo", f))
+    shutil.copy(os.path.join(ROOT, "tools", "sync_release.py"), os.path.join(tmp, "repo", "tools"))
+    cur = re.search(r"## Version: (\d+)\.(\d+)\.(\d+)", read("RCRotations.toc")).groups()
+    out = subprocess.run([sys.executable, "-I", os.path.join(tmp, "repo", "tools", "sync_release.py"), "bump", "abcdef1234567"],
+                         capture_output=True, text=True).stdout.strip()
+    want = "%s.%s.%d" % (cur[0], cur[1], int(cur[2]) + 1)
+    tocs_ok = all(("## Version: " + want) in open(os.path.join(tmp, "repo", f)).read() for f in ("RCRotations.toc", "RCRotations_Camelot.toc"))
+    check(out == want and tocs_ok and open(os.path.join(tmp, "repo", "VERSION.txt")).read().startswith(want),
+          "auto-release: version bump %s -> %s in both TOCs and the changelog" % (".".join(cur), out))
+finally:
+    shutil.rmtree(tmp, ignore_errors=True)
 
 print()
 print("ALL PASS" if not FAILS else "%d FAILED" % len(FAILS))

@@ -459,6 +459,7 @@ def main():
     ap.add_argument("--out", default="SimData_Mists.lua")
     ap.add_argument("--report", default=None)
     ap.add_argument("--game", default="mists")
+    ap.add_argument("--summary", default=None, help="write counts as JSON (used by the sync job)")
     ap.add_argument("--custom", default=None,
                     help="folder of your own rotations: <class>/<spec>/<name>.json (exported from WoWSims)")
     args = ap.parse_args()
@@ -554,6 +555,12 @@ def main():
     block("Dropped actions", conv.dropped,
           "Actions a rotation helper can't recommend (item swaps, prepull, moves, potions).")
     text = "\n".join(report) + "\n"
+    if args.summary:
+        with open(args.summary, "w", encoding="utf-8") as f:
+            json.dump({"rotations": total_rot, "sha": sha, "date": date,
+                       "unsupported": sum(conv.unsupported.values()),
+                       "approximated": sum(conv.approximated.values()),
+                       "dropped": sum(conv.dropped.values())}, f)
     if args.report:
         with open(args.report, "w", encoding="utf-8") as f:
             f.write(text)

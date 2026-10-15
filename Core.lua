@@ -1015,6 +1015,22 @@ SlashCmdList.RCROT = function(msg)
 		ns.SetProfile("base")
 	elseif msg == "custom" or msg == "customs" then
 		ns.SetProfile("custom")
+	elseif msg == "sim" then
+		ns.db.useSim = (ns.db.useSim == false)
+		ns.Print(ns.T(ns.db.useSim and "SIM_ON" or "SIM_OFF"))
+		if ns.InvalidateTick then
+			ns.InvalidateTick()
+		end
+	elseif msg == "apl" then
+		local rot, count = ns.Sim and ns.Sim.Cycle and ns.Sim.Cycle()
+		if rot then
+			ns.Print(ns.T("SIM_PICK"):format(rot.name, rot.file, count))
+		else
+			ns.Print(ns.T("SIM_NONE"))
+		end
+		if ns.InvalidateTick then
+			ns.InvalidateTick()
+		end
 	elseif msg == "flash" then
 		ns.db.spellFlash = (ns.db.spellFlash == false)
 		ns.Print(ns.T(ns.db.spellFlash and "FLASH_SPELLFLASH" or "FLASH_SKULL"))

@@ -1,4 +1,17 @@
-1.2.0
+1.3.0
+
+# 1.3.0
+
+WoWSims rotations on MoP Classic.
+
+- Every MoP class gets real rotations, generated from WoWSims (wowsims/mop, MIT): 74 rotations
+  covering all DPS and tank specs plus Discipline and Holy Priest. The rotation follows your
+  current specialization automatically.
+- /rcr apl switches between the WoWSims rotations available for your spec; /rcr sim turns them off.
+- Rotations update through the addon: a daily GitHub job pulls WoWSims changes into a pull request.
+- Simulator-only conditions (trinket procs, boss timers, scripted sequences) use stand-in values;
+  everything else (auras, dots, cooldowns, runes, chi, holy power, energy...) is read live.
+- Era, TBC, Wrath, Cata and Forever keep the built-in lists.
 
 # 1.2.0
 

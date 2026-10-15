@@ -6,3 +6,7 @@ desktop.ini
 .vscode/
 .idea/
 *.log
+
+wowsims-mop/
+sim-report.md
+__pycache__/

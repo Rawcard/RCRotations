@@ -1,0 +1,49 @@
+name: Sync WoWSims rotations
+
+# Daily: regenerate SimData_Mists.lua from the latest WoWSims MoP rotations.
+# If anything changed, open (or update) a pull request with the import report.
+on:
+  schedule:
+    - cron: "17 9 * * *" # daily, 09:17 UTC (3:17 am Alberta time)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch WoWSims rotation files
+        run: |
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/wowsims/mop wowsims-mop
+          cd wowsims-mop
+          git sparse-checkout set --no-cone 'LICENSE' '/ui/specs/**/apls/*'
+
+      - name: Convert
+        run: |
+          python3 tools/wowsims_convert.py --sims wowsims-mop --out SimData_Mists.lua --report sim-report.md
+          echo "SIMS_SHA=$(git -C wowsims-mop rev-parse --short=10 HEAD)" >> "$GITHUB_ENV"
+
+      - name: Test
+        run: |
+          pip install lupa
+          python3 tools/test_sim.py
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: wowsims-sync
+          delete-branch: true
+          add-paths: SimData_Mists.lua
+          commit-message: "Update WoWSims rotations (wowsims/mop@${{ env.SIMS_SHA }})"
+          title: "Update WoWSims rotations (wowsims/mop@${{ env.SIMS_SHA }})"
+          body-path: sim-report.md
+          labels: wowsims

@@ -128,6 +128,13 @@ end
 function ns.BuildQueue()
 	local q = {}
 	ns.queueHeal = {}
+	-- WoWSims rotation for this client/class/spec, when one exists (Sim.lua).
+	if ns.Sim and ns.Sim.Active and ns.Sim.Active() then
+		local ok, simQueue = pcall(ns.Sim.BuildQueue)
+		if ok and simQueue then
+			return simQueue
+		end
+	end
 	if not ns.GetAPL then
 		return q
 	end

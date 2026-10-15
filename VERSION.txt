@@ -1,4 +1,48 @@
-1.2.0
+1.3.0
+
+# 1.3.0
+
+WoWSims rotations on MoP Classic.
+
+- Every MoP class gets real rotations, generated from WoWSims (wowsims/mop, MIT): 73 rotations
+  covering all DPS and tank specs plus Holy Priest. The rotation follows your
+  current specialization automatically.
+- Rotation picker: when your spec has more than one WoWSims rotation (Frost DK: Obliterate or
+  Masterfrost), a window asks on login or spec change. The choice is saved per character and spec
+  until you change it with /rcr apl.
+- Import rotations in game: Options > Rotation > "Import WoWSims" (or /rcr import, or the picker's
+  "Import a rotation..." button). Paste a rotation exported from wowsims.com; it's converted on
+  the spot, saved for all your characters under the current spec, and shown as "(imported)" in the
+  picker. The X next to it removes it.
+- Rotations update through the addon: a daily GitHub job pulls WoWSims changes into a pull request.
+- Simulator-only conditions (trinket procs, boss timers, scripted sequences) use stand-in values;
+  everything else (auras, dots, cooldowns, runes, chi, holy power, energy...) is read live.
+- WoWSims only: the built-in rotation lists, their editor and the Auto/AoE/Burst buttons are
+  gone. On Era, TBC and Forever you import a WoWSims rotation per class; on first login with no
+  rotation for your class/spec, a window offers the import. The Options Rotation tab shows the
+  active WoWSims rotation with Choose and Import buttons. Defense, interrupt, purge, cleanse and
+  weapon reminders are unchanged.
+- Flashes: any bar addon is detected (ElvUI, Bartender, Dominos, RCDiabloUI, or anything built on
+  LibActionButton). Only visible buttons flash, and a flash hides while its button is hidden,
+  so there are no stray flashes where a bar addon hid Blizzard's buttons.
+- /rcr why lists the suggestions and the buttons each one flashes.
+- New default HUD style "Compact": a big square main icon with a thin gold edge, no panel behind
+  it, a large keybind in the bottom-left and a small RC badge, with the next two spells smaller
+  beside it, all with black borders. Switch back with Options > General > Display ("HUD: Classic")
+  or /rcr style.
+- Compact style replaces the padlock with a thin "Click to lock" bar under the icons. It disappears
+  once locked; unlock from Options > General > Lock (or the minimap button).
+- The RC badge on the main icon is a button: click it to open the options.
+- The defense, interrupt, purge, cleanse and weapon-buff windows are off by default (switched off
+  once on existing characters too). Turn them on in Options > General > Windows.
+- Suggestion icons stay clickable while locked (right-click = never suggest); dragging still
+  needs the HUD unlocked.
+- Spells the game says you can't cast right now (Dark Transformation without 5 Shadow Infusion,
+  procs, forms, resources) are never suggested.
+- Never-suggest list, applied on top of every rotation so WoWSims updates can't bring them back:
+  personal defensives and raid cooldowns by default (Anti-Magic Shell, Icebound Fortitude,
+  Army of the Dead, Bloodlust/Heroism/Time Warp, ...). Right-click a spell on the HUD to add it;
+  /rcr unblock <spell> to remove; /rcr blocked to list; Options > Rotation shows it with a reset.
 
 # 1.2.0
 

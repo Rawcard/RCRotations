@@ -23,7 +23,20 @@ One folder works on every Classic client:
 
 Retail is not supported: since Midnight, combat state is hidden from addons, so a rotation helper can't make decisions there.
 
-Rotation lists are currently the Classic Era lists (all nine Classic classes). Spells resolve by **name + spellbook**, so ranks and remapped IDs still match. Death Knight and Monk load and get a HUD, but have no rotation yet; WoWSims-based rotations for later expansions are in progress.
+RCRotations only uses **WoWSims** rotations. On **MoP Classic** they come bundled from [WoWSims](https://github.com/wowsims/mop) (MIT): every class, every DPS and tank spec, plus Holy Priest, picked from your current specialization, and they update with the addon. On other clients (Era, TBC, Forever), and for MoP specs WoWSims doesn't cover, you import the rotation you want from wowsims.com; on first login with nothing to use, a window offers the import. There are no built-in rotation lists. Spells resolve by **name + spellbook**, so ranks and remapped IDs still match.
+
+## WoWSims rotations
+
+- `tools/wowsims_convert.py` turns WoWSims' rotation files into `SimData_Mists.lua` (generated; don't edit by hand). The file header records the WoWSims commit it came from.
+- `Sim.lua` evaluates those rotations live each tick and fills the HUD with the first three castable spells.
+- A GitHub Action (`Sync WoWSims rotations`) runs daily. When WoWSims changes a rotation it either releases automatically or opens a pull request with an import report (what converted, what was approximated, anything unsupported).
+- **Automatic releases:** set the repository variable `AUTO_RELEASE` to `true` (Settings → Secrets and variables → Actions → Variables). Then a rotation update that passes the safety check (tests pass, no rotation removed, nothing unsupported) is committed, the patch version is bumped, and a release is published to GitHub and, when configured, CurseForge/Wago. Anything that fails the check still arrives as a pull request.
+- Your own rotations: export one from wowsims.com (Rotation tab → Export → JSON) and save it as `rotations/mists/<class>/<spec>/<name>.json`. Pushing it starts the sync job, which opens a PR adding it next to the WoWSims ones (shown as "(custom)" in the picker). See `rotations/mists/README.md`.
+- Import in game: Options → Rotation → **Import WoWSims** (or `/rcr import`). Paste a rotation exported from wowsims.com; it's converted in game (same rules as the Python converter, checked by the tests) and saved account-wide for the current spec.
+- Never-suggest list: spells WoWSims uses for simulation value but a player saves (defensives, raid cooldowns) are skipped by default; right-click a HUD spell to add more, `/rcr unblock <spell>` to undo. Applied on top of every rotation, so WoWSims updates don't undo it.
+- In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker.
+- Tests: `pip install lupa && python3 tools/test_sim.py`.
+
 
 ## Install
 
@@ -41,7 +54,7 @@ Pushing a version tag (for example `v1.2.0`) to GitHub builds the addon zip with
 
 | Surface | Role |
 | --- | --- |
-| **Rotation HUD** | Next 3 combat abilities from your checked list |
+| **Rotation HUD** | Next 3 combat abilities from your WoWSims rotation |
 | **Defense** | Missing long buffs / auras, plus emergency buttons when health is low |
 | **Weapon** | Missing weapon imbue (shaman / rogue poisons, etc.) |
 | **Interrupt / Purge / Cleanse** | Target interrupt, enemy magic purge, dispellable debuffs |

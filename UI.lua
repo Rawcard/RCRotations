@@ -26,9 +26,29 @@ local function classColor()
 	return 0.83, 0.63, 0.09
 end
 
+local COMPACT_EDGE = {
+	bgFile = "Interface\\Buttons\\WHITE8x8",
+	edgeFile = "Interface\\Buttons\\WHITE8x8",
+	edgeSize = 2,
+	insets = { left = 0, right = 0, top = 0, bottom = 0 },
+}
+
 local function applyChrome(frame, locked)
 	if not frame or not frame.SetBackdrop then
 		return
+	end
+	-- Compact HUD style (ns.UI.ApplyStyle): flat icons with a thin gold edge.
+	if frame._rcCompact == "root" then
+		frame:SetBackdropColor(0, 0, 0, 0)
+		frame:SetBackdropBorderColor(0, 0, 0, 0)
+		return
+	elseif frame._rcCompact then
+		frame:SetBackdropColor(0, 0, 0, 0.6)
+		frame:SetBackdropBorderColor(0, 0, 0, 1)
+		return
+	end
+	if frame._wfrChrome == "compact" then
+		frame._wfrChrome = nil
 	end
 	if not frame._wfrChrome then
 		frame:SetBackdrop(CHROME)
@@ -199,6 +219,15 @@ function ns.UI.Create()
 		end
 		makeMovable(slot, "queue", root)
 		bindTip(slot, tipKeys[i][1], tipKeys[i][2])
+		-- Right-click a suggestion: never suggest that spell again (per character).
+		slot:SetScript("OnMouseUp", function(self, button)
+			if button == "RightButton" and self.spellID and ns.Sim and ns.Sim.ToggleBlock then
+				ns.Sim.ToggleBlock(self.spellID)
+				if ns.Tick then
+					pcall(ns.Tick)
+				end
+			end
+		end)
 		ns.UI.slots[i] = slot
 		local font = slot.bind:GetFont()
 		if font then
@@ -388,7 +417,7 @@ function ns.UI.Create()
 				ns.UI.gauge:Hide()
 			end
 		end
-		local height = 8 + SIZE + 8 + extra
+		local height = (ns.UI.baseHeight or (8 + SIZE + 8)) + extra
 		local rootFrame = ns.UI.root
 		local current = tonumber(rootFrame:GetHeight())
 		if current and math.abs(current - height) < 0.5 then
@@ -723,6 +752,7 @@ function ns.UI.Create()
 	ns.UI.notice = notice
 
 	ns.UI.root = root
+	ns.UI.ApplyStyle()
 	ns.UI.ApplyPosition()
 	ns.UI.ApplyScale()
 	ns.UI.RefreshRoles()
@@ -754,6 +784,238 @@ function ns.UI.RefreshTips()
 			frame.tipDesc = frame.tipDescKey and ns.T(frame.tipDescKey) or nil
 		end
 	end
+end
+
+-- ---------------------------------------------------------------------------
+-- HUD style. "compact" (default): a big square main icon with a thin gold
+-- edge, no panel behind it, a large keybind in the bottom-left and a small
+-- RC badge, with the next two spells smaller beside it. "classic": the
+-- original Forever Rotation panel. Same frames either way, so everything
+-- anchored to the icons keeps working.
+-- ---------------------------------------------------------------------------
+local MAIN, SMALL, SPACE = 56, 38, 2
+
+local function hudStyle()
+	return (ns.db and ns.db.hudStyle == "classic") and "classic" or "compact"
+end
+ns.UI.HudStyle = hudStyle
+
+local function setInset(slot, px)
+	slot.texture:ClearAllPoints()
+	slot.texture:SetPoint("TOPLEFT", px, -px)
+	slot.texture:SetPoint("BOTTOMRIGHT", -px, px)
+	for _, key in ipairs({ "filter", "shine" }) do
+		local t = slot[key]
+		if t then
+			t:ClearAllPoints()
+			t:SetPoint("TOPLEFT", px, -px)
+			t:SetPoint("BOTTOMRIGHT", -px, px)
+		end
+	end
+end
+
+local function styleBind(slot, size, corner)
+	local bind = slot.bind
+	if not bind then
+		return
+	end
+	local font = bind:GetFont()
+	if font then
+		bind:SetFont(font, size, "THICKOUTLINE")
+	end
+	bind:ClearAllPoints()
+	if corner == "left" then
+		bind:SetPoint("BOTTOMLEFT", 4, 3)
+		bind:SetJustifyH("LEFT")
+		bind:SetTextColor(1, 1, 1)
+	else
+		bind:SetPoint("BOTTOMRIGHT", -3, 3)
+		bind:SetJustifyH("RIGHT")
+		bind:SetTextColor(1, 0.92, 0.45)
+	end
+end
+
+local function badge(slot)
+	if slot.rcBadge then
+		return slot.rcBadge
+	end
+	-- The RC badge is a button: click it to open the options (works locked too).
+	local b = CreateFrame("Button", "RCRotationsBadge", slot, "BackdropTemplate")
+	b:SetSize(22, 14)
+	b:SetPoint("TOPRIGHT", slot, "TOPRIGHT", 6, 7)
+	b:EnableMouse(true)
+	b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	b:SetScript("OnClick", function()
+		if ns.ToggleOptions then
+			ns.ToggleOptions()
+		end
+	end)
+	b:SetScript("OnEnter", function(self)
+		self:SetBackdropBorderColor(1, 1, 1, 1)
+		if GameTooltip then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText("RCRotations")
+			GameTooltip:AddLine(ns.T("BADGE_TIP"), 0.8, 0.8, 0.8)
+			GameTooltip:Show()
+		end
+	end)
+	b:SetScript("OnLeave", function(self)
+		self:SetBackdropBorderColor(1, 0.82, 0.2, 1)
+		if GameTooltip then
+			GameTooltip:Hide()
+		end
+	end)
+	b:SetFrameLevel(slot:GetFrameLevel() + 5)
+	if b.SetBackdrop then
+		b:SetBackdrop(COMPACT_EDGE)
+		b:SetBackdropColor(0, 0, 0, 0.85)
+		b:SetBackdropBorderColor(1, 0.82, 0.2, 1)
+	end
+	local text = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	text:SetPoint("CENTER", 0, 0)
+	local font = text:GetFont()
+	if font then
+		text:SetFont(font, 9, "OUTLINE")
+	end
+	text:SetText("|cff66ccffR|r|cffd4a017C|r")
+	b.text = text
+	slot.rcBadge = b
+	return b
+end
+
+function ns.UI.ApplyStyle()
+	local root, slots = ns.UI.root, ns.UI.slots
+	if not root or not slots or not slots[1] then
+		return
+	end
+	local style = hudStyle()
+	if style == "compact" then
+		if root.SetBackdrop then
+			root:SetBackdrop(COMPACT_EDGE)
+		end
+		root._rcCompact = "root"
+		root._wfrChrome = "compact"
+		ns.UI.baseHeight = MAIN
+		root:SetWidth(MAIN + (SPACE + SMALL) * 2)
+		for i, slot in ipairs(slots) do
+			local size = i == 1 and MAIN or SMALL
+			slot:SetSize(size, size)
+			if slot.SetBackdrop then
+				slot:SetBackdrop(COMPACT_EDGE)
+			end
+			slot._rcCompact = i == 1 and "main" or "next"
+			slot._wfrChrome = "compact"
+			setInset(slot, 2)
+			slot.texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+			slot:ClearAllPoints()
+			if i == 1 then
+				slot:SetPoint("TOPLEFT", root, "TOPLEFT", 0, 0)
+			else
+				slot:SetPoint("BOTTOMLEFT", slots[i - 1], "BOTTOMRIGHT", SPACE, 0)
+			end
+			styleBind(slot, i == 1 and 20 or 13, "left")
+			if slot.bind and slot.bind.SetWidth then
+				slot.bind:SetWidth(size - 6)
+			end
+		end
+		badge(slots[1]):Show()
+	else
+		root._rcCompact = nil
+		ns.UI.baseHeight = nil
+		root:SetWidth(SIZE * 3 + GAP * 2 + 16)
+		for i, slot in ipairs(slots) do
+			local size = i == 1 and SIZE or 40
+			slot:SetSize(size, size)
+			slot._rcCompact = nil
+			setInset(slot, 3)
+			slot:ClearAllPoints()
+			if i == 1 then
+				slot:SetPoint("TOPLEFT", root, "TOPLEFT", 8, -8)
+			else
+				slot:SetPoint("LEFT", slots[i - 1], "RIGHT", GAP, i == 2 and -4 or 0)
+			end
+			styleBind(slot, i == 1 and 18 or 16, "right")
+			if slot.bind and slot.bind.SetWidth then
+				slot.bind:SetWidth(size - 8)
+			end
+		end
+		if slots[1].rcBadge then
+			slots[1].rcBadge:Hide()
+		end
+	end
+	ns.UI.ApplyChrome()
+	ns.UI.RefreshLockBar()
+	if ns.UI.FitFrame then
+		root:SetHeight((ns.UI.baseHeight or (8 + SIZE + 8)) + 0.01)
+		ns.UI.FitFrame()
+	end
+end
+
+-- Compact style: a thin "click to lock" bar under the icons replaces the
+-- padlock. It only shows while unlocked; unlocking is done from the menu
+-- (Options > General > Lock, the minimap button, or /rcr unlock).
+local function ensureLockBar()
+	local root = ns.UI.root
+	if ns.UI.lockBar or not root then
+		return ns.UI.lockBar
+	end
+	local bar = CreateFrame("Button", "RCRotationsLockBar", root, "BackdropTemplate")
+	bar:SetHeight(14)
+	bar:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, -3)
+	bar:SetPoint("TOPRIGHT", root, "BOTTOMRIGHT", 0, -3)
+	if bar.SetBackdrop then
+		bar:SetBackdrop(COMPACT_EDGE)
+		bar:SetBackdropColor(0, 0, 0, 0.75)
+		bar:SetBackdropBorderColor(0, 0, 0, 1)
+	end
+	local fill = bar:CreateTexture(nil, "ARTWORK")
+	fill:SetPoint("TOPLEFT", 2, -2)
+	fill:SetPoint("BOTTOMRIGHT", -2, 2)
+	fill:SetTexture("Interface\\Buttons\\WHITE8x8")
+	fill:SetVertexColor(0.83, 0.63, 0.09, 0.35)
+	bar.fill = fill
+	local text = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	text:SetPoint("CENTER", 0, 0)
+	local font = text:GetFont()
+	if font then
+		text:SetFont(font, 9, "OUTLINE")
+	end
+	text:SetText(ns.T("LOCKBAR"))
+	bar.text = text
+	bar:SetScript("OnEnter", function(self)
+		self.fill:SetVertexColor(1, 0.82, 0.2, 0.6)
+	end)
+	bar:SetScript("OnLeave", function(self)
+		self.fill:SetVertexColor(0.83, 0.63, 0.09, 0.35)
+	end)
+	bar:RegisterForClicks("LeftButtonUp")
+	bar:SetScript("OnClick", function()
+		ns.UI.SetLocked(true)
+		if ns.Print then
+			ns.Print(ns.T("LOCKBAR_DONE"))
+		end
+	end)
+	bar:Hide()
+	ns.UI.lockBar = bar
+	return bar
+end
+
+function ns.UI.RefreshLockBar()
+	local compact = hudStyle() == "compact"
+	local locked = ns.db and ns.db.locked == true
+	local bar = compact and ensureLockBar() or ns.UI.lockBar
+	if bar then
+		bar:SetShown(compact and not locked)
+	end
+	if ns.UI.lockWrap then
+		ns.UI.lockWrap:SetShown(not compact)
+	end
+end
+
+function ns.UI.CycleStyle()
+	ns.db.hudStyle = hudStyle() == "compact" and "classic" or "compact"
+	ns.UI.ApplyStyle()
+	return ns.db.hudStyle
 end
 
 function ns.UI.ApplyChrome()
@@ -846,7 +1108,9 @@ function ns.UI.RefreshModes()
 	if not ns.UI.toolbar then
 		return
 	end
-	local showMode = ns.db.showModes ~= false
+	-- Auto/Single/AoE/Burst only switched the old built-in lists; WoWSims
+	-- rotations handle target count themselves, so these buttons stay hidden.
+	local showMode = false
 	local selected = ns.CombatMode and ns.CombatMode() or "auto"
 	local manual = ns.db.lastManualMode or "single"
 	if manual ~= "single" and manual ~= "aoe" and manual ~= "burst" then
@@ -954,9 +1218,14 @@ function ns.UI.ApplyMouse()
 			frame:EnableMouse(mouse)
 		end
 	end
+	-- Suggestion icons stay clickable when locked (right-click = never
+	-- suggest); dragging them is still only possible while unlocked.
 	if ns.UI.slots then
 		for _, slot in ipairs(ns.UI.slots) do
-			slot:EnableMouse(mouse)
+			slot:EnableMouse(true)
+			if slot.rcBadge then
+				slot.rcBadge:EnableMouse(true)
+			end
 		end
 	end
 	if ns.UI.lockWrap then
@@ -982,6 +1251,9 @@ function ns.UI.SetLocked(locked)
 		ns.UI.lock:SetAlpha(0.9)
 	end
 	ns.UI.ApplyMouse()
+	if ns.UI.RefreshLockBar then
+		ns.UI.RefreshLockBar()
+	end
 end
 
 function ns.UI.RefreshCue()
@@ -1037,7 +1309,7 @@ local function paint(slot, spellID, dim)
 	else
 		slot.texture:SetTexture(IMG .. "skull")
 	end
-	slot.texture:SetVertexColor(1, 1, 1, dim and 0.55 or 1)
+	slot.texture:SetVertexColor(1, 1, 1, dim and (hudStyle() == "compact" and 0.85 or 0.55) or 1)
 	if slot.filter then
 		slot.filter:Hide()
 	end

@@ -6,3 +6,11 @@ desktop.ini
 .vscode/
 .idea/
 *.log
+
+wowsims-mop/
+sim-report.md
+__pycache__/
+old-simdata.lua
+sim-summary.json
+guard.txt
+pr-body.md

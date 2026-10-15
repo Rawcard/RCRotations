@@ -1,8 +1,8 @@
 ## Interface: 11508, 11509, 20505, 20506, 30405, 40402, 50504, 16001
 ## ExcludeLoadGameType: standard
 ## Title: |cff66ccffRC|r|cffd4a017Rotations|r
-## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT).
-## Version: 1.2.0
+## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT); MoP rotations from WoWSims (MIT).
+## Version: 1.3.0
 ## Author: Rob
 ## X-Original-Author: Vohnka (Forever Rotation, MIT)
 ## X-Original-Source: https://github.com/ssablon/ForeverRotation
@@ -25,4 +25,8 @@ UI.lua
 Options.lua
 Glow.lua
 Rotations.lua
+SimData_Mists.lua
+Sim.lua
+SimImport.lua
+SimPicker.lua
 Core.lua

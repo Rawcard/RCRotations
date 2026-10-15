@@ -282,6 +282,13 @@ local function sfIsStance(button)
 end
 
 local function sfOnUpdate(self, elapsed)
+	-- The flash lives on UIParent, so mirror the button: hide while it's hidden.
+	local owner = self.owner
+	if owner and owner.IsVisible and not owner:IsVisible() then
+		self:SetAlpha(0)
+		return
+	end
+	self:SetAlpha(1)
 	self.animTime = (self.animTime or 0) + elapsed
 	local pulse = (math.sin(self.animTime * 3) + 1) / 2
 	local alpha = 0.3 + (pulse * 0.4)
@@ -297,6 +304,7 @@ local function sfFrame(button, key)
 		return flash
 	end
 	flash = CreateFrame("Frame", nil, UIParent)
+	flash.owner = button
 	flash:SetAllPoints(button)
 	flash:SetFrameStrata("HIGH")
 	flash:SetFrameLevel(sfIsStance(button) and 200 or 100)
@@ -502,6 +510,10 @@ local function actionSlot(button)
 	if (not slot or slot == 0) and button.action and button.action ~= 0 then
 		slot = button.action
 	end
+	-- LibActionButton (used by most bar addons) keeps the slot here.
+	if (not slot or slot == 0) and button._state_type == "action" and tonumber(button._state_action) then
+		slot = tonumber(button._state_action)
+	end
 	return slot
 end
 
@@ -691,7 +703,74 @@ function ns.GlowInvalidate()
 	lastPurge = nil
 end
 
-function ns.GlowFetch(force)
+-- Blizzard's own bar buttons (scanned by name above).
+local BLIZZARD_PREFIXES = { "^ActionButton%d", "^MultiBar", "^StanceButton", "^PetActionButton", "^PossessButton",
+	"^OverrideActionBarButton", "^ExtraActionButton" }
+
+local function isBlizzardButton(button)
+	local name = button.GetName and button:GetName()
+	if type(name) ~= "string" then
+		return false
+	end
+	for _, pattern in ipairs(BLIZZARD_PREFIXES) do
+		if name:match(pattern) then
+			return true
+		end
+	end
+	return false
+end
+
+local function looksLikeActionButton(f)
+	if type(f) ~= "table" or type(f.GetObjectType) ~= "function" then
+		return false
+	end
+	local ok, kind = pcall(f.GetObjectType, f)
+	if not ok or (kind ~= "Button" and kind ~= "CheckButton") then
+		return false
+	end
+	if f._state_type == "action" and tonumber(f._state_action) then
+		return true
+	end
+	if type(f.action) == "number" and f.action > 0 then
+		return true
+	end
+	if f.GetAttribute then
+		local okA, a = pcall(f.GetAttribute, f, "action")
+		if okA and tonumber(a) and tonumber(a) > 0 then
+			return true
+		end
+	end
+	return false
+end
+
+-- Walk every frame once and keep non-Blizzard action buttons (any bar addon).
+-- Cached; refreshed on a forced scan or every 30 seconds at most.
+local discovered, discoveredAt = {}, 0
+function ns.DiscoverActionButtons(force)
+	if not EnumerateFrames then
+		return discovered
+	end
+	if not force and discoveredAt > 0 and (GetTime() - discoveredAt) < 30 then
+		return discovered
+	end
+	discoveredAt = GetTime()
+	local out = {}
+	local ok = pcall(function()
+		local f = EnumerateFrames()
+		while f do
+			if looksLikeActionButton(f) and not isBlizzardButton(f) then
+				out[#out + 1] = f
+			end
+			f = EnumerateFrames(f)
+		end
+	end)
+	if ok then
+		discovered = out
+	end
+	return discovered
+end
+
+function ns.GlowFetch(force, sync)
 	if not force and lastFetch > 0 and (GetTime() - lastFetch) < 2 then
 		return
 	end
@@ -756,6 +835,10 @@ function ns.GlowFetch(force)
 			end
 		end
 	end
+	-- Any other bar addon: find its action buttons generically.
+	for _, button in ipairs(ns.DiscoverActionButtons(force)) do
+		queue[#queue + 1] = button
+	end
 	if addonLoaded("Dominos") then
 		for i = 1, 132 do
 			queue[#queue + 1] = _G["DominosActionButton" .. i]
@@ -781,7 +864,7 @@ function ns.GlowFetch(force)
 		if gen ~= glowFetchGen then
 			return
 		end
-		local budget = 20
+		local budget = sync and 100000 or 20
 		while idx <= #queue and budget > 0 do
 			local entry = queue[idx]
 			idx = idx + 1
@@ -814,8 +897,12 @@ function ns.GlowFetch(force)
 			else
 				pump()
 			end
-		elseif ns.InvalidateTick then
-			ns.InvalidateTick()
+		else
+			-- Scan finished: redraw so buttons found late (addon bars) get the flash.
+			ns.GlowInvalidate()
+			if ns.InvalidateTick then
+				ns.InvalidateTick()
+			end
 		end
 	end
 	pump()
@@ -864,6 +951,58 @@ local function buttonsFor(spellID)
 	return out
 end
 
+-- Buttons to flash for a spell. The same spell often sits on several buttons,
+-- including Blizzard's own bars that a UI addon (RCDiabloUI, ElvUI, ...) has
+-- hidden. Flash frames live on UIParent, so a hidden button would still get a
+-- stray flash at its old position. Prefer visible buttons; if none are visible
+-- (an addon bar whose header is hidden), prefer addon bars over Blizzard's.
+local ADDON_BARS = { "^RCUI32", "^ElvUI_", "^BT4Button", "^DominosActionButton" }
+
+local function isAddonBar(button)
+	local name = button.GetName and button:GetName()
+	if type(name) == "string" then
+		for _, pattern in ipairs(ADDON_BARS) do
+			if name:match(pattern) then
+				return true
+			end
+		end
+	end
+	return not isBlizzardButton(button)
+end
+
+local function isVisible(button)
+	if not button.IsVisible then
+		return true
+	end
+	local ok, vis = pcall(button.IsVisible, button)
+	return ok and vis and true or false
+end
+
+local function flashTargets(spellID)
+	local visible = {}
+	for _, button in ipairs(buttonsFor(spellID)) do
+		if isVisible(button) then
+			visible[#visible + 1] = button
+		end
+	end
+	return visible
+end
+
+-- Keybind lookup can still use a hidden button (same slot, same key).
+local function bindingTargets(spellID)
+	local list = flashTargets(spellID)
+	if #list > 0 then
+		return list
+	end
+	local all, addon = buttonsFor(spellID), {}
+	for _, button in ipairs(all) do
+		if isAddonBar(button) then
+			addon[#addon + 1] = button
+		end
+	end
+	return #addon > 0 and addon or all
+end
+
 function ns.GlowClear()
 	for button in pairs(damageGlowing) do
 		hideDamage(button)
@@ -905,7 +1044,7 @@ local function apply(spellID, isDef)
 	if not isDef and spellID == lastSpell and lastSpellHeal == heal and next(damageGlowing) then
 		return
 	end
-	local list = buttonsFor(spellID)
+	local list = flashTargets(spellID)
 	if isDef then
 		ns.GlowClearDef()
 		lastDef = spellID
@@ -950,7 +1089,7 @@ local function applyExtra(spellID, lastKey, glowing, show, clear)
 	if lastKey[1] == spellID and next(glowing) then
 		return
 	end
-	local list = buttonsFor(spellID)
+	local list = flashTargets(spellID)
 	clear()
 	lastKey[1] = spellID
 	for _, button in ipairs(list) do
@@ -1322,7 +1461,9 @@ function ns.SpellBinding(spellID)
 	if lastFetch == 0 then
 		ns.GlowFetch()
 	end
-	local list = buttonsFor(spellID)
+	-- Read the keybind from the button actually flashed (a hidden Blizzard
+	-- button under RCDiabloUI/ElvUI may carry a different key).
+	local list = bindingTargets(spellID)
 	for _, button in ipairs(list) do
 		local hot = button.HotKey
 		if hot and hot.GetText then
@@ -1359,4 +1500,20 @@ function ns.GlowClearAllStyles()
 	if ns.InvalidateTick then
 		ns.InvalidateTick()
 	end
+end
+
+-- /rcr why: what the flash is matching, for troubleshooting.
+function ns.GlowDebug(spellID)
+	local out = {}
+	local flashed = {}
+	for _, button in ipairs(flashTargets(spellID)) do
+		flashed[button] = true
+	end
+	for _, button in ipairs(buttonsFor(spellID)) do
+		local name = button.GetName and button:GetName() or "?"
+		local slot = buttonSlots[button]
+		local shown = button.IsVisible and button:IsVisible() and "visible" or "hidden"
+		out[#out + 1] = (flashed[button] and "*" or "") .. tostring(name) .. (slot and ("(slot " .. slot .. ")") or "") .. " " .. shown
+	end
+	return out
 end

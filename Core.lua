@@ -72,20 +72,16 @@ local function defaults()
 	if ns.db.showRotation == nil then
 		ns.db.showRotation = true
 	end
-	if ns.db.showDefense == nil then
-		ns.db.showDefense = true
-	end
-	if ns.db.showInterrupt == nil then
-		ns.db.showInterrupt = true
-	end
-	if ns.db.showPurge == nil then
-		ns.db.showPurge = true
-	end
-	if ns.db.showCleanse == nil then
-		ns.db.showCleanse = true
-	end
-	if ns.db.showWeapon == nil then
-		ns.db.showWeapon = true
+	-- Side windows (defense, interrupt, purge, cleanse, weapon buff) start OFF.
+	-- One-time switch-off for characters that already had them on from an
+	-- earlier build; after that, whatever the player sets is kept.
+	if ns.db.windowsOffV1 ~= true then
+		ns.db.showDefense = false
+		ns.db.showInterrupt = false
+		ns.db.showPurge = false
+		ns.db.showCleanse = false
+		ns.db.showWeapon = false
+		ns.db.windowsOffV1 = true
 	end
 	if ns.db.showRange == nil then
 		ns.db.showRange = true
@@ -989,6 +985,27 @@ SLASH_RCROT2 = "/rcrot"
 SLASH_RCROT3 = "/rcrotations"
 SlashCmdList.RCROT = function(msg)
 	msg = strtrim(strlower(msg or ""))
+	local blockCmd, blockArg = msg:match("^(un?block)%s+(.+)$")
+	if blockCmd and ns.Sim and ns.Sim.FindSpell then
+		local id = ns.Sim.FindSpell(blockArg)
+		if not id then
+			ns.Print(ns.T("SIM_BLOCK_UNKNOWN"):format(blockArg))
+		else
+			local want = blockCmd == "block"
+			ns.Sim.SetBlocked(id, want)
+			local name = (ns.db.simBlockNames and ns.db.simBlockNames[id]) or blockArg
+			ns.Print(ns.T(want and "SIM_BLOCKED" or "SIM_UNBLOCKED"):format(name))
+		end
+		return
+	end
+	if msg == "blocked" and ns.Sim and ns.Sim.BlockedList then
+		local names = {}
+		for _, b in ipairs(ns.Sim.BlockedList()) do
+			names[#names + 1] = b.name
+		end
+		ns.Print(ns.T("SIM_BLOCKED_LIST"):format(#names > 0 and table.concat(names, ", ") or "-"))
+		return
+	end
 	if msg == "unlock" then
 		ns.UI.SetLocked(false)
 		ns.Print(ns.T("UNLOCKED"))
@@ -1015,6 +1032,48 @@ SlashCmdList.RCROT = function(msg)
 		ns.SetProfile("base")
 	elseif msg == "custom" or msg == "customs" then
 		ns.SetProfile("custom")
+	elseif msg == "apl" then
+		-- Open the rotation picker (WoWSims rotations for the current spec).
+		if ns.Sim and ns.Sim.ShowPicker then
+			ns.Sim.ShowPicker(true)
+		end
+	elseif msg == "style" then
+		if ns.UI.CycleStyle then
+			local style = ns.UI.CycleStyle()
+			ns.Print(ns.T(style == "classic" and "OPT_HUD_CLASSIC" or "OPT_HUD_COMPACT"))
+		end
+	elseif msg == "why" then
+		-- Troubleshooting: the current suggestions and which bar buttons each one flashes.
+		local queue = ns.BuildQueue and ns.BuildQueue() or {}
+		local rot = ns.Sim and ns.Sim.Current and ns.Sim.Current()
+		ns.Print(("client=%s spec=%s source=%s flash=%s"):format(tostring(ns.GAME), tostring(ns.Sim and ns.Sim.Spec and ns.Sim.Spec() or "?"),
+			rot and ("WoWSims " .. rot.name) or "built-in list", ns.db.spellFlash == false and "skull" or "spellflash"))
+		if ns.GlowFetch then
+			ns.GlowFetch(true, true) -- full scan now, so every bar is included
+		end
+		ns.Print("* = flashed")
+		if #queue == 0 then
+			ns.Print("no suggestion right now")
+		end
+		for i, id in ipairs(queue) do
+			local name = ns.API and ns.API.SpellName and ns.API.SpellName(id) or "?"
+			local buttons = ns.GlowDebug and ns.GlowDebug(id) or {}
+			ns.Print(("%d. %s (%s) -> %s"):format(i, tostring(name), tostring(id), #buttons > 0 and table.concat(buttons, ", ") or "NO BUTTON FOUND"))
+		end
+	elseif msg == "import" then
+		if ns.Sim and ns.Sim.ShowImport then
+			ns.Sim.ShowImport()
+		end
+	elseif msg == "apl next" then
+		local rot, count = ns.Sim and ns.Sim.Cycle and ns.Sim.Cycle()
+		if rot then
+			ns.Print(ns.T("SIM_PICK"):format(rot.name, rot.file, count))
+		else
+			ns.Print(ns.T("SIM_NONE"))
+		end
+		if ns.InvalidateTick then
+			ns.InvalidateTick()
+		end
 	elseif msg == "flash" then
 		ns.db.spellFlash = (ns.db.spellFlash == false)
 		ns.Print(ns.T(ns.db.spellFlash and "FLASH_SPELLFLASH" or "FLASH_SKULL"))

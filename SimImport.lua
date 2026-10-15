@@ -232,6 +232,16 @@ local function parseConst(val)
 	return n
 end
 
+-- Same as CANCEL_TAGS in tools/wowsims_convert.py: Metamorphosis tag 1 ends it.
+local CANCEL_TAGS = { [103958] = 1 }
+local function isCancel(aid)
+	if type(aid) ~= "table" then
+		return false
+	end
+	local sid, tag = tonumber(aid.spellId), tonumber(aid.tag)
+	return sid ~= nil and tag ~= nil and CANCEL_TAGS[sid] == tag
+end
+
 local function actionId(aid)
 	if type(aid) ~= "table" then
 		return nil
@@ -445,6 +455,9 @@ convertAction = function(act, ctx, out, rep)
 			return
 		end
 		local item = { id = sid }
+		if isCancel(body.spellId) then
+			item.cancel = true
+		end
 		local c = cond
 		if kind == "multidot" or kind == "strictMultidot" then
 			local overlap = nonEmpty(body.maxOverlap) and convertValue(body.maxOverlap, ctx, rep) or 0

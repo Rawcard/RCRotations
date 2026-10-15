@@ -175,6 +175,19 @@ def parse_const(val):
     return int(n) if n == int(n) and unit != "%" and unit != "ms" else n
 
 
+# WoWSims casts some spells with a tag meaning "cancel": Metamorphosis tag 1
+# ends Metamorphosis. These become { id = ..., cancel = true } items.
+CANCEL_TAGS = {103958: 1}
+
+
+def is_cancel(aid):
+    if not isinstance(aid, dict):
+        return False
+    sid = aid.get("spellId")
+    tag = aid.get("tag")
+    return bool(sid) and CANCEL_TAGS.get(int(sid)) is not None and tag is not None and int(tag) == CANCEL_TAGS[int(sid)]
+
+
 def action_id(aid):
     """Return a spell id, or None for items/other actions (potions etc.)."""
     if not isinstance(aid, dict):
@@ -310,6 +323,8 @@ class Converter:
                 self.dropped["item/potion cast"] += 1
                 return
             item = {"id": sid}
+            if is_cancel(body.get("spellId")):
+                item["cancel"] = True
             c = cond
             if kind in ("multidot", "strictMultidot"):
                 # Recommend refreshing the dot on the current target.

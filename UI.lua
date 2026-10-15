@@ -1294,10 +1294,29 @@ local function setBind(slot, spellID)
 	end
 end
 
-local function paint(slot, spellID, dim)
+-- "CANCEL" label for cancel suggestions (press Metamorphosis again to end it).
+local function setCancel(slot, on)
+	if on and not slot.cancelText then
+		local fs = slot:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		fs:SetPoint("BOTTOM", slot, "BOTTOM", 0, 2)
+		fs:SetTextColor(1, 0.25, 0.25)
+		fs:SetText(ns.T("HUD_CANCEL"))
+		slot.cancelText = fs
+	end
+	if slot.cancelText then
+		if on then
+			slot.cancelText:Show()
+		else
+			slot.cancelText:Hide()
+		end
+	end
+end
+
+local function paint(slot, spellID, dim, cancel)
 	if not slot then
 		return
 	end
+	setCancel(slot, spellID and cancel)
 	slot.spellID = spellID
 	slot.texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 	if not spellID then
@@ -1350,7 +1369,7 @@ end
 function ns.UI.Update(queue, defenseID, interruptID, purgeID, cleanseID, weaponID, weaponNeed, notice)
 	queue = queue or {}
 	for i = 1, 3 do
-		paint(ns.UI.slots[i], queue[i], i > 1)
+		paint(ns.UI.slots[i], queue[i], i > 1, queue.cancel and queue[i] and queue.cancel[queue[i]])
 	end
 	if ns.UI.notice then
 		if type(notice) == "string" and notice ~= "" then

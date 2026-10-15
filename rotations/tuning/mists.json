@@ -30,7 +30,7 @@
       {
         "spell": 103958,
         "when": "buff(103958).down",
-        "why": "Pressing Metamorphosis while it's up cancels it; WoWSims never re-casts it during Meta, but in game the button stays usable"
+        "why": "Pressing Metamorphosis while it's up ends it. Only the rotation's own 'cancel Metamorphosis' line may suggest it then (shown with a CANCEL label)"
       }
     ],
     "add": [

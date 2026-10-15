@@ -1188,7 +1188,7 @@ function Sim.ListFor(rot, token, spec)
 	end
 	local list = {}
 	for _, item in ipairs(rot.list) do
-		if item.id and need[item.id] then
+		if item.id and need[item.id] and not item.cancel then
 			local copy = {}
 			for k, v in pairs(item) do
 				copy[k] = v
@@ -1309,6 +1309,16 @@ function Sim.BuildQueue(rot)
 		if item.hold then
 			if test(item.c) and #q == 0 then
 				break
+			end
+		elseif item.cancel then
+			-- "Cancel" lines (end Metamorphosis): only while its aura is up;
+			-- press the same button again. Shown with a CANCEL label.
+			local rid = resolve(item.id)
+			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and V.auraIsActive({ id = item.id, unit = "player" }) and test(item.c) then
+				q[#q + 1] = rid
+				seen[rid] = true
+				q.cancel = q.cancel or {}
+				q.cancel[rid] = true
 			end
 		elseif item.id then
 			local rid = resolve(item.id)

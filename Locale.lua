@@ -66,6 +66,7 @@ L.enUS = {
 	OPT_SPELLFLASH = "RC SpellFlash style (off = skull)",
 	FLASH_SPELLFLASH = "Flash style: RC SpellFlash",
 	FLASH_SKULL = "Flash style: skull",
+	HUD_CANCEL = "CANCEL",
 	SOON_ON = "Coming up: on. When nothing is ready, the HUD shows the next spell coming off cooldown (with its timer).",
 	SOON_OFF = "Coming up: off. Only spells you can press right now are shown.",
 	SIM_PICK = "WoWSims rotation: %s (%s) — %d for this spec",

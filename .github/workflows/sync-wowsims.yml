@@ -57,6 +57,7 @@ jobs:
           cp SimData_Mists.lua old-simdata.lua
           python3 tools/wowsims_convert.py --sims wowsims-mop --custom rotations/mists \
             --tuning rotations/tuning/mists.json --out SimData_Mists.lua --report sim-report.md --summary sim-summary.json
+          pip install lupa
           python3 tools/build_workshop_data.py --sims wowsims-mop --custom rotations/mists --out app/data
           echo "SIMS_SHA=$(git -C wowsims-mop rev-parse --short=10 HEAD)" >> "$GITHUB_ENV"
 

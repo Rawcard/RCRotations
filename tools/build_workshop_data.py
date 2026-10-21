@@ -57,6 +57,134 @@ def load_names(sims):
     return spells, items
 
 
+# ------------------------------------------------------------------ WoW Forever
+# WoWSims has no WoW Forever sim. On Forever the addon uses the original Forever
+# Rotation lists (Lists.lua). Export them as WoWSims-format rotations so the app
+# can show and edit them; saved copies replace the built-in list in game.
+FOREVER_ROLE_NAMES = {"damage": "Damage", "tank": "Tank", "heal": "Healer", "range": "Ranged",
+                      "melee": "Melee", "caster": "Caster", "cat": "Cat", "bear": "Bear", "hybrid": "Hybrid"}
+CLASS_DIR = {v[0]: k for k, v in conv.SPECS.items()}
+
+
+def _words(key):
+    return re.sub(r"(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", " ", key).replace("ofthe", " of the ")
+
+
+def _forever_lists(root):
+    """Run Data.lua + Lists.lua (as WoW Forever) and return (lists, spell names)."""
+    import lupa.luajit21 as lupa_mod  # same runtime family as the game (Lua 5.1)
+    L = lupa_mod.LuaRuntime(unpack_returned_tuples=True)
+    ns = L.eval("{ GAME = 'forever' }")
+    run = L.eval("function(src, name, ns) return assert(loadstring(src, name))('RCRotations', ns) end")
+    for fn in ("Data.lua", "Lists.lua"):
+        run(open(os.path.join(root, fn), encoding="utf-8").read(), fn, ns)
+    keys = {}
+    for _, cls in ns.Spell.items():
+        if lupa_mod.lua_type(cls) != "table":
+            continue
+        for key, sid in cls.items():
+            if isinstance(sid, (int, float)) and sid > 0:
+                keys.setdefault(int(sid), set()).add(_words(str(key)))
+    names = {}
+    for sid, ks in keys.items():
+        # one ID under several keys (Mangle Cat / Mangle Bear): keep the shared words
+        parts = [k.split() for k in sorted(ks)]
+        common = []
+        for words in zip(*parts):
+            if len(set(words)) != 1:
+                break
+            common.append(words[0])
+        names[sid] = " ".join(common) if len(parts) > 1 and common else sorted(ks)[0]
+    return ns, names
+
+
+def _ids(v):
+    """A spell ID, or the IDs in a Lua list, from a list option."""
+    if v is None or v is True or v is False:
+        return []
+    if isinstance(v, (int, float)):
+        return [int(v)]
+    try:
+        return [int(x) for x in v.values() if isinstance(x, (int, float))]
+    except AttributeError:
+        return []
+
+
+def _forever_step(step):
+    """One Forever Rotation step -> one WoWSims priority-list entry."""
+    sid = int(step.id)
+    o = step.opt
+    get = (lambda k: o[k]) if o is not None else (lambda k: None)
+    aura = lambda i, tgt=False: dict({"auraId": {"spellId": i}}, **({"sourceUnit": {"type": "CurrentTarget"}} if tgt else {}))
+    cmp = lambda op, lhs, val: {"cmp": {"op": op, "lhs": lhs, "rhs": {"const": {"val": str(val)}}}}
+    conds = []
+    nb = get("nobuff")
+    if nb is True:
+        for i in [sid] + _ids(get("anybuff")):
+            conds.append({"auraIsInactive": aura(i)})
+    elif nb:
+        conds += [{"auraIsInactive": aura(i)} for i in _ids(nb)]
+    if get("needbuff"):
+        conds += [{"auraIsActive": aura(i)} for i in _ids(get("needbuff"))]
+    if get("needanybuff"):
+        conds.append({"or": {"vals": [{"auraIsActive": aura(i)} for i in _ids(get("needanybuff"))]}})
+    nd = get("nodebuff")
+    stacks = get("stacks")
+    if nd is True and stacks:
+        conds.append(cmp("OpLt", {"auraNumStacks": aura(sid, True)}, int(stacks)))
+    elif nd is True:
+        conds.append({"not": {"val": {"dotIsActive": {"spellId": {"spellId": sid}}}}})
+    elif nd:
+        conds += [{"auraIsInactive": aura(i, True)} for i in _ids(nd)]
+    if get("anydebuff"):
+        conds += [{"auraIsInactive": aura(i, True)} for i in _ids(get("anydebuff"))]
+    if get("needdebuff"):
+        conds += [{"auraIsActive": aura(i, True)} for i in _ids(get("needdebuff"))]
+    hp = get("hp")
+    if hp:
+        unit = {"sourceUnit": {"type": "CurrentTarget"}} if get("unit") == "target" else {}
+        conds.append(cmp("OpLe", {"currentHealthPercent": unit}, "%d%%" % int(hp)))
+    if get("hpMin"):
+        conds.append(cmp("OpGe", {"currentHealthPercent": {}}, "%d%%" % int(get("hpMin"))))
+    if get("comboMin"):
+        conds.append(cmp("OpGe", {"currentComboPoints": {}}, int(get("comboMin"))))
+    if get("enemiesMin"):
+        conds.append(cmp("OpGe", {"numberTargets": {}}, int(get("enemiesMin"))))
+    action = {"castSpell": {"spellId": {"spellId": sid}}}
+    if len(conds) == 1:
+        action["condition"] = conds[0]
+    elif conds:
+        action["condition"] = {"and": {"vals": conds}}
+    entry = {"action": action}
+    if step.on is False:
+        entry["hide"] = True
+    return entry
+
+
+def forever_rotations(root):
+    ns, names = _forever_lists(root)
+    out = []
+    for token, roles in sorted(ns.APLDefaults.items()):
+        cls = CLASS_DIR.get(token)
+        if not cls:
+            continue
+        seen = set()
+        for role, steps in sorted(roles.items()):
+            if id(steps) in seen or role == "hybrid":
+                continue
+            seen.add(id(steps))
+            items = [_forever_step(steps[i]) for i in range(1, len(steps) + 1) if steps[i].id]
+            if not items:
+                continue
+            rname = FOREVER_ROLE_NAMES.get(role, role.title())
+            out.append({
+                "cls": cls, "spec": "forever", "token": token, "specIndex": 0, "game": "forever",
+                "name": "Forever Rotation: " + rname, "file": "forever/%s/%s" % (cls, role),
+                "rotation": {"type": "TypeAPL", "prepullActions": [], "priorityList": items},
+            })
+    return out, names
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sims", required=True)
@@ -91,7 +219,13 @@ def main():
                     })
     rots.sort(key=lambda r: (r["cls"], r["specIndex"], not r["file"].endswith("/default"), r["file"]))
 
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    forever, forever_names = forever_rotations(root)
+    rots += forever
+
     spells, items = load_names(a.sims)
+    for k, v in forever_names.items():
+        spells.setdefault(k, v)
     text = json.dumps([r["rotation"] for r in rots])
     need_s = {int(x) for x in re.findall(r'"spellId": ?(\d+)', text)}
     need_i = {int(x) for x in re.findall(r'"itemId": ?(\d+)', text)}

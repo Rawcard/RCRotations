@@ -662,6 +662,9 @@ local function ensureOptions()
 			local from = rot.imported and ns.T("OPT_SIM_FROM_IMPORT")
 				or ns.T("OPT_SIM_FROM_BUNDLE"):format(ns.SimData and ns.SimData.source or "WoWSims")
 			simLines[3]:SetText(from)
+		elseif ns.UsingBuiltInList and ns.UsingBuiltInList() then
+			simLines[2]:SetText("|cffffd100" .. ns.T("SIM_PICK_BUILTIN") .. "|r")
+			simLines[3]:SetText(ns.T("SIM_PICK_BUILTIN_HINT"))
 		elseif not Sim.Ready() then
 			simLines[2]:SetText(ns.T("SIM_IMPORT_NOSPEC"))
 			simLines[3]:SetText("")

@@ -21,7 +21,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const clone = (o) => JSON.parse(JSON.stringify(o));
-  const pretty = (s) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const pretty = (s) => (s === "forever" ? "WoW Forever" : s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
   const store = {
     get(k) { try { const v = localStorage.getItem("rcw:" + k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem("rcw:" + k, JSON.stringify(v)); } catch (e) {} },
@@ -167,7 +167,8 @@
   }
   function specLabel(token, idx) {
     const c = Object.keys(CLASS).find((k) => CLASS[k][2] === token);
-    return c ? CLASS[c][0] + " · " + pretty(SPECS[c][idx - 1] || "") : token;
+    if (!c) return token;
+    return CLASS[c][0] + " · " + (idx === 0 ? "WoW Forever" : pretty(SPECS[c][idx - 1] || ""));
   }
   function renderSaved() {
     if (!SAVED.length) { $("savedList").innerHTML = '<p class="sub">Nothing saved yet.</p>'; return; }
@@ -233,7 +234,7 @@
         <div class="actions">
           <button class="btn primary" id="saveBtn">Save to WoW</button>
           <button class="btn" id="copyBtn">Copy for /rcr import</button>
-          <button class="btn danger" id="resetBtn" ${edited && !current.mine ? "" : "hidden"}>Reset to WoWSims</button>
+          <button class="btn danger" id="resetBtn" ${edited && !current.mine ? "" : "hidden"}>Reset to original</button>
         </div>
       </div>
       <div class="savepanel" id="savePanel" hidden>
@@ -266,7 +267,7 @@
     };
     $("resetBtn").onclick = (e) => {
       const b = e.currentTarget;
-      if (b.dataset.sure) { store.del("edit:" + current.file); work = clone(current.rotation); renderList(); renderMain(); toast("Back to the WoWSims version"); }
+      if (b.dataset.sure) { store.del("edit:" + current.file); work = clone(current.rotation); renderList(); renderMain(); toast("Back to the original version"); }
       else { b.dataset.sure = "1"; b.textContent = "Click again to reset"; }
     };
     $("addBtn").onclick = () => {

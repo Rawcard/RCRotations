@@ -24,16 +24,24 @@ function isDir(p) {
 
 // Accept the WoW folder itself, a version folder (_classic_) or an AddOns
 // folder, and return the WoW folder.
+// A game folder with Interface\AddOns right inside it (WoW Forever and other
+// single-version installs) is its own "version", written as ".".
+const ROOT_FLAVOR = ".";
+const hasAddons = (dir) => isDir(path.join(dir, "Interface", "AddOns"));
+
 function normalizeRoot(p) {
   if (!p) return null;
+  const chain = [];
   let cur = path.resolve(p);
   for (let i = 0; i < 4; i++) {
-    if (listFlavorDirs(cur).length) return cur;
+    chain.push(cur);
     const parent = path.dirname(cur);
     if (parent === cur) break;
     cur = parent;
   }
-  return null;
+  // A WoW folder with version folders (_classic_, _retail_...) wins; otherwise
+  // the first folder with Interface\AddOns right inside it (WoW Forever).
+  return chain.find((d) => listFlavorDirs(d).length) || chain.find(hasAddons) || null;
 }
 
 function listFlavorDirs(root) {
@@ -44,11 +52,15 @@ function listFlavorDirs(root) {
 }
 
 function detectFlavors(root) {
-  return listFlavorDirs(root).map((dir) => ({
+  const list = listFlavorDirs(root).map((dir) => ({
     dir,
     label: LABELS[dir] || dir.replace(/_/g, " ").trim(),
     hasAddon: isDir(path.join(root, dir, "Interface", "AddOns", "RCRotations")),
   }));
+  if (hasAddons(root)) {
+    list.push({ dir: ROOT_FLAVOR, label: path.basename(root) || "This game", hasAddon: isDir(path.join(root, "Interface", "AddOns", "RCRotations")) });
+  }
+  return list;
 }
 
 // Lua long string that can't be closed by the content.
@@ -112,7 +124,7 @@ function buildToc(iface) {
 function writeCompanion(root, flavors, entries) {
   const results = [];
   for (const flavor of flavors) {
-    if (!FLAVOR_RE.test(flavor)) {
+    if (flavor !== ROOT_FLAVOR && !FLAVOR_RE.test(flavor)) {
       results.push({ flavor, ok: false, error: "Not a WoW version folder" });
       continue;
     }

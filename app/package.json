@@ -1,7 +1,7 @@
 {
   "name": "rcrotations-workshop",
   "productName": "RCRotations Workshop",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Edit WoWSims rotations and save them straight into RCRotations.",
   "author": "Rawcard",
   "license": "MIT",

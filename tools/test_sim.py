@@ -733,6 +733,29 @@ check(q[:3] == [81700, 47540, 14914], "Disc: Archangel at 5 Evangelism, then Pen
 q = disc_q(base + "WORLD.cd[81700] = 60; WORLD.cd[47540] = 8; WORLD.cd[14914] = 8; WORLD.auras.player = {{id=588, remain=900}}")
 check(q[:1] == [585], "Disc: Smite as filler (got %s)" % q)
 
+# WoW Forever: the built-in Forever Rotation lists are exported for the Workshop app
+import build_workshop_data as bwd
+fr_rots, fr_names = bwd.forever_rotations(ROOT)
+check(len(fr_rots) >= 15 and all(r["specIndex"] == 0 and r["game"] == "forever" for r in fr_rots),
+      "Forever lists exported for the app (%d rotations)" % len(fr_rots))
+fr_bad = []
+for r in fr_rots:
+    c = conv.Converter()
+    items, skipped = c.rotation(r["rotation"])
+    if c.unsupported or skipped or not items:
+        fr_bad.append(r["file"])
+check(not fr_bad, "every exported Forever list converts cleanly %s" % fr_bad)
+check(fr_names.get(407995) == "Mangle", "shared-ID Forever spells get their common name (%s)" % fr_names.get(407995))
+
+# ...and a Workshop rotation saved for Forever (spec 0) takes over from the built-in list
+L, ns = picker_world()
+ns.GAME = "forever"
+L.execute("GetSpecialization = nil; C_SpecializationInfo = nil; WORLD.known[49020] = true")
+L.execute("""RCRotations_MyRotations = { { class = "DEATHKNIGHT", spec = 0, name = "Mine", json = '{"priorityList":[{"action":{"castSpell":{"spellId":{"spellId":49020}}}}]}' } }""")
+rl = ns.Sim.Rotations()[0]
+check(rl is not None and any(str(rl[i].name).startswith("Mine") for i in range(1, len(rl) + 1)) and ns.Sim.Active(),
+      "Forever: a Workshop rotation is active (and replaces the built-in list)")
+
 # --------------------------------------------------------------- 8. auto-release helpers
 import json as _j
 import shutil

@@ -1,4 +1,17 @@
-1.4.1
+1.4.2
+
+# 1.4.2
+
+WoW Forever gets rotations again.
+
+- WoWSims has no WoW Forever sim, so on Forever RCRotations uses the original Forever Rotation
+  lists (by Vohnka) as the built-in rotation for every class and role, the way Forever Rotation
+  did. Everywhere else RCRotations stays WoWSims-only.
+- A rotation you import or save from the Workshop app replaces the built-in list on Forever.
+  /rcr options > Rotation shows which one is in use.
+- Workshop app 1.2.0: the Forever Rotation lists show up under each class as "WoW Forever",
+  ready to tweak and save, and you can build a new rotation for WoW Forever too. The app also
+  finds Forever-style game folders (AddOns right inside the game folder).
 
 # 1.4.1
 

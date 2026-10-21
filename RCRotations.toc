@@ -2,7 +2,7 @@
 ## ExcludeLoadGameType: standard
 ## Title: |cff66ccffRC|r|cffd4a017Rotations|r
 ## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT); MoP rotations from WoWSims (MIT).
-## Version: 1.4.1
+## Version: 1.4.2
 ## Author: Rob
 ## X-Original-Author: Vohnka (Forever Rotation, MIT)
 ## X-Original-Source: https://github.com/ssablon/ForeverRotation

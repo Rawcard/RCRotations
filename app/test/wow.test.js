@@ -55,6 +55,19 @@ test("skips broken entries", () => {
   assert.strictEqual((lua.match(/class = /g) || []).length, 1);
 });
 
+test("single-version installs (WoW Forever): AddOns right in the game folder", () => {
+  const fr = fs.mkdtempSync(path.join(os.tmpdir(), "forever-"));
+  fs.mkdirSync(path.join(fr, "Interface", "AddOns", "RCRotations"), { recursive: true });
+  assert.strictEqual(wow.normalizeRoot(path.join(fr, "Interface", "AddOns")), fr);
+  const f = wow.detectFlavors(fr);
+  assert.deepStrictEqual(f.map((x) => [x.dir, x.hasAddon]), [[".", true]]);
+  const res = wow.writeCompanion(fr, ["."], [{ token: "MAGE", specIndex: 0, name: "My Mage", rotation: rot }]);
+  assert.ok(res[0].ok, res[0].error);
+  const lua = fs.readFileSync(path.join(fr, "Interface", "AddOns", wow.ADDON, "MyRotations.lua"), "utf8");
+  assert.ok(lua.includes('class = "MAGE", spec = 0'));
+  fs.rmSync(fr, { recursive: true, force: true });
+});
+
 fs.rmSync(root, { recursive: true, force: true });
 if (failed) { console.log(failed + " FAILED"); process.exit(1); }
 console.log("ALL PASS");

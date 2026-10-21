@@ -174,7 +174,10 @@ function Sim.ShowPicker(force)
 		return false
 	end
 	if not force then
-		if #list == 0 then
+		if #list == 0 and ns.UsingBuiltInList and ns.UsingBuiltInList() then
+			-- WoW Forever: the built-in Forever Rotation list is in use; no prompt.
+			return false
+		elseif #list == 0 then
 			-- Nothing to use yet: offer an import once per class/spec on this character.
 			ns.db.simPrompted = ns.db.simPrompted or {}
 			if ns.db.simPrompted[pickKey(token, spec)] then
@@ -255,7 +258,10 @@ function Sim.ShowPicker(force)
 		frame.importBtn:ClearAllPoints()
 		frame.importBtn:SetPoint("TOP", frame, "TOP", 0, -58 - #list * 32 - 4)
 	end
-	if #list == 0 then
+	if #list == 0 and ns.UsingBuiltInList and ns.UsingBuiltInList() then
+		frame.sub:SetText(T("SIM_PICK_BUILTIN", "Using the built-in Forever Rotation list"))
+		frame.hint:SetText(T("SIM_PICK_BUILTIN_HINT", "Import a rotation, or make one in the Workshop app, to replace it."))
+	elseif #list == 0 then
 		frame.sub:SetText(T("SIM_PICK_EMPTY", "No WoWSims rotation for %s yet. Import one:"):format(name or "?"))
 		frame.hint:SetText(T("SIM_PICK_EMPTY_HINT", "Until then the HUD stays empty. Import later with /rcr import."))
 	end

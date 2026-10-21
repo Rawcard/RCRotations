@@ -124,10 +124,13 @@
 
   // ---------------------------------------------------------------- render
   function specOptions(selected) {
-    return Object.keys(W.SPECS).map((c) => W.SPECS[c].map((s, i) => {
-      const v = W.CLASS[c][2] + "|" + (i + 1) + "|" + c;
-      return `<option value="${v}" ${selected === v ? "selected" : ""}>${W.esc(W.CLASS[c][0] + " · " + W.pretty(s))}</option>`;
-    }).join("")).join("");
+    // MoP specs, plus "WoW Forever" (no specs; spec 0) for classes Forever has.
+    const forever = new Set(W.rots().filter((r) => r.specIndex === 0).map((r) => r.cls));
+    return Object.keys(W.SPECS).map((c) => {
+      const opts = W.SPECS[c].map((s, i) => [W.CLASS[c][2] + "|" + (i + 1) + "|" + c, W.CLASS[c][0] + " · " + W.pretty(s)]);
+      if (forever.has(c)) opts.push([W.CLASS[c][2] + "|0|" + c, W.CLASS[c][0] + " · WoW Forever"]);
+      return opts.map(([v, label]) => `<option value="${v}" ${selected === v ? "selected" : ""}>${W.esc(label)}</option>`).join("");
+    }).join("");
   }
   function render() {
     const e = W.esc;
@@ -142,7 +145,7 @@
         <input type="text" id="bSearch" placeholder="Search spells" aria-label="Search spells">
         <div class="spells" id="bSpells">${palette.map((p) => `<div class="spellchip" draggable="true" data-sp="${p.id}" data-ch="${p.channel ? 1 : 0}"><span>${e(p.label)}</span><button data-add="${p.id}" data-ch="${p.channel ? 1 : 0}" aria-label="Add ${e(p.label)}" title="Add to the bottom">+</button></div>`).join("") || '<p class="sub">No spells known for this spec yet. Add one by name or ID below.</p>'}</div>
         <div class="row"><input type="text" id="bOther" list="spellNames" placeholder="Other spell (name or ID)" aria-label="Other spell"><button class="btn" id="bOtherAdd">Add</button></div>
-        <p class="sub">Drag spells into the rotation, or click +. Spells come from the WoWSims rotations for this spec.</p>
+        <p class="sub">Drag spells into the rotation, or click +. Spells come from the rotations for this spec (WoWSims, or the Forever Rotation lists for WoW Forever).</p>
       </aside>
       <div class="canvas">
         <div class="head">

@@ -107,9 +107,31 @@ local function addonExtras(uf)
 	return out
 end
 
+-- Name color the way Blizzard's nameplates do it: red for hostile, yellow for
+-- neutral, grey once someone else has tagged it.
+local function nameColor(unit)
+	if unit then
+		local ok, denied = pcall(UnitIsTapDenied or function() end, unit)
+		if ok and denied then
+			return 0.5, 0.5, 0.5
+		end
+		if UnitSelectionColor then
+			local ok2, r, g, b = pcall(UnitSelectionColor, unit)
+			if ok2 and type(r) == "number" then
+				return r, g, b
+			end
+		end
+		local ok3, reaction = pcall(UnitReaction, unit, "player")
+		if ok3 and reaction and reaction >= 4 then
+			return 1, 1, 0
+		end
+	end
+	return 1, 0, 0
+end
+
 -- ElvUI places its name at the left end of its own health bar, and keeps
 -- putting it back there. So while bars are hidden its name is faded out and
--- RCRotations shows the same name, in the same font and color, centered on the
+-- RCRotations shows the same name, in the same font with Blizzard's name color, centered on the
 -- game's nameplate frame, which always sits right above the character.
 local function ownName(plate, uf, hide, unit)
 	local theirs = type(uf.Name) == "table" and uf.Name or nil
@@ -145,12 +167,6 @@ local function ownName(plate, uf, hide, unit)
 				pcall(mine.SetFont, mine, font, size, flags)
 			end
 		end
-		if theirs.GetTextColor then
-			local r, g, b2 = theirs:GetTextColor()
-			if r then
-				mine:SetTextColor(r, g, b2)
-			end
-		end
 		if theirs.SetAlpha then
 			pcall(theirs.SetAlpha, theirs, 0)
 		end
@@ -160,6 +176,8 @@ local function ownName(plate, uf, hide, unit)
 		text = theirs:GetText()
 	end
 	mine:SetText(text or "")
+	local r, g, b2 = nameColor(unit)
+	mine:SetTextColor(r, g, b2)
 	if mine.holder then
 		mine.holder:Show()
 	end

@@ -313,6 +313,11 @@ local function findAura(id, unit, mine)
 	return nil
 end
 
+-- For Buffs.lua: is this aura (by ID, or by name) on the unit right now?
+function Sim.AuraUp(id, unit)
+	return findAura(id, unit or "player") ~= nil
+end
+
 local function auraRemain(a)
 	if not a then
 		return 0

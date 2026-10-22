@@ -162,6 +162,9 @@ local function featureOn(key)
 	if key == "locked" then
 		return ns.db.locked == true
 	end
+	if key == "hidePlates" then
+		return ns.db.hidePlates == true
+	end
 	return ns.db[key] ~= false
 end
 
@@ -721,6 +724,7 @@ local function ensureOptions()
 	frame.optRotation = addSwitch(hudCard, "showRotation", ns.T("OPT_ROTATION"))
 	frame.optGlow = addSwitch(hudCard, "glow", ns.T("OPT_GLOW"))
 	frame.optRange = addSwitch(hudCard, "showRange", ns.T("OPT_RANGE"))
+	frame.optBuffs = addSwitch(hudCard, "showBuffs", ns.T("OPT_BUFFS"))
 	frame.optModes = addSwitch(hudCard, "showModes", ns.T("OPT_MODES"))
 	frame.optModes:Hide() -- mode buttons only drove the removed built-in lists
 
@@ -1055,9 +1059,10 @@ local function ensureOptions()
 	frame.optRoleAuto = addSwitch(combatCard, "roleAuto", ns.T("OPT_ROLE_AUTO"))
 	frame.optBarOnly = addSwitch(combatCard, "barOnly", ns.T("OPT_BAR_ONLY"))
 
-	local autoCard = makeCard(extra, "OPT_CARD_AUTOMATION", 338, -4, 318, 96)
+	local autoCard = makeCard(extra, "OPT_CARD_AUTOMATION", 338, -4, 318, 106)
 	frame.optAutoProfile = addSwitch(autoCard, "autoProfile", ns.T("OPT_AUTO_PROFILE"))
 	frame.optCleanseGroup = addSwitch(autoCard, "cleanseGroup", ns.T("OPT_CLEANSE_GROUP"))
+	frame.optPlates = addSwitch(autoCard, "hidePlates", ns.T("OPT_HIDE_PLATES"))
 
 	local alertCard = makeCard(extra, "OPT_CARD_ALERTS", 8, -138, 318, 132)
 	local soundLabel = alertCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -1571,6 +1576,12 @@ function ns.RefreshOptions()
 		end
 		if ns.OptionsRefreshLock then
 			ns.OptionsRefreshLock()
+		end
+		if frame.optBuffs then
+			frame.optBuffs:SetChecked(ns.db.showBuffs ~= false)
+		end
+		if frame.optPlates then
+			frame.optPlates:SetChecked(ns.db.hidePlates == true)
 		end
 		if frame.optPhysics then
 			frame.optPhysics:SetChecked(ns.db.showPhysics ~= false)

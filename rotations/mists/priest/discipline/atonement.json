@@ -6,35 +6,6 @@
    "action": {
     "castSpell": {
      "spellId": {
-      "spellId": 588
-     }
-    },
-    "condition": {
-     "and": {
-      "vals": [
-       {
-        "auraIsInactive": {
-         "auraId": {
-          "spellId": 588
-         }
-        }
-       },
-       {
-        "auraIsInactive": {
-         "auraId": {
-          "spellId": 73413
-         }
-        }
-       }
-      ]
-     }
-    }
-   }
-  },
-  {
-   "action": {
-    "castSpell": {
-     "spellId": {
       "spellId": 10060
      }
     }

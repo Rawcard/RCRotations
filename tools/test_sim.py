@@ -114,6 +114,7 @@ def load_addon_files(L, game="mists"):
     runner(read("Sim.lua"), "Sim.lua", ns)
     L.eval("function(ns) ns.T = ns.T or function(k) return k end end")(ns)
     runner(read("SimImport.lua"), "SimImport.lua", ns)
+    runner(read("Buffs.lua"), "Buffs.lua", ns)
     return ns
 
 
@@ -230,17 +231,24 @@ q = scenario(cds + "WORLD.cd[77575]=50; WORLD.auras.target = {{id=55095, remain=
 check(len(q) > 0 and q[0] == FROST["frost_strike"],
       "diseases up, no runes, runic power capped -> Frost Strike first (got %s)" % q)
 
-# DK upkeep reminders WoWSims leaves to the pre-pull
+# DK upkeep: presence and Horn of Winter are buff reminders above the HUD (Buffs.lua)
+def frost_buffs(setup):
+    L = new_lua()
+    ns = load_addon_files(L)
+    L.execute("WORLD.spec = 2; WORLD.known[57330] = true; WORLD.known[48266] = true; WORLD.auras.player = {}")
+    L.execute(setup)
+    m = ns.Buffs.Missing()
+    return [m[i] for i in range(1, len(m) + 1)]
+NOPRES = "function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 0 end; function GetShapeshiftFormInfo(i) return 'i', false, true, ({48263, 48266, 48265})[i] end; "
+INFROST = "function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 2 end; function GetShapeshiftFormInfo(i) return 'i', i == 2, true, ({48263, 48266, 48265})[i] end; "
+m = frost_buffs(NOPRES)
+check(m == [48266, 57330], "Frost buffs: Frost Presence and Horn of Winter missing (got %s)" % m)
+m = frost_buffs(INFROST + "WORLD.auras.player = {{id=6673, remain=300}}")
+check(m == [], "Frost buffs: nothing missing in Frost Presence with a warrior's Battle Shout (got %s)" % m)
+m = frost_buffs(INFROST + "WORLD.auras.player = {{id=57330, remain=300}}")
+check(m == [], "Frost buffs: own Horn of Winter counts (got %s)" % m)
 q = scenario("NO_HORN = true")
-check(q[:1] == [57330], "Frost: Horn of Winter first when no attack power buff is up (got %s)" % q)
-q = scenario("NO_HORN = true; WORLD.auras.player = {{id=6673, remain=300}}")
-check(57330 not in q[:1], "Frost: no Horn of Winter reminder when a warrior's Battle Shout is up (got %s)" % q)
-q = scenario("WORLD.known[48266] = true; function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 0 end; "
-             "function GetShapeshiftFormInfo(i) return 'i', false, true, ({48263, 48266, 48265})[i] end")
-check(q[:1] == [48266], "Frost: Frost Presence first when in no presence (got %s)" % q)
-q = scenario("WORLD.known[48266] = true; function GetNumShapeshiftForms() return 3 end; function GetShapeshiftForm() return 2 end; "
-             "function GetShapeshiftFormInfo(i) return 'i', i == 2, true, ({48263, 48266, 48265})[i] end")
-check(48266 not in q, "Frost: no presence reminder while in Frost Presence (got %s)" % q)
+check(57330 not in q[:1], "Frost rotation: Horn of Winter isn't pushed to the top any more (got %s)" % q)
 
 # never-suggest defaults: AMS / Army are simulator picks, not player picks
 q = scenario("")
@@ -642,28 +650,56 @@ check(q[2] is None, "coming up: never shows a spell the game says isn't usable")
 for text, want in (("stance == 0", {"k": "cmp"}), ("stance(31801)", {"k": "playerStance", "id": 31801})):
     node = tun.parse_condition(text)
     check(all(node.get(k) == v for k, v in want.items()), "tuning syntax: %s" % text)
-check("PALADIN:3" in shipped, "shipped tuning has the Retribution seal reminder")
 L = new_lua()
 ns = load_addon_files(L)
 L.execute("""
 function UnitClass() return "Paladin", "PALADIN", 2 end
-WORLD.spec = 3; WORLD.known[31801] = true; WORLD.known[20154] = true; WORLD.known[35395] = true
-STANCE = 0
+WORLD.spec = 3; for _, id in ipairs({31801, 20154, 20217, 19740, 25780, 35395}) do WORLD.known[id] = true end
+STANCE = 0; WORLD.auras.player = {}
 function GetNumShapeshiftForms() return 2 end
 function GetShapeshiftForm() return STANCE end
 function GetShapeshiftFormInfo(i) return 'icon', STANCE == i, true, ({31801, 20154})[i] end
 """)
-L.eval("function(ns) ns.ClassToken = function() return 'PALADIN', 2 end; ns.db.barOnly = true; ns.SpellOnBar = function(id) return id == 35395 end end")(ns)
-ret = ns.SimData.specs["PALADIN"][3][1]
-q = ns.Sim.BuildQueue(ret)
-check(q[1] == 31801, "Ret with no seal: Seal of Truth first, even though seals aren't on action bars (got %s)" % q[1])
-L.execute("WORLD.enemies = 5")
-q = ns.Sim.BuildQueue(ret)
-check(q[1] == 20154, "Ret with no seal on 5 targets: Seal of Righteousness (got %s)" % q[1])
-L.execute("STANCE = 1; WORLD.enemies = 1")
-q = ns.Sim.BuildQueue(ret)
-check(31801 not in [q[i] for i in range(1, len(q) + 1)], "Ret with Seal of Truth on: no seal reminder")
+L.eval("function(ns) ns.ClassToken = function() return 'PALADIN', 2 end end")(ns)
+def ret_buffs(setup=""):
+    L.execute(setup)
+    m = ns.Buffs.Missing()
+    return [m[i] for i in range(1, len(m) + 1)]
+m = ret_buffs()
+check(m == [31801, 20217], "Ret buffs: no seal and no stats buff -> Seal of Truth, Blessing of Kings (got %s)" % m)
+m = ret_buffs("STANCE = 2")
+check(31801 not in m, "Ret buffs: any seal counts (Righteousness on) (got %s)" % m)
+m = ret_buffs("STANCE = 1; WORLD.auras.player = {{id=1126, remain=3600}}")
+check(m == [19740], "Ret buffs: a druid's Mark of the Wild covers Kings, so Blessing of Might instead (got %s)" % m)
+m = ret_buffs("WORLD.auras.player = {{id=1126, remain=3600}, {id=116956, remain=3600}}")
+check(m == [], "Ret buffs: a shaman's Grace of Air covers Might (got %s)" % m)
+m = ret_buffs("WORLD.auras.player = {}; function GetRaidBuffTrayAuraInfo(i) if i == 1 or i == 8 then return 'Buff' end end")
+check(m == [], "Ret buffs: the game's raid buff tray counts as covered (got %s)" % m)
+L.execute("GetRaidBuffTrayAuraInfo = nil")
 check(L.eval("function(ns) return ns.Sim.HANDLERS.playerStance({ id = 31801 }) end")(ns) is True, "stance(31801) true while Truth is active")
+m = ret_buffs("ns_dead = true; function UnitIsDeadOrGhost() return true end")
+check(m == [], "Buffs: nothing while dead (got %s)" % m)
+L.execute("UnitIsDeadOrGhost = nil")
+
+# Rogue poisons, Warlock pet (Grimoire of Sacrifice counts), Shaman imbues
+def class_buffs(cls, token, cid, spec, known, setup):
+    L = new_lua()
+    ns = load_addon_files(L)
+    L.execute("function UnitClass() return '%s', '%s', %d end; WORLD.spec = %d; WORLD.auras.player = {}" % (cls, token, cid, spec))
+    for k in known:
+        L.execute("WORLD.known[%d] = true" % k)
+    L.eval("function(ns) ns.ClassToken = function() return '%s', %d end end" % (token, cid))(ns)
+    L.execute(setup)
+    m = ns.Buffs.Missing()
+    return [m[i] for i in range(1, len(m) + 1)]
+m = class_buffs("Rogue", "ROGUE", 4, 1, (2823, 8679, 3408), "WORLD.auras.player = {{id=8679, remain=3600}}")
+check(m == [3408], "Rogue: Wound Poison counts as the lethal poison; non-lethal still missing (got %s)" % m)
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), "function UnitExists(u) return u ~= 'pet' end")
+check(m == [109773, 688], "Destruction: Dark Intent and Imp missing (got %s)" % m)
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), "function UnitExists(u) return u ~= 'pet' end; WORLD.auras.player = {{id=108503, remain=3600}, {id=1459, remain=3600}}")
+check(m == [], "Destruction: Grimoire of Sacrifice means no pet; a mage's Brilliance covers spell power (got %s)" % m)
+m = class_buffs("Shaman", "SHAMAN", 7, 2, (324, 8232, 8024), "function GetWeaponEnchantInfo() return true, 0, 0, 0, false end; function GetInventoryItemID(_, slot) return slot == 17 and 1234 or nil end")
+check(m == [324, 8024], "Enhancement: Lightning Shield and the off-hand Flametongue missing (got %s)" % m)
 
 # Metamorphosis: Shadow Bolt -> Touch of Chaos, Corruption -> Doom on the same buttons
 L = new_lua()
@@ -715,7 +751,7 @@ ns = load_addon_files(L)
 L.execute("""
 function UnitClass() return "Priest", "PRIEST", 5 end
 WORLD.spec = 1
-for _, id in ipairs({588, 10060, 34433, 81700, 589, 47540, 14914, 585}) do WORLD.known[id] = true end
+for _, id in ipairs({588, 21562, 10060, 34433, 81700, 589, 47540, 14914, 585}) do WORLD.known[id] = true end
 """)
 L.eval("function(ns) ns.ClassToken = function() return 'PRIEST', 5 end end")(ns)
 discs = ns.SimData.specs["PRIEST"][1]
@@ -727,7 +763,9 @@ def disc_q(setup):
     return [q[i] for i in range(1, len(q) + 1)] if q else []
 base = "WORLD.cd[10060] = 60; WORLD.cd[34433] = 60; WORLD.power[0] = 100; WORLD.powerMax[0] = 100; "
 q = disc_q(base + "WORLD.auras.player = {}; WORLD.auras.target = {}")
-check(q[:2] == [588, 589], "Disc: Inner Fire, then Shadow Word: Pain when missing (got %s)" % q)
+check(q[:1] == [589], "Disc: Shadow Word: Pain first when missing (got %s)" % q)
+mb = ns.Buffs.Missing(); mb = [mb[i] for i in range(1, len(mb) + 1)]
+check(mb == [21562, 588], "Disc buffs: Power Word: Fortitude and Inner Fire as reminders (got %s)" % mb)
 q = disc_q(base + "WORLD.auras.player = {{id=588, remain=900}, {id=81661, stacks=5}}; WORLD.auras.target = {{id=589, remain=15, kind='HARMFUL'}}")
 check(q[:3] == [81700, 47540, 14914], "Disc: Archangel at 5 Evangelism, then Penance, Holy Fire (got %s)" % q)
 q = disc_q(base + "WORLD.cd[81700] = 60; WORLD.cd[47540] = 8; WORLD.cd[14914] = 8; WORLD.auras.player = {{id=588, remain=900}}")

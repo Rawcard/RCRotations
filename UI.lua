@@ -1262,6 +1262,64 @@ function ns.UI.ApplyMouse()
 	end
 end
 
+-- Missing buff row: small icons with a red edge just above the main icon.
+local BUFF_SIZE, BUFF_GAP = 22, 3
+local function buffIcon(i)
+	ns.UI.buffIcons = ns.UI.buffIcons or {}
+	local icon = ns.UI.buffIcons[i]
+	if icon then
+		return icon
+	end
+	icon = CreateFrame("Frame", "RCRotationsBuff" .. i, UIParent, "BackdropTemplate")
+	icon:SetSize(BUFF_SIZE, BUFF_SIZE)
+	icon:SetFrameStrata("MEDIUM")
+	if icon.SetBackdrop then
+		icon:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 2 })
+		icon:SetBackdropBorderColor(1, 0.08, 0.08, 1)
+	end
+	local tex = icon:CreateTexture(nil, "ARTWORK")
+	tex:SetPoint("TOPLEFT", 2, -2)
+	tex:SetPoint("BOTTOMRIGHT", -2, 2)
+	tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	icon.texture = tex
+	icon:EnableMouse(true)
+	icon:SetScript("OnEnter", function(self)
+		if GameTooltip and self.spellID then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(ns.T("BUFF_MISSING"):format(API.SpellName and API.SpellName(self.spellID) or "?"), 1, 0.25, 0.25)
+			GameTooltip:AddLine(ns.T("BUFF_MISSING_HINT"), 0.9, 0.9, 0.9, true)
+			GameTooltip:Show()
+		end
+	end)
+	icon:SetScript("OnLeave", function()
+		if GameTooltip then
+			GameTooltip:Hide()
+		end
+	end)
+	icon:Hide()
+	ns.UI.buffIcons[i] = icon
+	return icon
+end
+
+function ns.UI.UpdateBuffs(list)
+	list = list or {}
+	local anchor = ns.UI.slots and ns.UI.slots[1]
+	for i = 1, math.max(#list, ns.UI.buffIcons and #ns.UI.buffIcons or 0) do
+		local id = list[i]
+		if id and anchor then
+			local icon = buffIcon(i)
+			icon.spellID = id
+			icon.texture:SetTexture(API.SpellIcon and API.SpellIcon(id) or (IMG .. "skull-idle"))
+			icon:ClearAllPoints()
+			-- above the RC badge, which pokes 7px over the main icon
+			icon:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", (i - 1) * (BUFF_SIZE + BUFF_GAP), 10)
+			icon:Show()
+		elseif ns.UI.buffIcons and ns.UI.buffIcons[i] then
+			ns.UI.buffIcons[i]:Hide()
+		end
+	end
+end
+
 function ns.UI.SetLocked(locked)
 	ns.db.locked = locked and true or false
 	local layout = sharedLayout()

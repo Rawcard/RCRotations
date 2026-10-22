@@ -468,18 +468,25 @@ end
 local lastTickSig
 local lastRangeAt = 0
 
+local lastBuffSig
+
 local function flagBit(value)
 	return value ~= false and "1" or "0"
 end
 
 function ns.InvalidateTick()
 	lastTickSig = nil
+	lastBuffSig = nil
 end
 
 function ns.ApplyFeatureFlags()
 	if ns.UI and ns.UI.SetLocked then
 		ns.UI.SetLocked(ns.db.locked == true)
 	end
+	if ns.Plates and ns.Plates.Apply then
+		ns.Plates.Apply()
+	end
+	lastBuffSig = nil
 	local idle = ns.API.ShouldHideIdle and ns.API.ShouldHideIdle()
 	if ns.UI then
 		if ns.UI.root then
@@ -631,6 +638,17 @@ function ns.Tick()
 			lastAlertWeapon = nil
 		else
 			lastAlertWeapon = weapon
+		end
+	end
+	local buffs = ns.Buffs and ns.Buffs.Missing and ns.Buffs.Missing() or {}
+	local buffSig = table.concat(buffs, ",")
+	if buffSig ~= lastBuffSig then
+		lastBuffSig = buffSig
+		if ns.UI.UpdateBuffs then
+			ns.UI.UpdateBuffs(buffs)
+		end
+		if ns.GlowBuffs then
+			ns.GlowBuffs(buffs)
 		end
 	end
 	local soon = queue.soon and queue[1] and queue.soon[queue[1]]
@@ -1106,6 +1124,16 @@ SlashCmdList.RCROT = function(msg)
 		end
 		if ns.Tick then
 			ns.Tick()
+		end
+	elseif msg == "plates" or msg == "nameplates" then
+		if ns.Plates then
+			ns.Plates.Set(ns.db.hidePlates ~= true)
+		end
+	elseif msg == "buffs" then
+		ns.db.showBuffs = (ns.db.showBuffs == false)
+		ns.Print(ns.T(ns.db.showBuffs and "BUFFS_ON" or "BUFFS_OFF"))
+		if ns.InvalidateTick then
+			ns.InvalidateTick()
 		end
 	elseif msg == "workshop" or msg == "app" then
 		ns.Print(ns.T("WORKSHOP_PRINT"):format(ns.WORKSHOP_URL))

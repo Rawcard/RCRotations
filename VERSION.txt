@@ -19,7 +19,8 @@ Missing buff reminders and name-only nameplates.
 - Name-only enemy nameplates: RCRotations counts enemies for AoE through enemy nameplates, so with
   nameplates off it always thinks there's one target. The new option (Options > Extra, or
   /rcr plates) turns enemy nameplates on and hides their health bars: you still see enemy names
-  and cast bars. Works with Blizzard's nameplates and with ElvUI's. Your old setting comes back when you turn it off. If nameplates are off, you get
+  and cast bars. Works with Blizzard's nameplates and with ElvUI's (there the name is centered and
+  the health % and level hide with the bar). Your old setting comes back when you turn it off. If nameplates are off, you get
   a one-time tip about it.
 
 # 1.4.3

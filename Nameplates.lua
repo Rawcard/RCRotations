@@ -77,9 +77,67 @@ local function healthBars(plate)
 	return out
 end
 
+-- Nameplate addons (ElvUI) put the name at the left end of the health bar and
+-- the health % / level on it. With the bar hidden that looks off, so while
+-- hidden: health text and level go too, and the name is centered on the plate.
+-- The name's original position is remembered and put back.
+local function addonTexts(uf)
+	local out = {}
+	local h = type(uf.Health) == "table" and uf.Health or nil
+	for _, t in ipairs({ h and h.Text or false, h and h.value or false, uf.HealthText or false, uf.Level or false }) do
+		if type(t) == "table" and t.SetAlpha then
+			out[#out + 1] = t
+		end
+	end
+	return out
+end
+
+local function centerName(uf, hide)
+	local name = type(uf.Name) == "table" and uf.Name or nil
+	if not name or not name.ClearAllPoints or not name.SetPoint then
+		return
+	end
+	if hide then
+		if not name.rcrSaved then
+			local saved = { justify = name.GetJustifyH and name:GetJustifyH() or nil }
+			local n = name.GetNumPoints and name:GetNumPoints() or 0
+			for i = 1, n do
+				saved[i] = { name:GetPoint(i) }
+			end
+			name.rcrSaved = saved
+		end
+		local p1 = name.GetPoint and name:GetPoint(1)
+		if not name.rcrCentered or p1 ~= "CENTER" then
+			pcall(name.ClearAllPoints, name)
+			pcall(name.SetPoint, name, "CENTER", uf, "CENTER", 0, 0)
+			if name.SetJustifyH then
+				pcall(name.SetJustifyH, name, "CENTER")
+			end
+			name.rcrCentered = true
+		end
+	elseif name.rcrSaved then
+		local saved = name.rcrSaved
+		pcall(name.ClearAllPoints, name)
+		for i = 1, #saved do
+			pcall(name.SetPoint, name, unpack(saved[i]))
+		end
+		if saved.justify and name.SetJustifyH then
+			pcall(name.SetJustifyH, name, saved.justify)
+		end
+		name.rcrSaved, name.rcrCentered = nil, nil
+	end
+end
+
 local function styleBar(plate, hide)
 	for _, bar in ipairs(healthBars(plate)) do
 		pcall(bar.SetAlpha, bar, hide and 0 or 1)
+	end
+	local uf = plate and plate.unitFrame
+	if type(uf) == "table" and uf ~= plate.UnitFrame then
+		for _, t in ipairs(addonTexts(uf)) do
+			pcall(t.SetAlpha, t, hide and 0 or 1)
+		end
+		centerName(uf, hide)
 	end
 end
 

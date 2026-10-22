@@ -1,4 +1,10 @@
-1.4.2
+1.4.3
+
+# 1.4.3
+
+- Locking the HUD sticks: once you lock it, it stays locked on every login and on all your
+  characters, and they all share the same HUD position. Unlock it with the new "Unlock HUD" button
+  at the top of the menu (/rcr), next to Role.
 
 # 1.4.2
 

@@ -60,10 +60,27 @@ local function applyChrome(frame, locked)
 	frame:SetBackdropBorderColor(r, g, b, 0.75)
 end
 
+-- The HUD layout (positions and lock) is shared by all your characters:
+-- it's kept in the account-wide RCRotationsDB.layout and copied to each
+-- character at login (Core.lua).
+local function sharedLayout()
+	if type(RCRotationsDB) ~= "table" then
+		return nil
+	end
+	RCRotationsDB.layout = RCRotationsDB.layout or {}
+	return RCRotationsDB.layout
+end
+ns.UI.SharedLayout = sharedLayout
+
 local function savePoint(frame, key)
 	local point, _, rel, x, y = frame:GetPoint()
 	ns.db.pos = ns.db.pos or {}
 	ns.db.pos[key] = { point, rel, x, y }
+	local layout = sharedLayout()
+	if layout then
+		layout.pos = layout.pos or {}
+		layout.pos[key] = { point, rel, x, y }
+	end
 end
 
 local function loadPoint(frame, key, default)
@@ -1247,6 +1264,10 @@ end
 
 function ns.UI.SetLocked(locked)
 	ns.db.locked = locked and true or false
+	local layout = sharedLayout()
+	if layout then
+		layout.locked = ns.db.locked
+	end
 	if ns.UI.ApplyChrome then
 		ns.UI.ApplyChrome()
 	end
@@ -1260,6 +1281,9 @@ function ns.UI.SetLocked(locked)
 	ns.UI.ApplyMouse()
 	if ns.UI.RefreshLockBar then
 		ns.UI.RefreshLockBar()
+	end
+	if ns.OptionsRefreshLock then
+		ns.OptionsRefreshLock()
 	end
 end
 

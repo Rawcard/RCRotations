@@ -552,6 +552,25 @@ local function ensureOptions()
 		end
 	end)
 	frame.roleBtn = roleBtn
+
+	-- Lock / unlock the HUD from anywhere in the menu. Locked stays locked on
+	-- every character and every login until you unlock it here.
+	local lockBtn = makeGoldBtn(content, 120, 22, "")
+	lockBtn:SetPoint("LEFT", roleBtn, "RIGHT", 8, 0)
+	lockBtn:SetScript("OnClick", function()
+		ns.UI.SetLocked(not ns.db.locked)
+		if ns.OptionsRefreshLock then
+			ns.OptionsRefreshLock()
+		end
+		if frame.optLock then
+			frame.optLock:SetChecked(ns.db.locked == true)
+		end
+	end)
+	frame.lockBtn = lockBtn
+	function ns.OptionsRefreshLock()
+		lockBtn:SetText(ns.T(ns.db.locked == true and "OPT_UNLOCK_HUD" or "OPT_LOCK_HUD"))
+	end
+	ns.OptionsRefreshLock()
 	function ns.OptionsRefreshRole()
 		local role = (ns.db and ns.db.role) or "damage"
 		roleBtn:SetText(ns.T("TIP_ROLE"):format(ns.T("ROLE_" .. role:upper())))
@@ -763,6 +782,9 @@ local function ensureOptions()
 	resetPos:SetPoint("TOPLEFT", 12, -132)
 	resetPos:SetScript("OnClick", function()
 		ns.db.pos = nil
+		if type(RCRotationsDB) == "table" and type(RCRotationsDB.layout) == "table" then
+			RCRotationsDB.layout.pos = nil
+		end
 		ns.UI.ApplyPosition()
 	end)
 	frame.resetPos = resetPos
@@ -1546,6 +1568,9 @@ function ns.RefreshOptions()
 		end
 		if ns.OptionsRefreshRole then
 			ns.OptionsRefreshRole()
+		end
+		if ns.OptionsRefreshLock then
+			ns.OptionsRefreshLock()
 		end
 		if frame.optPhysics then
 			frame.optPhysics:SetChecked(ns.db.showPhysics ~= false)

@@ -61,6 +61,8 @@ L.enUS = {
 	INFO_COPIED = "The link is in the chat box. Press Ctrl+C to copy.",
 	DEF_FOR = "Defense: %s",
 	OPT_LOCK = "Lock interface",
+	OPT_UNLOCK_HUD = "Unlock HUD",
+	OPT_LOCK_HUD = "Lock HUD",
 	OPT_FEATURES = "Features",
 	OPT_GLOW = "Show spell overlay on action bars",
 	OPT_SPELLFLASH = "RC SpellFlash style (off = skull)",

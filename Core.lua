@@ -36,8 +36,28 @@ end
 
 useCharacterDB()
 
+-- Shared HUD layout: once you place and lock the HUD, every character gets
+-- the same spot and stays locked (see savePoint / SetLocked in UI.lua).
+local function applySharedLayout()
+	local layout = type(RCRotationsDB) == "table" and RCRotationsDB.layout
+	if type(layout) ~= "table" then
+		-- first run with this version: share what this character has
+		if type(RCRotationsDB) == "table" and (ns.db.locked ~= nil or ns.db.pos) then
+			RCRotationsDB.layout = { locked = ns.db.locked == true, pos = ns.db.pos and copyValue(ns.db.pos) or nil }
+		end
+		return
+	end
+	if layout.locked ~= nil then
+		ns.db.locked = layout.locked == true
+	end
+	if type(layout.pos) == "table" then
+		ns.db.pos = copyValue(layout.pos)
+	end
+end
+
 local function defaults()
 	useCharacterDB()
+	applySharedLayout()
 	if ns.db.locale == nil or ns.db.locale == "" then
 		ns.db.locale = "auto"
 	end
@@ -1015,6 +1035,9 @@ SlashCmdList.RCROT = function(msg)
 		ns.Print(ns.T("LOCKED"))
 	elseif msg == "reset" then
 		ns.db.pos = nil
+		if type(RCRotationsDB) == "table" and type(RCRotationsDB.layout) == "table" then
+			RCRotationsDB.layout.pos = nil
+		end
 		ns.db.point = nil
 		ns.UI.ApplyPosition()
 	elseif msg == "resetall" then

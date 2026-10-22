@@ -57,15 +57,29 @@ end
 -- The health bar of one Blizzard nameplate: hidden (alpha 0) or shown.
 -- Names, cast bars and raid marks are left alone. Changing alpha is allowed
 -- in combat; it doesn't touch the protected plate frame itself.
-local function styleBar(plate, hide)
-	local uf = plate and plate.UnitFrame
-	local bar = uf and (uf.healthBar or uf.HealthBar)
-	if bar and bar.SetAlpha then
-		pcall(bar.SetAlpha, bar, hide and 0 or 1)
+-- Works with Blizzard's plates (plate.UnitFrame.healthBar) and with nameplate
+-- addons that hang their own frame on the plate: ElvUI (plate.unitFrame.Health),
+-- Plater and others (plate.unitFrame.healthBar).
+local function healthBars(plate)
+	local out = {}
+	local frames = { plate and plate.UnitFrame or false, plate and plate.unitFrame or false }
+	for i = 1, 2 do
+		local uf = frames[i]
+		if type(uf) == "table" then
+			for _, key in ipairs({ "healthBar", "HealthBar", "Health", "selectionHighlight" }) do
+				local bar = uf[key]
+				if type(bar) == "table" and bar.SetAlpha then
+					out[#out + 1] = bar
+				end
+			end
+		end
 	end
-	local sel = uf and uf.selectionHighlight
-	if sel and sel.SetAlpha then
-		pcall(sel.SetAlpha, sel, hide and 0 or 1)
+	return out
+end
+
+local function styleBar(plate, hide)
+	for _, bar in ipairs(healthBars(plate)) do
+		pcall(bar.SetAlpha, bar, hide and 0 or 1)
 	end
 end
 
@@ -169,6 +183,22 @@ frame:SetScript("OnEvent", function(_, event, unit)
 		ns.db.platesTip = true
 		ns.Print(ns.T("PLATES_TIP"))
 	end
+end)
+
+-- Nameplate addons (ElvUI and the like) style their plates after this event
+-- and may reset a bar; check every half second while the option is on.
+local elapsedSince, wasOn = 0, false
+frame:SetScript("OnUpdate", function(_, elapsed)
+	elapsedSince = elapsedSince + elapsed
+	if elapsedSince < 0.5 then
+		return
+	end
+	elapsedSince = 0
+	local now = on()
+	if now or wasOn then
+		restyleAll()
+	end
+	wasOn = now
 end)
 
 -- Blizzard's nameplate code can reset a bar's look (target changes, health

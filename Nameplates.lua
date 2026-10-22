@@ -77,10 +77,6 @@ local function healthBars(plate)
 	return out
 end
 
--- Nameplate addons (ElvUI) put the name at the left end of the health bar and
--- the health % / level on it. With the bar hidden that looks off, so while
--- hidden: health text and level go too, and the name is centered on the plate.
--- The name's original position is remembered and put back.
 -- Bits of an addon plate (ElvUI) that go with the bar: health % text, level,
 -- and the target glow / spark / arrows and mouseover highlight.
 local function addonExtras(uf)
@@ -111,73 +107,66 @@ local function addonExtras(uf)
 	return out
 end
 
--- Center the name over the character while bars are hidden. ElvUI moves the name
--- back whenever it restyles a plate (target changes, health updates), so the
--- name's SetPoint / SetJustifyH are watched and it's centered again at once.
-local function placeCenter(name)
-	name.rcrMoving = true
-	pcall(name.ClearAllPoints, name)
-	pcall(name.SetPoint, name, "CENTER", name.rcrOwner, "CENTER", 0, 0)
-	if name.SetJustifyH then
-		pcall(name.SetJustifyH, name, "CENTER")
-	end
-	name.rcrMoving = false
-end
-
-local function watchName(name)
-	if name.rcrWatched or not hooksecurefunc then
-		return
-	end
-	name.rcrWatched = true
-	local function again(self)
-		if self.rcrHide and not self.rcrMoving then
-			placeCenter(self)
+-- ElvUI places its name at the left end of its own health bar, and keeps
+-- putting it back there. So while bars are hidden its name is faded out and
+-- RCRotations shows the same name, in the same font and color, centered on the
+-- game's nameplate frame, which always sits right above the character.
+local function ownName(plate, uf, hide, unit)
+	local theirs = type(uf.Name) == "table" and uf.Name or nil
+	local mine = plate.rcrName
+	if not hide then
+		if mine then
+			mine:Hide()
 		end
-	end
-	pcall(hooksecurefunc, name, "SetPoint", again)
-	pcall(hooksecurefunc, name, "SetJustifyH", again)
-end
-
-local function centerName(uf, hide, plate)
-	local name = type(uf.Name) == "table" and uf.Name or nil
-	if not name or not name.ClearAllPoints or not name.SetPoint then
+		if theirs and theirs.SetAlpha then
+			pcall(theirs.SetAlpha, theirs, 1)
+		end
 		return
 	end
-	if hide then
-		if not name.rcrSaved then
-			local saved = { justify = name.GetJustifyH and name:GetJustifyH() or nil }
-			local n = name.GetNumPoints and name:GetNumPoints() or 0
-			for i = 1, n do
-				saved[i] = { name:GetPoint(i) }
+	if not mine then
+		local ok, holder = pcall(CreateFrame, "Frame", nil, plate)
+		if not ok or not holder then
+			return
+		end
+		holder:SetAllPoints(plate)
+		if holder.SetFrameLevel and plate.GetFrameLevel then
+			pcall(holder.SetFrameLevel, holder, (plate:GetFrameLevel() or 0) + 20)
+		end
+		mine = holder:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		mine:SetPoint("CENTER", plate, "CENTER", 0, 0)
+		mine:SetJustifyH("CENTER")
+		mine.holder = holder
+		plate.rcrName = mine
+	end
+	if theirs then
+		if theirs.GetFont then
+			local font, size, flags = theirs:GetFont()
+			if font then
+				pcall(mine.SetFont, mine, font, size, flags)
 			end
-			name.rcrSaved = saved
 		end
-		-- the game's own nameplate frame sits centered over the character; the
-		-- addon's frame inside it may not be
-		name.rcrOwner = plate or uf
-		name.rcrHide = true
-		watchName(name)
-		local p1 = name.GetPoint and name:GetPoint(1)
-		if p1 ~= "CENTER" or (name.GetJustifyH and name:GetJustifyH() ~= "CENTER") then
-			placeCenter(name)
+		if theirs.GetTextColor then
+			local r, g, b2 = theirs:GetTextColor()
+			if r then
+				mine:SetTextColor(r, g, b2)
+			end
 		end
-	elseif name.rcrSaved then
-		name.rcrHide = false
-		local saved = name.rcrSaved
-		name.rcrMoving = true
-		pcall(name.ClearAllPoints, name)
-		for i = 1, #saved do
-			pcall(name.SetPoint, name, unpack(saved[i]))
+		if theirs.SetAlpha then
+			pcall(theirs.SetAlpha, theirs, 0)
 		end
-		if saved.justify and name.SetJustifyH then
-			pcall(name.SetJustifyH, name, saved.justify)
-		end
-		name.rcrMoving = false
-		name.rcrSaved = nil
 	end
+	local text = unit and UnitName and UnitName(unit)
+	if not text and theirs and theirs.GetText then
+		text = theirs:GetText()
+	end
+	mine:SetText(text or "")
+	if mine.holder then
+		mine.holder:Show()
+	end
+	mine:Show()
 end
 
-local function styleBar(plate, hide)
+local function styleBar(plate, hide, unit)
 	for _, bar in ipairs(healthBars(plate)) do
 		pcall(bar.SetAlpha, bar, hide and 0 or 1)
 	end
@@ -186,7 +175,7 @@ local function styleBar(plate, hide)
 		for _, t in ipairs(addonExtras(uf)) do
 			pcall(t.SetAlpha, t, hide and 0 or 1)
 		end
-		centerName(uf, hide, plate)
+		ownName(plate, uf, hide, unit)
 	end
 end
 
@@ -208,7 +197,7 @@ end
 local function restyleAll()
 	forEachPlate(function(plate)
 		local unit = plate.namePlateUnitToken or (plate.UnitFrame and plate.UnitFrame.unit)
-		styleBar(plate, on() and unit and hostileUnit(unit))
+		styleBar(plate, on() and unit and hostileUnit(unit), unit)
 	end)
 end
 
@@ -278,7 +267,7 @@ frame:SetScript("OnEvent", function(_, event, unit)
 			local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
 			if ok and plate then
 				-- plates are reused, so always set the bar one way or the other
-				styleBar(plate, on() and hostileUnit(unit))
+				styleBar(plate, on() and hostileUnit(unit), unit)
 			end
 		end
 		return

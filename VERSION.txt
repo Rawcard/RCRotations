@@ -2,7 +2,7 @@
 
 # 1.5.0
 
-Missing buff reminders and invisible nameplates.
+Missing buff reminders and name-only nameplates.
 
 - Missing buffs show as a red-edged bar just above the main HUD icon, as wide as the icon and
   split between the missing buffs, and their buttons
@@ -16,10 +16,11 @@ Missing buff reminders and invisible nameplates.
   Grimoire of Sacrifice) and Warrior shouts.
 - Seal, presence, Horn of Winter and Inner Fire moved out of the rotation into these reminders.
 - Turn them off with /rcr buffs or Options > General > HUD.
-- Invisible enemy nameplates: RCRotations counts enemies for AoE through enemy nameplates, so with
+- Name-only enemy nameplates: RCRotations counts enemies for AoE through enemy nameplates, so with
   nameplates off it always thinks there's one target. The new option (Options > Extra, or
-  /rcr plates) turns enemy nameplates on but invisible and click-through. Your old settings come
-  back when you turn it off. If nameplates are off, you get a one-time tip about it.
+  /rcr plates) turns enemy nameplates on and hides their health bars: you still see enemy names
+  and cast bars. Your old setting comes back when you turn it off. If nameplates are off, you get
+  a one-time tip about it.
 
 # 1.4.3
 

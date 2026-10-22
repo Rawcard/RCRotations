@@ -81,15 +81,61 @@ end
 -- the health % / level on it. With the bar hidden that looks off, so while
 -- hidden: health text and level go too, and the name is centered on the plate.
 -- The name's original position is remembered and put back.
-local function addonTexts(uf)
+-- Bits of an addon plate (ElvUI) that go with the bar: health % text, level,
+-- and the target glow / spark / arrows and mouseover highlight.
+local function addonExtras(uf)
 	local out = {}
-	local h = type(uf.Health) == "table" and uf.Health or nil
-	for _, t in ipairs({ h and h.Text or false, h and h.value or false, uf.HealthText or false, uf.Level or false }) do
+	local function add(t)
 		if type(t) == "table" and t.SetAlpha then
 			out[#out + 1] = t
 		end
 	end
+	local h = type(uf.Health) == "table" and uf.Health or nil
+	if h then
+		add(h.Text)
+		add(h.value)
+		add(h.Highlight)
+	end
+	add(uf.HealthText)
+	add(uf.Level)
+	add(uf.Highlight)
+	local ti = type(uf.TargetIndicator) == "table" and uf.TargetIndicator or nil
+	if ti then
+		add(ti)
+		for _, k in ipairs({ "Shadow", "Spark", "TopIndicator", "LeftIndicator", "RightIndicator", "Glow" }) do
+			add(ti[k])
+		end
+	end
+	add(uf.Glow)
+	add(uf.Spark)
 	return out
+end
+
+-- Center the name on the plate while bars are hidden. ElvUI moves the name
+-- back whenever it restyles a plate (target changes, health updates), so the
+-- name's SetPoint / SetJustifyH are watched and it's centered again at once.
+local function placeCenter(name)
+	name.rcrMoving = true
+	pcall(name.ClearAllPoints, name)
+	pcall(name.SetPoint, name, "CENTER", name.rcrOwner, "CENTER", 0, 0)
+	if name.SetJustifyH then
+		pcall(name.SetJustifyH, name, "CENTER")
+	end
+	name.rcrMoving = false
+end
+
+local function watchName(name)
+	if name.rcrWatched or not hooksecurefunc then
+		return
+	end
+	name.rcrWatched = true
+	local function again(self)
+		if self.rcrHide and not self.rcrMoving then
+			placeCenter(self)
+		end
+	end
+	pcall(hooksecurefunc, name, "SetPoint", again)
+	pcall(hooksecurefunc, name, "SetJustifyH", again)
 end
 
 local function centerName(uf, hide)
@@ -106,17 +152,17 @@ local function centerName(uf, hide)
 			end
 			name.rcrSaved = saved
 		end
+		name.rcrOwner = uf
+		name.rcrHide = true
+		watchName(name)
 		local p1 = name.GetPoint and name:GetPoint(1)
-		if not name.rcrCentered or p1 ~= "CENTER" then
-			pcall(name.ClearAllPoints, name)
-			pcall(name.SetPoint, name, "CENTER", uf, "CENTER", 0, 0)
-			if name.SetJustifyH then
-				pcall(name.SetJustifyH, name, "CENTER")
-			end
-			name.rcrCentered = true
+		if p1 ~= "CENTER" or (name.GetJustifyH and name:GetJustifyH() ~= "CENTER") then
+			placeCenter(name)
 		end
 	elseif name.rcrSaved then
+		name.rcrHide = false
 		local saved = name.rcrSaved
+		name.rcrMoving = true
 		pcall(name.ClearAllPoints, name)
 		for i = 1, #saved do
 			pcall(name.SetPoint, name, unpack(saved[i]))
@@ -124,7 +170,8 @@ local function centerName(uf, hide)
 		if saved.justify and name.SetJustifyH then
 			pcall(name.SetJustifyH, name, saved.justify)
 		end
-		name.rcrSaved, name.rcrCentered = nil, nil
+		name.rcrMoving = false
+		name.rcrSaved = nil
 	end
 end
 
@@ -134,7 +181,7 @@ local function styleBar(plate, hide)
 	end
 	local uf = plate and plate.unitFrame
 	if type(uf) == "table" and uf ~= plate.UnitFrame then
-		for _, t in ipairs(addonTexts(uf)) do
+		for _, t in ipairs(addonExtras(uf)) do
 			pcall(t.SetAlpha, t, hide and 0 or 1)
 		end
 		centerName(uf, hide)

@@ -266,6 +266,7 @@ local SF_COLORS = {
 	def = { 0, 1, 1 }, -- cyan: defense, long buffs
 	kick = { 1, 0.5, 0 }, -- orange: interrupt
 	purge = { 0.85, 0.35, 1 }, -- purple: purge
+	buff = { 1, 0.08, 0.08 }, -- bright red: missing buff
 }
 local SF_FILL_ALPHA = 0.8
 
@@ -1138,6 +1139,33 @@ function ns.GlowPurge(spellID)
 	end
 end
 
+-- Missing buffs (Buffs.lua): every listed spell's buttons flash bright red.
+local buffGlowing, lastBuffSig = {}, nil
+function ns.GlowClearBuffs()
+	for button in pairs(buffGlowing) do
+		unmark(button, "buff")
+	end
+	wipe(buffGlowing)
+	lastBuffSig = nil
+end
+
+function ns.GlowBuffs(list)
+	styleSync()
+	list = list or {}
+	local sig = table.concat(list, ",")
+	if sig == lastBuffSig and (sig == "" or next(buffGlowing)) then
+		return
+	end
+	ns.GlowClearBuffs()
+	lastBuffSig = sig
+	for _, id in ipairs(list) do
+		for _, button in ipairs(flashTargets(id)) do
+			mark(button, "buff", IMG .. "skull", 1, 0.08, 0.08, 1.45, 1)
+			buffGlowing[button] = true
+		end
+	end
+end
+
 local cleanseGlowing, weaponGlowing = {}, {}
 local lastCleanse, lastWeapon
 
@@ -1507,6 +1535,9 @@ function ns.GlowClearAllStyles()
 	ns.GlowClearPurge()
 	ns.GlowClearCleanse()
 	ns.GlowClearWeapon()
+	if ns.GlowClearBuffs then
+		ns.GlowClearBuffs()
+	end
 	ns.GlowInvalidate()
 	if ns.InvalidateTick then
 		ns.InvalidateTick()

@@ -162,6 +162,9 @@ local function featureOn(key)
 	if key == "locked" then
 		return ns.db.locked == true
 	end
+	if key == "hidePlates" then
+		return ns.db.hidePlates == true
+	end
 	return ns.db[key] ~= false
 end
 
@@ -552,6 +555,25 @@ local function ensureOptions()
 		end
 	end)
 	frame.roleBtn = roleBtn
+
+	-- Lock / unlock the HUD from anywhere in the menu. Locked stays locked on
+	-- every character and every login until you unlock it here.
+	local lockBtn = makeGoldBtn(content, 120, 22, "")
+	lockBtn:SetPoint("LEFT", roleBtn, "RIGHT", 8, 0)
+	lockBtn:SetScript("OnClick", function()
+		ns.UI.SetLocked(not ns.db.locked)
+		if ns.OptionsRefreshLock then
+			ns.OptionsRefreshLock()
+		end
+		if frame.optLock then
+			frame.optLock:SetChecked(ns.db.locked == true)
+		end
+	end)
+	frame.lockBtn = lockBtn
+	function ns.OptionsRefreshLock()
+		lockBtn:SetText(ns.T(ns.db.locked == true and "OPT_UNLOCK_HUD" or "OPT_LOCK_HUD"))
+	end
+	ns.OptionsRefreshLock()
 	function ns.OptionsRefreshRole()
 		local role = (ns.db and ns.db.role) or "damage"
 		roleBtn:SetText(ns.T("TIP_ROLE"):format(ns.T("ROLE_" .. role:upper())))
@@ -702,6 +724,7 @@ local function ensureOptions()
 	frame.optRotation = addSwitch(hudCard, "showRotation", ns.T("OPT_ROTATION"))
 	frame.optGlow = addSwitch(hudCard, "glow", ns.T("OPT_GLOW"))
 	frame.optRange = addSwitch(hudCard, "showRange", ns.T("OPT_RANGE"))
+	frame.optBuffs = addSwitch(hudCard, "showBuffs", ns.T("OPT_BUFFS"))
 	frame.optModes = addSwitch(hudCard, "showModes", ns.T("OPT_MODES"))
 	frame.optModes:Hide() -- mode buttons only drove the removed built-in lists
 
@@ -763,6 +786,9 @@ local function ensureOptions()
 	resetPos:SetPoint("TOPLEFT", 12, -132)
 	resetPos:SetScript("OnClick", function()
 		ns.db.pos = nil
+		if type(RCRotationsDB) == "table" and type(RCRotationsDB.layout) == "table" then
+			RCRotationsDB.layout.pos = nil
+		end
 		ns.UI.ApplyPosition()
 	end)
 	frame.resetPos = resetPos
@@ -1033,9 +1059,10 @@ local function ensureOptions()
 	frame.optRoleAuto = addSwitch(combatCard, "roleAuto", ns.T("OPT_ROLE_AUTO"))
 	frame.optBarOnly = addSwitch(combatCard, "barOnly", ns.T("OPT_BAR_ONLY"))
 
-	local autoCard = makeCard(extra, "OPT_CARD_AUTOMATION", 338, -4, 318, 96)
+	local autoCard = makeCard(extra, "OPT_CARD_AUTOMATION", 338, -4, 318, 106)
 	frame.optAutoProfile = addSwitch(autoCard, "autoProfile", ns.T("OPT_AUTO_PROFILE"))
 	frame.optCleanseGroup = addSwitch(autoCard, "cleanseGroup", ns.T("OPT_CLEANSE_GROUP"))
+	frame.optPlates = addSwitch(autoCard, "hidePlates", ns.T("OPT_HIDE_PLATES"))
 
 	local alertCard = makeCard(extra, "OPT_CARD_ALERTS", 8, -138, 318, 132)
 	local soundLabel = alertCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -1546,6 +1573,15 @@ function ns.RefreshOptions()
 		end
 		if ns.OptionsRefreshRole then
 			ns.OptionsRefreshRole()
+		end
+		if ns.OptionsRefreshLock then
+			ns.OptionsRefreshLock()
+		end
+		if frame.optBuffs then
+			frame.optBuffs:SetChecked(ns.db.showBuffs ~= false)
+		end
+		if frame.optPlates then
+			frame.optPlates:SetChecked(ns.db.hidePlates == true)
 		end
 		if frame.optPhysics then
 			frame.optPhysics:SetChecked(ns.db.showPhysics ~= false)

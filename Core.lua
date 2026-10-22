@@ -36,8 +36,28 @@ end
 
 useCharacterDB()
 
+-- Shared HUD layout: once you place and lock the HUD, every character gets
+-- the same spot and stays locked (see savePoint / SetLocked in UI.lua).
+local function applySharedLayout()
+	local layout = type(RCRotationsDB) == "table" and RCRotationsDB.layout
+	if type(layout) ~= "table" then
+		-- first run with this version: share what this character has
+		if type(RCRotationsDB) == "table" and (ns.db.locked ~= nil or ns.db.pos) then
+			RCRotationsDB.layout = { locked = ns.db.locked == true, pos = ns.db.pos and copyValue(ns.db.pos) or nil }
+		end
+		return
+	end
+	if layout.locked ~= nil then
+		ns.db.locked = layout.locked == true
+	end
+	if type(layout.pos) == "table" then
+		ns.db.pos = copyValue(layout.pos)
+	end
+end
+
 local function defaults()
 	useCharacterDB()
+	applySharedLayout()
 	if ns.db.locale == nil or ns.db.locale == "" then
 		ns.db.locale = "auto"
 	end
@@ -448,18 +468,25 @@ end
 local lastTickSig
 local lastRangeAt = 0
 
+local lastBuffSig
+
 local function flagBit(value)
 	return value ~= false and "1" or "0"
 end
 
 function ns.InvalidateTick()
 	lastTickSig = nil
+	lastBuffSig = nil
 end
 
 function ns.ApplyFeatureFlags()
 	if ns.UI and ns.UI.SetLocked then
 		ns.UI.SetLocked(ns.db.locked == true)
 	end
+	if ns.Plates and ns.Plates.Apply then
+		ns.Plates.Apply()
+	end
+	lastBuffSig = nil
 	local idle = ns.API.ShouldHideIdle and ns.API.ShouldHideIdle()
 	if ns.UI then
 		if ns.UI.root then
@@ -611,6 +638,17 @@ function ns.Tick()
 			lastAlertWeapon = nil
 		else
 			lastAlertWeapon = weapon
+		end
+	end
+	local buffs = ns.Buffs and ns.Buffs.Missing and ns.Buffs.Missing() or {}
+	local buffSig = table.concat(buffs, ",")
+	if buffSig ~= lastBuffSig then
+		lastBuffSig = buffSig
+		if ns.UI.UpdateBuffs then
+			ns.UI.UpdateBuffs(buffs)
+		end
+		if ns.GlowBuffs then
+			ns.GlowBuffs(buffs)
 		end
 	end
 	local soon = queue.soon and queue[1] and queue.soon[queue[1]]
@@ -1015,6 +1053,9 @@ SlashCmdList.RCROT = function(msg)
 		ns.Print(ns.T("LOCKED"))
 	elseif msg == "reset" then
 		ns.db.pos = nil
+		if type(RCRotationsDB) == "table" and type(RCRotationsDB.layout) == "table" then
+			RCRotationsDB.layout.pos = nil
+		end
 		ns.db.point = nil
 		ns.UI.ApplyPosition()
 	elseif msg == "resetall" then
@@ -1083,6 +1124,16 @@ SlashCmdList.RCROT = function(msg)
 		end
 		if ns.Tick then
 			ns.Tick()
+		end
+	elseif msg == "plates" or msg == "nameplates" then
+		if ns.Plates then
+			ns.Plates.Set(ns.db.hidePlates ~= true)
+		end
+	elseif msg == "buffs" then
+		ns.db.showBuffs = (ns.db.showBuffs == false)
+		ns.Print(ns.T(ns.db.showBuffs and "BUFFS_ON" or "BUFFS_OFF"))
+		if ns.InvalidateTick then
+			ns.InvalidateTick()
 		end
 	elseif msg == "workshop" or msg == "app" then
 		ns.Print(ns.T("WORKSHOP_PRINT"):format(ns.WORKSHOP_URL))

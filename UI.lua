@@ -60,10 +60,27 @@ local function applyChrome(frame, locked)
 	frame:SetBackdropBorderColor(r, g, b, 0.75)
 end
 
+-- The HUD layout (positions and lock) is shared by all your characters:
+-- it's kept in the account-wide RCRotationsDB.layout and copied to each
+-- character at login (Core.lua).
+local function sharedLayout()
+	if type(RCRotationsDB) ~= "table" then
+		return nil
+	end
+	RCRotationsDB.layout = RCRotationsDB.layout or {}
+	return RCRotationsDB.layout
+end
+ns.UI.SharedLayout = sharedLayout
+
 local function savePoint(frame, key)
 	local point, _, rel, x, y = frame:GetPoint()
 	ns.db.pos = ns.db.pos or {}
 	ns.db.pos[key] = { point, rel, x, y }
+	local layout = sharedLayout()
+	if layout then
+		layout.pos = layout.pos or {}
+		layout.pos[key] = { point, rel, x, y }
+	end
 end
 
 local function loadPoint(frame, key, default)
@@ -1245,8 +1262,85 @@ function ns.UI.ApplyMouse()
 	end
 end
 
+-- Missing buff row: small icons with a red edge just above the main icon.
+local BUFF_SIZE, BUFF_GAP = 22, 2
+local function buffIcon(i)
+	ns.UI.buffIcons = ns.UI.buffIcons or {}
+	local icon = ns.UI.buffIcons[i]
+	if icon then
+		return icon
+	end
+	icon = CreateFrame("Frame", "RCRotationsBuff" .. i, UIParent, "BackdropTemplate")
+	icon:SetSize(BUFF_SIZE, BUFF_SIZE)
+	icon:SetFrameStrata("MEDIUM")
+	if icon.SetBackdrop then
+		icon:SetBackdrop({ edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 2 })
+		icon:SetBackdropBorderColor(1, 0.08, 0.08, 1)
+	end
+	local tex = icon:CreateTexture(nil, "ARTWORK")
+	tex:SetPoint("TOPLEFT", 2, -2)
+	tex:SetPoint("BOTTOMRIGHT", -2, 2)
+	tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	icon.texture = tex
+	icon:EnableMouse(true)
+	icon:SetScript("OnEnter", function(self)
+		if GameTooltip and self.spellID then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText(ns.T("BUFF_MISSING"):format(API.SpellName and API.SpellName(self.spellID) or "?"), 1, 0.25, 0.25)
+			GameTooltip:AddLine(ns.T("BUFF_MISSING_HINT"), 0.9, 0.9, 0.9, true)
+			GameTooltip:Show()
+		end
+	end)
+	icon:SetScript("OnLeave", function()
+		if GameTooltip then
+			GameTooltip:Hide()
+		end
+	end)
+	icon:Hide()
+	ns.UI.buffIcons[i] = icon
+	return icon
+end
+
+function ns.UI.UpdateBuffs(list)
+	list = list or {}
+	local anchor = ns.UI.slots and ns.UI.slots[1]
+	local n = #list
+	-- One bar as wide as the main icon, split evenly between the missing buffs,
+	-- lined up with the main icon's edges.
+	local total = anchor and anchor:GetWidth() or 56
+	local w = n > 0 and (total - (n - 1) * BUFF_GAP) / n or total
+	for i = 1, math.max(n, ns.UI.buffIcons and #ns.UI.buffIcons or 0) do
+		local id = list[i]
+		if id and anchor then
+			local icon = buffIcon(i)
+			icon.spellID = id
+			icon.texture:SetTexture(API.SpellIcon and API.SpellIcon(id) or (IMG .. "skull-idle"))
+			icon:SetSize(w, BUFF_SIZE)
+			-- show the middle band of the icon so a wide strip doesn't look stretched
+			local inner = math.max(1, w - 4)
+			local band = math.min(1, (BUFF_SIZE - 4) / inner) * 0.84
+			icon.texture:SetTexCoord(0.08, 0.92, 0.5 - band / 2, 0.5 + band / 2)
+			icon:ClearAllPoints()
+			-- sits right on top of the main icon; the RC badge (one level up) stays
+			-- drawn over the bar's right corner, so it can still be clicked
+			icon:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", (i - 1) * (w + BUFF_GAP), 1)
+			if anchor.GetFrameStrata and icon.SetFrameLevel then
+				icon:SetFrameStrata(anchor:GetFrameStrata())
+				icon:SetFrameLevel(anchor:GetFrameLevel())
+			end
+			icon:Show()
+		elseif ns.UI.buffIcons and ns.UI.buffIcons[i] then
+			ns.UI.buffIcons[i]:Hide()
+		end
+	end
+end
+
 function ns.UI.SetLocked(locked)
 	ns.db.locked = locked and true or false
+	local layout = sharedLayout()
+	if layout then
+		layout.locked = ns.db.locked
+	end
 	if ns.UI.ApplyChrome then
 		ns.UI.ApplyChrome()
 	end
@@ -1260,6 +1354,9 @@ function ns.UI.SetLocked(locked)
 	ns.UI.ApplyMouse()
 	if ns.UI.RefreshLockBar then
 		ns.UI.RefreshLockBar()
+	end
+	if ns.OptionsRefreshLock then
+		ns.OptionsRefreshLock()
 	end
 end
 

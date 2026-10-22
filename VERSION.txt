@@ -4,7 +4,8 @@
 
 Missing buff reminders and invisible nameplates.
 
-- Missing buffs show as small icons with a red edge just above the main HUD icon, and their buttons
+- Missing buffs show as a red-edged bar just above the main HUD icon, as wide as the icon and
+  split between the missing buffs, and their buttons
   on your action bars flash bright red. A reminder goes away as soon as you have the buff, or the
   same kind of buff from someone else (Mark of the Wild, Blessing of Kings and Legacy of the
   Emperor all count as the stats buff, Battle Shout and Trueshot Aura count as Horn of Winter...).

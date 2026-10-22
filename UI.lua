@@ -1263,7 +1263,7 @@ function ns.UI.ApplyMouse()
 end
 
 -- Missing buff row: small icons with a red edge just above the main icon.
-local BUFF_SIZE, BUFF_GAP = 22, 3
+local BUFF_SIZE, BUFF_GAP = 22, 2
 local function buffIcon(i)
 	ns.UI.buffIcons = ns.UI.buffIcons or {}
 	local icon = ns.UI.buffIcons[i]
@@ -1304,15 +1304,25 @@ end
 function ns.UI.UpdateBuffs(list)
 	list = list or {}
 	local anchor = ns.UI.slots and ns.UI.slots[1]
-	for i = 1, math.max(#list, ns.UI.buffIcons and #ns.UI.buffIcons or 0) do
+	local n = #list
+	-- One bar as wide as the main icon, split evenly between the missing buffs,
+	-- lined up with the main icon's edges.
+	local total = anchor and anchor:GetWidth() or 56
+	local w = n > 0 and (total - (n - 1) * BUFF_GAP) / n or total
+	for i = 1, math.max(n, ns.UI.buffIcons and #ns.UI.buffIcons or 0) do
 		local id = list[i]
 		if id and anchor then
 			local icon = buffIcon(i)
 			icon.spellID = id
 			icon.texture:SetTexture(API.SpellIcon and API.SpellIcon(id) or (IMG .. "skull-idle"))
+			icon:SetSize(w, BUFF_SIZE)
+			-- show the middle band of the icon so a wide strip doesn't look stretched
+			local inner = math.max(1, w - 4)
+			local band = math.min(1, (BUFF_SIZE - 4) / inner) * 0.84
+			icon.texture:SetTexCoord(0.08, 0.92, 0.5 - band / 2, 0.5 + band / 2)
 			icon:ClearAllPoints()
 			-- above the RC badge, which pokes 7px over the main icon
-			icon:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", (i - 1) * (BUFF_SIZE + BUFF_GAP), 10)
+			icon:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", (i - 1) * (w + BUFF_GAP), 10)
 			icon:Show()
 		elseif ns.UI.buffIcons and ns.UI.buffIcons[i] then
 			ns.UI.buffIcons[i]:Hide()

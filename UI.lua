@@ -1321,8 +1321,13 @@ function ns.UI.UpdateBuffs(list)
 			local band = math.min(1, (BUFF_SIZE - 4) / inner) * 0.84
 			icon.texture:SetTexCoord(0.08, 0.92, 0.5 - band / 2, 0.5 + band / 2)
 			icon:ClearAllPoints()
-			-- above the RC badge, which pokes 7px over the main icon
-			icon:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", (i - 1) * (w + BUFF_GAP), 10)
+			-- sits right on top of the main icon; the RC badge (one level up) stays
+			-- drawn over the bar's right corner, so it can still be clicked
+			icon:SetPoint("BOTTOMLEFT", anchor, "TOPLEFT", (i - 1) * (w + BUFF_GAP), 1)
+			if anchor.GetFrameStrata and icon.SetFrameLevel then
+				icon:SetFrameStrata(anchor:GetFrameStrata())
+				icon:SetFrameLevel(anchor:GetFrameLevel())
+			end
 			icon:Show()
 		elseif ns.UI.buffIcons and ns.UI.buffIcons[i] then
 			ns.UI.buffIcons[i]:Hide()

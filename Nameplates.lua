@@ -111,7 +111,7 @@ local function addonExtras(uf)
 	return out
 end
 
--- Center the name on the plate while bars are hidden. ElvUI moves the name
+-- Center the name over the character while bars are hidden. ElvUI moves the name
 -- back whenever it restyles a plate (target changes, health updates), so the
 -- name's SetPoint / SetJustifyH are watched and it's centered again at once.
 local function placeCenter(name)
@@ -138,7 +138,7 @@ local function watchName(name)
 	pcall(hooksecurefunc, name, "SetJustifyH", again)
 end
 
-local function centerName(uf, hide)
+local function centerName(uf, hide, plate)
 	local name = type(uf.Name) == "table" and uf.Name or nil
 	if not name or not name.ClearAllPoints or not name.SetPoint then
 		return
@@ -152,7 +152,9 @@ local function centerName(uf, hide)
 			end
 			name.rcrSaved = saved
 		end
-		name.rcrOwner = uf
+		-- the game's own nameplate frame sits centered over the character; the
+		-- addon's frame inside it may not be
+		name.rcrOwner = plate or uf
 		name.rcrHide = true
 		watchName(name)
 		local p1 = name.GetPoint and name:GetPoint(1)
@@ -184,7 +186,7 @@ local function styleBar(plate, hide)
 		for _, t in ipairs(addonExtras(uf)) do
 			pcall(t.SetAlpha, t, hide and 0 or 1)
 		end
-		centerName(uf, hide)
+		centerName(uf, hide, plate)
 	end
 end
 

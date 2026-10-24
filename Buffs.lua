@@ -237,7 +237,7 @@ local function active()
 	if call(UnitIsDeadOrGhost, "player") then
 		return false
 	end
-	if call(UnitInVehicle, "player") or call(UnitOnTaxi, "player") then
+	if call(UnitInVehicle, "player") or call(UnitOnTaxi, "player") or call(IsMounted) then
 		return false
 	end
 	return true

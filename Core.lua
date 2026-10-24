@@ -618,6 +618,9 @@ function ns.Tick()
 	if ns.db.showWeapon ~= false and not idle then
 		weapon, _, weaponNeed = ns.BuildWeapon()
 	end
+	-- No action-button flashing while mounted (the HUD still shows).
+	local okM, mounted = pcall(IsMounted or function() end)
+	mounted = okM and mounted and true or false
 	local noticeKey = (not idle and ns.API.CombatNotice and ns.API.CombatNotice()) or nil
 	local notice = noticeKey and ns.T(noticeKey) or nil
 	if idle then
@@ -652,27 +655,27 @@ function ns.Tick()
 		end
 	end
 	local soon = queue.soon and queue[1] and queue.soon[queue[1]]
-	local sig = (queue[1] or 0) .. ":" .. (queue[2] or 0) .. ":" .. (queue[3] or 0) .. (soon and "s" or "") .. (queue.cancel and queue[1] and queue.cancel[queue[1]] and "c" or "") .. ":" .. (defense or 0) .. ":" .. (interrupt or 0) .. ":" .. (purge or 0) .. ":" .. (cleanse or 0) .. ":" .. (weapon or 0) .. ":" .. (weaponNeed and 1 or 0) .. ":" .. (noticeKey or "") .. ":" .. flagBit(ns.db.showRotation) .. flagBit(ns.db.showDefense) .. flagBit(ns.db.showInterrupt) .. flagBit(ns.db.showPurge) .. flagBit(ns.db.showCleanse) .. flagBit(ns.db.showWeapon) .. flagBit(ns.db.glow) .. flagBit(ns.db.spellFlash) .. flagBit(ns.db.showModes) .. flagBit(ns.db.showRange) .. (ns.db.locked == true and "1" or "0") .. flagBit(not idle)
+	local sig = (queue[1] or 0) .. ":" .. (queue[2] or 0) .. ":" .. (queue[3] or 0) .. (soon and "s" or "") .. (queue.cancel and queue[1] and queue.cancel[queue[1]] and "c" or "") .. ":" .. (defense or 0) .. ":" .. (interrupt or 0) .. ":" .. (purge or 0) .. ":" .. (cleanse or 0) .. ":" .. (weapon or 0) .. ":" .. (weaponNeed and 1 or 0) .. ":" .. (noticeKey or "") .. ":" .. flagBit(ns.db.showRotation) .. flagBit(ns.db.showDefense) .. flagBit(ns.db.showInterrupt) .. flagBit(ns.db.showPurge) .. flagBit(ns.db.showCleanse) .. flagBit(ns.db.showWeapon) .. flagBit(ns.db.glow) .. flagBit(ns.db.spellFlash) .. flagBit(ns.db.showModes) .. flagBit(ns.db.showRange) .. (ns.db.locked == true and "1" or "0") .. flagBit(not idle) .. (mounted and "m" or "")
 	if sig ~= lastTickSig then
 		lastTickSig = sig
 		ns.UI.Update(queue, defense, interrupt, purge, cleanse, weapon, weaponNeed, notice)
 		if ns.GlowSpell then
-			ns.GlowSpell((ns.db.showRotation ~= false and not soon) and queue[1] or nil)
+			ns.GlowSpell((ns.db.showRotation ~= false and not soon and not mounted) and queue[1] or nil)
 		end
 		if ns.GlowDef then
-			ns.GlowDef(defense)
+			ns.GlowDef(not mounted and defense or nil)
 		end
 		if ns.GlowInterrupt then
-			ns.GlowInterrupt(interrupt)
+			ns.GlowInterrupt(not mounted and interrupt or nil)
 		end
 		if ns.GlowPurge then
-			ns.GlowPurge(purge)
+			ns.GlowPurge(not mounted and purge or nil)
 		end
 		if ns.GlowCleanse then
-			ns.GlowCleanse(cleanse)
+			ns.GlowCleanse(not mounted and cleanse or nil)
 		end
 		if ns.GlowWeapon then
-			ns.GlowWeapon(weaponNeed and weapon or nil)
+			ns.GlowWeapon(not mounted and weaponNeed and weapon or nil)
 		end
 	end
 	local now = GetTime()

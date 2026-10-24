@@ -1,4 +1,9 @@
-1.5.0
+1.5.1
+
+# 1.5.1
+
+- No flashing on your action bars while you're mounted. The HUD still shows what's next; the
+  flashes come back as soon as you dismount. Missing buff reminders also wait until you dismount.
 
 # 1.5.0
 

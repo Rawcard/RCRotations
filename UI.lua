@@ -1287,6 +1287,10 @@ local function buffIcon(i)
 		if GameTooltip and self.spellID then
 			GameTooltip:SetOwner(self, "ANCHOR_TOP")
 			GameTooltip:SetText(ns.T("BUFF_MISSING"):format(API.SpellName and API.SpellName(self.spellID) or "?"), 1, 0.25, 0.25)
+			local who = ns.Buffs and ns.Buffs.who and ns.Buffs.who[self.spellID]
+			if who then
+				GameTooltip:AddLine(ns.T("BUFF_MISSING_ON"):format(who), 1, 0.82, 0.2, true)
+			end
 			GameTooltip:AddLine(ns.T("BUFF_MISSING_HINT"), 0.9, 0.9, 0.9, true)
 			GameTooltip:Show()
 		end

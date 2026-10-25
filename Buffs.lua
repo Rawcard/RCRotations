@@ -191,6 +191,89 @@ local function petUp()
 	return (call(UnitExists, "pet") and not call(UnitIsDead, "pet")) and true or false
 end
 
+-- ------------------------------------------------------------------ group
+-- In a party or raid, your raid buff also has to be on everyone near you.
+-- Members who are out of range, offline, dead or out of sight don't count
+-- (you couldn't buff them anyway). A member counts as covered when they have
+-- your buff or the same kind of buff from anyone. Checked about once a second.
+local GROUP_EVERY = 1
+local groupAt, groupCache = 0, {}
+Buffs.who = {}
+
+local function groupUnits()
+	local out = {}
+	if call(IsInRaid) then
+		for i = 1, (call(GetNumGroupMembers) or 0) do
+			out[#out + 1] = "raid" .. i
+		end
+	elseif call(IsInGroup) then
+		for i = 1, (call(GetNumSubgroupMembers) or 0) do
+			out[#out + 1] = "party" .. i
+		end
+	end
+	return out
+end
+
+local function reachable(unit)
+	if not call(UnitExists, unit) or call(UnitIsUnit, unit, "player") then
+		return false
+	end
+	if call(UnitIsConnected, unit) == false or call(UnitIsDeadOrGhost, unit) then
+		return false
+	end
+	if UnitIsVisible and not call(UnitIsVisible, unit) then
+		return false
+	end
+	if UnitInRange then
+		local inRange, checked = call(UnitInRange, unit)
+		if checked and not inRange then
+			return false
+		end
+	end
+	return true
+end
+
+local function unitHasAny(unit, list)
+	if not (ns.Sim and ns.Sim.AuraUp) then
+		return true
+	end
+	for _, id in ipairs(list or {}) do
+		if ns.Sim.AuraUp(id, unit) then
+			return true
+		end
+	end
+	return false
+end
+
+local function memberCovered(unit, entry)
+	if unitHasAny(unit, { entry.spell }) or unitHasAny(unit, entry.alt) then
+		return true
+	end
+	for _, cat in ipairs(entry.cats) do
+		if not unitHasAny(unit, EQUIVALENT[cat]) then
+			return false
+		end
+	end
+	return true
+end
+
+-- The first group member near you who lacks this buff (name), or nil.
+local function groupMissing(entry)
+	local key = entry.spell
+	if groupCache[key] ~= nil then
+		return groupCache[key] or nil
+	end
+	local who = false
+	for _, unit in ipairs(groupUnits()) do
+		if reachable(unit) and not memberCovered(unit, entry) then
+			who = call(UnitName, unit) or unit
+			break
+		end
+	end
+	groupCache[key] = who
+	return who or nil
+end
+
 local function missing(entry)
 	local kind = entry.kind or "aura"
 	if kind == "stance" then
@@ -208,22 +291,29 @@ local function missing(entry)
 	elseif kind == "imbue" then
 		return not imbueUp(entry.hand)
 	end
-	if auraUp(entry.spell) or anyUp(entry.alt) then
-		return false
-	end
 	if entry.needs and not Buffs.CategoryUp(entry.needs) then
 		-- e.g. Blessing of Might only after Kings/stats is covered
 		return false
 	end
-	if entry.cats then
+	local selfHas = auraUp(entry.spell) or anyUp(entry.alt)
+	if not selfHas then
+		if not entry.cats then
+			return true
+		end
 		for _, cat in ipairs(entry.cats) do
 			if not Buffs.CategoryUp(cat) then
 				return true
 			end
 		end
-		return false
 	end
-	return true
+	-- raid buffs: someone near you in the group still needs it
+	if entry.cats and ns.db and ns.db.buffGroup ~= false then
+		local who = groupMissing(entry)
+		if who then
+			return true, who
+		end
+	end
+	return false
 end
 
 -- Should reminders show at all right now?
@@ -260,16 +350,28 @@ function Buffs.Missing()
 	if ns.Sim and ns.Sim.BeginPass then
 		ns.Sim.BeginPass() -- fresh aura scan
 	end
-	local out, seen = {}, {}
+	local t = call(GetTime) or 0
+	if t - groupAt >= GROUP_EVERY or t < groupAt then
+		groupAt = t
+		for k in pairs(groupCache) do
+			groupCache[k] = nil
+		end
+	end
+	local out, seen, who = {}, {}, {}
 	for _, entry in ipairs(list) do
 		if #out >= 4 then
 			break
 		end
-		if forSpec(entry, spec) and (not entry.combat or inCombat) and known(entry.spell) and not seen[entry.spell] and missing(entry) then
-			local id = ns.API.Resolve(entry.spell) or entry.spell
-			out[#out + 1] = id
-			seen[entry.spell] = true
+		if forSpec(entry, spec) and (not entry.combat or inCombat) and known(entry.spell) and not seen[entry.spell] then
+			local miss, name = missing(entry)
+			if miss then
+				local id = ns.API.Resolve(entry.spell) or entry.spell
+				out[#out + 1] = id
+				who[id] = name
+				seen[entry.spell] = true
+			end
 		end
 	end
+	Buffs.who = who
 	return out
 end

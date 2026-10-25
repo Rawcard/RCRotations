@@ -6,6 +6,9 @@
   flashes come back as soon as you dismount. Missing buff reminders also wait until you dismount.
 - All action-button flashes pulse in step: the red missing-buff flash pulses together with the
   rotation flash, so you can pick at a glance whether to attack or buff.
+- In a party or raid, your raid buff (Fortitude, Kings, Mark of the Wild, Brilliance, Dark Intent,
+  shouts, Horn of Winter...) is also checked on everyone near you. If someone in range is missing
+  it (and has no equivalent buff), the reminder shows; hover it to see who.
 
 # 1.5.0
 

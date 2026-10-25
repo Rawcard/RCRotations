@@ -698,6 +698,17 @@ m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), "function UnitExists(
 check(m == [109773, 688], "Destruction: Dark Intent and Imp missing (got %s)" % m)
 m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), "function UnitExists(u) return u ~= 'pet' end; WORLD.auras.player = {{id=108503, remain=3600}, {id=1459, remain=3600}}")
 check(m == [], "Destruction: Grimoire of Sacrifice means no pet; a mage's Brilliance covers spell power (got %s)" % m)
+GROUP = ("function UnitExists(u) return u ~= 'pet' end; function IsInGroup() return true end; "
+         "function GetNumSubgroupMembers() return 1 end; function UnitName(u) return 'Leo' end; "
+         "function UnitIsConnected() return true end; function UnitIsVisible() return true end; "
+         "function UnitIsUnit(a, b) return a == b end; ")
+HAVE = "WORLD.auras.player = {{id=108503, remain=3600}, {id=109773, remain=3600}}; "
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), GROUP + HAVE + "WORLD.auras.party1 = {}; function UnitInRange() return true, true end")
+check(m == [109773], "Group: a party member near you without Dark Intent -> remind (got %s)" % m)
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), GROUP + HAVE + "WORLD.auras.party1 = {{id=1459, remain=3600}}; function UnitInRange() return true, true end")
+check(m == [], "Group: a member with a mage's Brilliance is covered (got %s)" % m)
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), GROUP + HAVE + "WORLD.auras.party1 = {}; function UnitInRange() return false, true end")
+check(m == [], "Group: members out of range don't count (got %s)" % m)
 m = class_buffs("Shaman", "SHAMAN", 7, 2, (324, 8232, 8024), "function GetWeaponEnchantInfo() return true, 0, 0, 0, false end; function GetInventoryItemID(_, slot) return slot == 17 and 1234 or nil end")
 check(m == [324, 8024], "Enhancement: Lightning Shield and the off-hand Flametongue missing (got %s)" % m)
 

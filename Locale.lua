@@ -72,6 +72,7 @@ L.enUS = {
 	BUFFS_OFF = "Missing buff reminders: off.",
 	BUFF_MISSING = "Missing: %s",
 	BUFF_MISSING_HINT = "Cast it, or get the same buff from someone else, and this goes away.",
+	BUFF_MISSING_ON = "%s in your group doesn't have it.",
 	OPT_UNLOCK_HUD = "Unlock HUD",
 	OPT_LOCK_HUD = "Lock HUD",
 	OPT_FEATURES = "Features",

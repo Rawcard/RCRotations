@@ -782,6 +782,11 @@ check(q[:3] == [81700, 47540, 14914], "Disc: Archangel at 5 Evangelism, then Pen
 q = disc_q(base + "WORLD.cd[81700] = 60; WORLD.cd[47540] = 8; WORLD.cd[14914] = 8; WORLD.auras.player = {{id=588, remain=900}}")
 check(q[:1] == [585], "Disc: Smite as filler (got %s)" % q)
 
+# the in-game "What's new" popup is generated from VERSION.txt
+import changelog_lua
+check(open(os.path.join(ROOT, "Changelog.lua"), encoding="utf-8").read() == changelog_lua.render(changelog_lua.parse(read("VERSION.txt"))),
+      "Changelog.lua matches VERSION.txt (run tools/changelog_lua.py)")
+
 # WoW Forever: the built-in Forever Rotation lists are exported for the Workshop app
 import build_workshop_data as bwd
 fr_rots, fr_names = bwd.forever_rotations(ROOT)

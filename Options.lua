@@ -529,6 +529,24 @@ local function ensureOptions()
 	pageTitle:SetTextColor(1, 0.82, 0.2)
 	frame.pageTitle = pageTitle
 
+	-- Big Workshop app button, top right on every page: opens the copy-link box.
+	local appBig = (ns.WhatsNewButton or makeGoldBtn)(content, 200, 28, ns.T("NEWS_GET_APP"), true)
+	appBig:SetPoint("TOPRIGHT", -12, -10)
+	appBig:SetScript("OnClick", function()
+		if ns.ShowCopyLink then
+			ns.ShowCopyLink(ns.WORKSHOP_URL)
+		end
+	end)
+	frame.appBig = appBig
+	local newsBtn = makeGoldBtn(content, 96, 28, ns.T("NEWS_BTN"))
+	newsBtn:SetPoint("RIGHT", appBig, "LEFT", -8, 0)
+	newsBtn:SetScript("OnClick", function()
+		if ns.ShowWhatsNew then
+			ns.ShowWhatsNew()
+		end
+	end)
+	frame.newsBtn = newsBtn
+
 	frame.profileButtons = {}
 	for i, key in ipairs({ "base", "pve", "pvp", "custom" }) do
 		local btn = makeGoldBtn(content, 88, 22, ns.T("PROFILE_" .. key:upper()))
@@ -661,9 +679,14 @@ local function ensureOptions()
 	appUrl:SetScript("OnEscapePressed", function(self)
 		self:ClearFocus()
 	end)
-	local appHint = appCard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	appHint:SetPoint("LEFT", appUrl, "RIGHT", 10, 0)
-	appHint:SetText(ns.T("OPT_WORKSHOP_COPY"))
+	appUrl:SetWidth(420)
+	local appCopy = (ns.WhatsNewButton or makeGoldBtn)(appCard, 160, 30, ns.T("NEWS_COPY_APP"), true)
+	appCopy:SetPoint("BOTTOMRIGHT", -16, 8)
+	appCopy:SetScript("OnClick", function()
+		if ns.ShowCopyLink then
+			ns.ShowCopyLink(ns.WORKSHOP_URL)
+		end
+	end)
 	local simNote = simPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	simNote:SetPoint("TOPLEFT", appCard, "BOTTOMLEFT", 8, -14)
 	simNote:SetPoint("RIGHT", simPage, "RIGHT", -16, 0)

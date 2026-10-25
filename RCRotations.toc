@@ -31,4 +31,6 @@ SimImport.lua
 Buffs.lua
 Nameplates.lua
 SimPicker.lua
+Changelog.lua
+WhatsNew.lua
 Core.lua

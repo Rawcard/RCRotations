@@ -63,6 +63,12 @@ def bump(sims_sha):
         % (version, version, sims_sha[:10])
     )
     vfile.write_text(entry + rest.lstrip("\n"), encoding="utf-8")
+    try:  # keep the in-game changelog in step
+        sys.path.insert(0, str(ROOT / "tools"))
+        import changelog_lua
+        changelog_lua.main()
+    except ImportError:
+        pass
     print(version)
     return 0
 

@@ -1140,6 +1140,13 @@ SlashCmdList.RCROT = function(msg)
 		end
 	elseif msg == "workshop" or msg == "app" then
 		ns.Print(ns.T("WORKSHOP_PRINT"):format(ns.WORKSHOP_URL))
+		if ns.ShowCopyLink then
+			ns.ShowCopyLink(ns.WORKSHOP_URL)
+		end
+	elseif msg == "news" or msg == "changelog" then
+		if ns.ShowWhatsNew then
+			ns.ShowWhatsNew()
+		end
 	elseif msg == "soon" then
 		ns.db.simLookahead = (ns.db.simLookahead == false)
 		ns.Print(ns.T(ns.db.simLookahead and "SOON_ON" or "SOON_OFF"))

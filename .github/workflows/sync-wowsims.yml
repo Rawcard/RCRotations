@@ -101,7 +101,7 @@ jobs:
           VERSION=$(python3 tools/sync_release.py bump "$SIMS_SHA")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add SimData_Mists.lua app/data RCRotations.toc RCRotations_Camelot.toc VERSION.txt
+          git add SimData_Mists.lua app/data RCRotations.toc RCRotations_Camelot.toc VERSION.txt Changelog.lua
           git commit -m "Update WoWSims rotations (wowsims/mop@$SIMS_SHA), v$VERSION"
           git tag "v$VERSION"
           git push origin HEAD:main "v$VERSION"

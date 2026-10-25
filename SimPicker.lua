@@ -114,17 +114,20 @@ local function ensureFrame()
 	frame.title = title
 
 	local sub = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	sub:SetPoint("TOP", title, "BOTTOM", 0, -6)
-	sub:SetPoint("LEFT", 16, 0)
-	sub:SetPoint("RIGHT", -16, 0)
+	-- fixed position and height: measuring wrapped text can freeze the Forever client
+	sub:SetPoint("TOPLEFT", 16, -34)
+	sub:SetPoint("TOPRIGHT", -16, -34)
+	sub:SetHeight(22)
 	sub:SetJustifyH("CENTER")
+	sub:SetJustifyV("TOP")
 	frame.sub = sub
 
 	local hint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	hint:SetPoint("BOTTOM", 0, 14)
-	hint:SetPoint("LEFT", 16, 0)
-	hint:SetPoint("RIGHT", -16, 0)
+	hint:SetPoint("BOTTOMLEFT", 16, 10)
+	hint:SetPoint("BOTTOMRIGHT", -16, 10)
+	hint:SetHeight(30)
 	hint:SetJustifyH("CENTER")
+	hint:SetJustifyV("BOTTOM")
 	hint:SetTextColor(0.65, 0.65, 0.65)
 	frame.hint = hint
 
@@ -136,6 +139,9 @@ local function ensureFrame()
 	frame:Hide()
 	if UISpecialFrames then
 		table.insert(UISpecialFrames, "RCRotationsPicker")
+	end
+	if ns.RegisterWindow then
+		ns.RegisterWindow(frame)
 	end
 	return frame
 end
@@ -267,6 +273,9 @@ function Sim.ShowPicker(force)
 	end
 	frame:SetSize(width, 58 + #list * 32 + 36 + 40)
 	frame:Show()
+	if ns.WindowsLayout then
+		ns.WindowsLayout()
+	end
 	return true
 end
 

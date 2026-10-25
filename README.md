@@ -1,14 +1,14 @@
 # RCRotations
 
-Rotation helper for **WoW Forever** (Classic Era combat on the camelot client, interface `16001`).
+Rotation helper for **WoW Forever** (the camelot client, interface `16001`) and the Classic clients (Era, TBC, Wrath, Cata, MoP).
 
 It shows the next three abilities on a small HUD, flashes the matching action-bar button, and also tracks heals, long defense buffs, interrupts, purges, cleanses, and weapon imbues. It does **not** cast spells for you.
 
-Maintained by **Rob** · Version **1.0.0**
+Maintained by **Raw Card**
 
 ## Credits
 
-RCRotations is a fork of **[Forever Rotation](https://github.com/ssablon/ForeverRotation)** by **Vohnka** ([wow-forever.fr](https://wow-forever.fr)), released under the MIT license. The original copyright notice is kept in `LICENSE`. Please report RCRotations problems to Rob, not to the original project.
+RCRotations is a fork of **[Forever Rotation](https://github.com/ssablon/ForeverRotation)** by **Vohnka** ([wow-forever.fr](https://wow-forever.fr)), released under the MIT license. The original copyright notice is kept in `LICENSE`. Please report RCRotations problems to Raw Card, not to the original project.
 
 ## Requirements
 
@@ -19,11 +19,23 @@ One folder works on every Classic client:
 | Classic Era | `World of Warcraft\_classic_era_\Interface\AddOns` |
 | TBC Anniversary | `World of Warcraft\_anniversary_\Interface\AddOns` |
 | MoP Classic | `World of Warcraft\_classic_\Interface\AddOns` |
-| WoW Forever | `World of Warcraft\_classic_beta_\Interface\AddOns` |
+| WoW Forever | the Forever game folder's `Interface\AddOns` (`World of Warcraft\_classic_beta_\Interface\AddOns` during the beta) |
 
 Retail is not supported: since Midnight, combat state is hidden from addons, so a rotation helper can't make decisions there.
 
-RCRotations only uses **WoWSims** rotations. On **MoP Classic** they come bundled from [WoWSims](https://github.com/wowsims/mop) (MIT): every class, every DPS and tank spec, plus Holy Priest, picked from your current specialization, and they update with the addon. On other clients (Era, TBC, Forever), and for MoP specs WoWSims doesn't cover, you import the rotation you want from wowsims.com; on first login with nothing to use, a window offers the import. There are no built-in rotation lists. Spells resolve by **name + spellbook**, so ranks and remapped IDs still match.
+Where the rotations come from:
+
+- **WoW Forever:** the built-in Forever Rotation lists for all nine classes (WoWSims has no Forever sim). They cover the Forever spellbook, including Forever's new abilities. Change them with the Workshop app; a saved copy replaces the built-in list in game.
+- **MoP Classic:** bundled from [WoWSims](https://github.com/wowsims/mop) (MIT): every class, every DPS and tank spec, plus Holy Priest, picked from your current specialization, and they update with the addon.
+- **Other clients (Era, TBC...)** and MoP specs WoWSims doesn't cover: import the rotation you want from wowsims.com; on first login with nothing to use, a window offers the import.
+
+Spells resolve by **name + spellbook**, so ranks and remapped IDs still match.
+
+### WoW Forever and secret values
+
+WoW Forever uses the same addon rules as retail Midnight: in combat the game hands addons *secret values* (enemy health and names, auras, spell cooldowns) that can be shown but not read. RCRotations never does math or comparisons on them: an unreadable value counts as unknown, and it falls back on what it saw you cast (spell cooldowns from your casts, DoTs and seals remembered for their duration). It doesn't use the combat log, which Forever blocks.
+
+`tools/test_forever.py` runs the whole addon on a simulated Forever client for all nine classes and every role, through a fight with secret values, and checks that a spell is always suggested and flashed. It runs on every push.
 
 ## WoWSims rotations
 
@@ -36,7 +48,7 @@ RCRotations only uses **WoWSims** rotations. On **MoP Classic** they come bundle
 - **Tuning layer:** `rotations/tuning/mists.json` holds per-spec fixes on top of WoWSims (extra conditions, moves, additions, blocks) in a short readable syntax like `pet.buff(91342).stacks >= 5`. They apply to every rotation for the spec, bundled or imported, and survive WoWSims updates. See `rotations/tuning/README.md`.
 - Never-suggest list: spells WoWSims uses for simulation value but a player saves (defensives, raid cooldowns) are skipped by default; right-click a HUD spell to add more, `/rcr unblock <spell>` to undo. Applied on top of every rotation, so WoWSims updates don't undo it.
 - In game: when your spec has more than one WoWSims rotation (for example Frost DK "Obliterate" vs "Masterfrost"), a picker opens on login or spec change. The choice is saved per character and spec. `/rcr apl` reopens the picker.
-- Tests: `pip install lupa && python3 tools/test_sim.py`.
+- Tests: `pip install lupa && python3 tools/test_sim.py && python3 tools/test_forever.py`.
 
 
 ## Install
@@ -178,11 +190,11 @@ RCRotations is based on Forever Rotation by Vohnka. The original project, for re
 - CurseForge: [https://www.curseforge.com/wow/addons/forever-rot](https://www.curseforge.com/wow/addons/forever-rot)
 - Website: [https://wow-forever.fr](https://wow-forever.fr)
 
-Report RCRotations problems to Rob, not to the original project.
+Report RCRotations problems to Raw Card, not to the original project.
 
 ## License
 
-[MIT](LICENSE). Original work © Vohnka / wow-forever.fr; RCRotations modifications © Rob. Free to use, modify, fork, and redistribute, as long as the copyright notices and license are kept.
+[MIT](LICENSE). Original work © Vohnka / wow-forever.fr; RCRotations modifications © Raw Card. Free to use, modify, fork, and redistribute, as long as the copyright notices and license are kept.
 
 ## RCRotations Workshop (Windows app)
 

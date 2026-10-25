@@ -70,7 +70,7 @@ C_UnitAuras = {
 		local want = filter:find("HARMFUL") and "HARMFUL" or "HELPFUL"
 		local n = 0
 		for _, a in ipairs(list) do
-			if (a.kind or (unit == "target" and "HARMFUL" or "HELPFUL")) == want then
+			if (a.kind or (unit == "target" and "HARMFUL" or "HELPFUL")) == want and not (a.other and filter:find("PLAYER")) then
 				n = n + 1
 				if n == i then
 					return { spellId = a.id, name = "Spell" .. a.id, applications = a.stacks or 0,
@@ -676,6 +676,14 @@ check(m == [], "Ret buffs: a shaman's Grace of Air covers Might (got %s)" % m)
 m = ret_buffs("WORLD.auras.player = {}; function GetRaidBuffTrayAuraInfo(i) if i == 1 or i == 8 then return 'Buff' end end")
 check(m == [], "Ret buffs: the game's raid buff tray counts as covered (got %s)" % m)
 L.execute("GetRaidBuffTrayAuraInfo = nil")
+m = ret_buffs("WORLD.auras.player = {{id=20217, remain=3600}}")
+check(m == [], "Ret buffs: your own Kings up -> no Might too (one blessing per paladin) (got %s)" % m)
+m = ret_buffs("WORLD.auras.player = {{id=20217, remain=3600}, {id=1126, remain=3600}}")
+check(m == [19740], "Ret buffs: your Kings plus a druid's Mark -> switch to Might, only Might shown (got %s)" % m)
+m = ret_buffs("WORLD.auras.player = {{id=20217, remain=3600, other=true}}")
+check(m == [19740], "Ret buffs: another paladin's Kings -> you do Might (got %s)" % m)
+m = ret_buffs("WORLD.auras.player = {{id=19740, remain=3600}}")
+check(m == [20217], "Ret buffs: your Might with nobody covering stats -> Kings instead (got %s)" % m)
 check(L.eval("function(ns) return ns.Sim.HANDLERS.playerStance({ id = 31801 }) end")(ns) is True, "stance(31801) true while Truth is active")
 m = ret_buffs("ns_dead = true; function UnitIsDeadOrGhost() return true end")
 check(m == [], "Buffs: nothing while dead (got %s)" % m)
@@ -698,6 +706,21 @@ m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), "function UnitExists(
 check(m == [109773, 688], "Destruction: Dark Intent and Imp missing (got %s)" % m)
 m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), "function UnitExists(u) return u ~= 'pet' end; WORLD.auras.player = {{id=108503, remain=3600}, {id=1459, remain=3600}}")
 check(m == [], "Destruction: Grimoire of Sacrifice means no pet; a mage's Brilliance covers spell power (got %s)" % m)
+m = class_buffs("Warrior", "WARRIOR", 1, 1, (6673, 469), "WORLD.auras.player = {{id=6673, remain=300}}")
+check(m == [], "Warrior: your Battle Shout up -> not Commanding too (got %s)" % m)
+m = class_buffs("Warrior", "WARRIOR", 1, 1, (6673, 469), "WORLD.auras.player = {{id=6673, remain=300}, {id=57330, remain=300}}")
+check(m == [469], "Warrior: a DK's Horn of Winter covers attack power -> Commanding Shout only (got %s)" % m)
+GROUP = ("function UnitExists(u) return u ~= 'pet' end; function IsInGroup() return true end; "
+         "function GetNumSubgroupMembers() return 1 end; function UnitName(u) return 'Leo' end; "
+         "function UnitIsConnected() return true end; function UnitIsVisible() return true end; "
+         "function UnitIsUnit(a, b) return a == b end; ")
+HAVE = "WORLD.auras.player = {{id=108503, remain=3600}, {id=109773, remain=3600}}; "
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), GROUP + HAVE + "WORLD.auras.party1 = {}; function UnitInRange() return true, true end")
+check(m == [109773], "Group: a party member near you without Dark Intent -> remind (got %s)" % m)
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), GROUP + HAVE + "WORLD.auras.party1 = {{id=1459, remain=3600}}; function UnitInRange() return true, true end")
+check(m == [], "Group: a member with a mage's Brilliance is covered (got %s)" % m)
+m = class_buffs("Warlock", "WARLOCK", 9, 3, (109773, 688), GROUP + HAVE + "WORLD.auras.party1 = {}; function UnitInRange() return false, true end")
+check(m == [], "Group: members out of range don't count (got %s)" % m)
 m = class_buffs("Shaman", "SHAMAN", 7, 2, (324, 8232, 8024), "function GetWeaponEnchantInfo() return true, 0, 0, 0, false end; function GetInventoryItemID(_, slot) return slot == 17 and 1234 or nil end")
 check(m == [324, 8024], "Enhancement: Lightning Shield and the off-hand Flametongue missing (got %s)" % m)
 
@@ -770,6 +793,11 @@ q = disc_q(base + "WORLD.auras.player = {{id=588, remain=900}, {id=81661, stacks
 check(q[:3] == [81700, 47540, 14914], "Disc: Archangel at 5 Evangelism, then Penance, Holy Fire (got %s)" % q)
 q = disc_q(base + "WORLD.cd[81700] = 60; WORLD.cd[47540] = 8; WORLD.cd[14914] = 8; WORLD.auras.player = {{id=588, remain=900}}")
 check(q[:1] == [585], "Disc: Smite as filler (got %s)" % q)
+
+# the in-game "What's new" popup is generated from VERSION.txt
+import changelog_lua
+check(open(os.path.join(ROOT, "Changelog.lua"), encoding="utf-8").read() == changelog_lua.render(changelog_lua.parse(read("VERSION.txt"))),
+      "Changelog.lua matches VERSION.txt (run tools/changelog_lua.py)")
 
 # WoW Forever: the built-in Forever Rotation lists are exported for the Workshop app
 import build_workshop_data as bwd

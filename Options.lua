@@ -474,6 +474,9 @@ local function ensureOptions()
 	})
 	frame:Hide()
 	tinsert(UISpecialFrames, frame:GetName())
+	if ns.RegisterMenu then
+		ns.RegisterMenu(frame)
+	end
 
 	local titleBar = CreateFrame("Frame", nil, frame)
 	titleBar:SetPoint("TOPLEFT", 12, -10)
@@ -528,6 +531,24 @@ local function ensureOptions()
 	pageTitle:SetPoint("TOPLEFT", 16, -14)
 	pageTitle:SetTextColor(1, 0.82, 0.2)
 	frame.pageTitle = pageTitle
+
+	-- Big Workshop app button, top right on every page: opens the copy-link box.
+	local appBig = (ns.WhatsNewButton or makeGoldBtn)(content, 200, 28, ns.T("NEWS_GET_APP"), true)
+	appBig:SetPoint("TOPRIGHT", -12, -10)
+	appBig:SetScript("OnClick", function()
+		if ns.ShowCopyLink then
+			ns.ShowCopyLink(ns.WORKSHOP_URL)
+		end
+	end)
+	frame.appBig = appBig
+	local newsBtn = makeGoldBtn(content, 96, 28, ns.T("NEWS_BTN"))
+	newsBtn:SetPoint("RIGHT", appBig, "LEFT", -8, 0)
+	newsBtn:SetScript("OnClick", function()
+		if ns.ShowWhatsNew then
+			ns.ShowWhatsNew()
+		end
+	end)
+	frame.newsBtn = newsBtn
 
 	frame.profileButtons = {}
 	for i, key in ipairs({ "base", "pve", "pvp", "custom" }) do
@@ -602,6 +623,7 @@ local function ensureOptions()
 		local line = simCard:CreateFontString(nil, "OVERLAY", i == 2 and "GameFontHighlight" or "GameFontHighlightSmall")
 		line:SetPoint("TOPLEFT", 16, -34 - (i - 1) * 24)
 		line:SetPoint("RIGHT", -16, 0)
+		line:SetHeight(18) -- fixed heights: measuring wrapped text can freeze the Forever client
 		line:SetJustifyH("LEFT")
 		simLines[i] = line
 	end
@@ -623,7 +645,9 @@ local function ensureOptions()
 	local blockText = blockCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	blockText:SetPoint("TOPLEFT", 16, -30)
 	blockText:SetPoint("RIGHT", -16, 0)
+	blockText:SetHeight(28)
 	blockText:SetJustifyH("LEFT")
+	blockText:SetJustifyV("TOP")
 	local blockReset = makeGoldBtn(blockCard, 190, 22, ns.T("OPT_SIM_RESET_BLOCKS"))
 	blockReset:SetPoint("BOTTOMLEFT", 16, 12)
 	blockReset:SetScript("OnClick", function()
@@ -640,7 +664,9 @@ local function ensureOptions()
 	local appText = appCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	appText:SetPoint("TOPLEFT", 16, -30)
 	appText:SetPoint("RIGHT", -16, 0)
+	appText:SetHeight(28)
 	appText:SetJustifyH("LEFT")
+	appText:SetJustifyV("TOP")
 	appText:SetText(ns.T("OPT_WORKSHOP_TEXT"))
 	local appUrl = CreateFrame("EditBox", nil, appCard, "InputBoxTemplate")
 	appUrl:SetSize(470, 20)
@@ -661,13 +687,20 @@ local function ensureOptions()
 	appUrl:SetScript("OnEscapePressed", function(self)
 		self:ClearFocus()
 	end)
-	local appHint = appCard:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	appHint:SetPoint("LEFT", appUrl, "RIGHT", 10, 0)
-	appHint:SetText(ns.T("OPT_WORKSHOP_COPY"))
+	appUrl:SetWidth(420)
+	local appCopy = (ns.WhatsNewButton or makeGoldBtn)(appCard, 160, 30, ns.T("NEWS_COPY_APP"), true)
+	appCopy:SetPoint("BOTTOMRIGHT", -16, 8)
+	appCopy:SetScript("OnClick", function()
+		if ns.ShowCopyLink then
+			ns.ShowCopyLink(ns.WORKSHOP_URL)
+		end
+	end)
 	local simNote = simPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	simNote:SetPoint("TOPLEFT", appCard, "BOTTOMLEFT", 8, -14)
 	simNote:SetPoint("RIGHT", simPage, "RIGHT", -16, 0)
+	simNote:SetHeight(42)
 	simNote:SetJustifyH("LEFT")
+	simNote:SetJustifyV("TOP")
 	simNote:SetTextColor(0.65, 0.65, 0.65)
 	function frame.RefreshSim()
 		local Sim = ns.Sim

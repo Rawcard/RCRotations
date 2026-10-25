@@ -2,8 +2,8 @@
 ## AllowLoadGameType: camelot
 ## Title: |cff66ccffRC|r|cffd4a017Rotations|r
 ## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT); MoP rotations from WoWSims (MIT).
-## Version: 1.5.0
-## Author: Rob
+## Version: 1.5.1
+## Author: Raw Card
 ## X-Original-Author: Vohnka (Forever Rotation, MIT)
 ## X-Original-Source: https://github.com/ssablon/ForeverRotation
 ## IconTexture: Interface\AddOns\RCRotations\images\logo.tga
@@ -15,6 +15,7 @@
 Credits.lua
 Compat.lua
 Locale.lua
+Windows.lua
 API.lua
 Data.lua
 Physics.lua
@@ -31,4 +32,6 @@ SimImport.lua
 Buffs.lua
 Nameplates.lua
 SimPicker.lua
+Changelog.lua
+WhatsNew.lua
 Core.lua

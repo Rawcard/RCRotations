@@ -44,6 +44,11 @@ Buffs.EQUIVALENT = EQUIVALENT
 --   kind    "aura" (default), "stance" (seal/presence/stance/form), "pet",
 --           "imbue" (shaman weapon enchant: "main" or "off")
 --   combat  only remind in combat (forms you leave on purpose)
+--   choose  kind "choice": you can only keep ONE of these up (a paladin's own
+--           blessing, a warrior's own shout). Only one is ever shown: the
+--           first whose buff nobody else covers. Yours doesn't count toward
+--           "covered", so with Kings up and a druid's Mark of the Wild there,
+--           it tells you to switch to Might.
 local CLASS = {
 	DEATHKNIGHT = {
 		{ spell = 48263, kind = "stance", specs = { 1 } }, -- Blood Presence
@@ -76,8 +81,8 @@ local CLASS = {
 	PALADIN = {
 		{ spell = 20165, kind = "seal", specs = { 1 } }, -- Seal of Insight (Holy)
 		{ spell = 31801, kind = "seal", specs = { 2, 3 } }, -- Seal of Truth (Prot, Ret)
-		{ spell = 20217, cats = { "stats" } }, -- Blessing of Kings
-		{ spell = 19740, cats = { "mastery" }, needs = "stats" }, -- Blessing of Might, once stats are covered
+		-- one blessing per paladin: Kings, or Might when someone else covers stats
+		{ kind = "choice", spell = 20217, choose = { { spell = 20217, cats = { "stats" } }, { spell = 19740, cats = { "mastery" } } } },
 		{ spell = 25780, specs = { 2 } }, -- Righteous Fury
 	},
 	PRIEST = {
@@ -104,11 +109,80 @@ local CLASS = {
 		{ spell = 688, kind = "pet", specs = { 3 } }, -- Summon Imp
 	},
 	WARRIOR = {
-		{ spell = 6673, cats = { "ap" } }, -- Battle Shout
-		{ spell = 469, cats = { "stamina" }, needs = "ap" }, -- Commanding Shout, once attack power is covered
+		-- one shout per warrior: Battle Shout, or Commanding when someone else covers attack power
+		{ kind = "choice", spell = 6673, choose = { { spell = 6673, cats = { "ap" } }, { spell = 469, cats = { "stamina" } } } },
 	},
 }
 Buffs.CLASS = CLASS
+
+-- WoW Forever (Classic-style buffs; IDs from the Forever spellbook in Data.lua).
+-- Buffs there don't share categories the way MoP raid buffs do, so each one is
+-- your own buff (any rank, or its group version). Extra fields:
+--   any    kind "anyof": any one of these counts (paladin blessings and auras,
+--          mage/warlock armor, hunter aspects, shaman shields)
+--   show   which spell to suggest per role ({ heal = ..., tank = ... }); the
+--          first one you know wins, otherwise the entry's spell
+--   roles  only for these roles (the role button in the menu)
+--   group  in a group, also check it's on everyone near you
+--   usable only when the game says you can cast it now (Battle Shout needs rage)
+local F = ns.Spell or {}
+local FP, FD, FPr, FM, FL, FSh, FH, FW = F.Paladin or {}, F.Druid or {}, F.Priest or {}, F.Mage or {}, F.Warlock or {}, F.Shaman or {}, F.Hunter or {}, F.Warrior or {}
+local GREATER = { Might = 25782, Wisdom = 25894, Kings = 25898, Salvation = 25895, Light = 25890, Sanctuary = 25899 }
+local FOREVER = {
+	DRUID = {
+		{ spell = FD.MarkoftheWild, alt = { 21849 }, group = true }, -- Mark / Gift of the Wild
+		{ spell = FD.Thorns, roles = { "tank" } },
+	},
+	HUNTER = {
+		-- any aspect counts (Cheetah / Pack too: you're travelling)
+		{ kind = "anyof", spell = FH.AspectHawk, any = { FH.AspectHawk, FH.AspectMonkey, FH.AspectWild, FH.AspectBeast, FH.AspectCheetah, FH.AspectPack },
+			show = { melee = { FH.AspectMonkey } } },
+		{ spell = FH.TrueshotAura },
+		{ spell = FH.CallPet, kind = "pet" },
+	},
+	MAGE = {
+		{ spell = FM.ArcaneIntellect, alt = { 23028 }, group = true }, -- Arcane Intellect / Brilliance
+		{ kind = "anyof", spell = FM.FrostArmor, any = { FM.FrostArmor, FM.IceArmor, FM.MageArmor }, show = { damage = { FM.IceArmor, FM.FrostArmor } } },
+	},
+	PALADIN = {
+		{ kind = "anyof", spell = FP.BlessingMight, any = { FP.BlessingMight, FP.BlessingWisdom, FP.BlessingKings, FP.BlessingSalvation, FP.BlessingLight, FP.BlessingSanctuary,
+			GREATER.Might, GREATER.Wisdom, GREATER.Kings, GREATER.Salvation, GREATER.Light, GREATER.Sanctuary },
+			show = { heal = { FP.BlessingWisdom }, tank = { FP.BlessingKings, FP.BlessingSanctuary, FP.BlessingMight }, damage = { FP.BlessingKings, FP.BlessingMight } } },
+		{ kind = "anyof", spell = FP.DevotionAura, any = { FP.DevotionAura, FP.RetributionAura, FP.ConcentrationAura, FP.SanctityAura, FP.FireResistAura, FP.FrostResistAura, FP.ShadowResistAura },
+			show = { heal = { FP.ConcentrationAura, FP.DevotionAura }, damage = { FP.SanctityAura, FP.RetributionAura, FP.DevotionAura } } },
+		{ spell = FP.RighteousFury, roles = { "tank" } },
+	},
+	PRIEST = {
+		{ spell = FPr.PowerWordFortitude, alt = { 21562 }, group = true }, -- Fortitude / Prayer of Fortitude
+		{ spell = FPr.InnerFire },
+		{ spell = FPr.DivineSpirit, alt = { 27681 }, group = true }, -- talent; Prayer of Spirit
+		{ spell = FPr.Shadowform, kind = "stance", roles = { "damage" } }, -- talent
+	},
+	ROGUE = {
+		{ kind = "weapon" }, -- poisons: the same choice as the weapon window
+	},
+	SHAMAN = {
+		{ kind = "anyof", spell = FSh.LightningShield, any = { FSh.LightningShield, FSh.WaterShield }, show = { heal = { FSh.WaterShield } } },
+		{ kind = "weapon" }, -- weapon imbue
+	},
+	WARLOCK = {
+		{ kind = "anyof", spell = FL.DemonSkin, any = { FL.DemonArmor, FL.DemonSkin }, show = { damage = { FL.DemonArmor, FL.DemonSkin } } },
+		-- the demon you summoned last (Imp until then); Demonic Sacrifice's buffs mean no pet
+		{ spell = FL.SummonImp, kind = "pet", noPet = { 18789, 18790, 18791, 18792 } },
+	},
+	WARRIOR = {
+		{ spell = FW.BattleShout, usable = true },
+	},
+}
+Buffs.FOREVER = FOREVER
+local SUMMONS = { [FL.SummonImp or 0] = true, [FL.SummonVoidwalker or 0] = true, [FL.SummonSuccubus or 0] = true,
+	[FL.SummonFelhunter or 0] = true, [FL.SummonIncubus or 0] = true, [FL.SummonFelguard or 0] = true }
+-- remember the last demon a warlock summoned (Forever)
+function Buffs.NoteCast(spellID)
+	if spellID and SUMMONS[spellID] and ns.db then
+		ns.db.lastDemon = spellID
+	end
+end
 
 local GRIMOIRE_OF_SACRIFICE = 108503
 
@@ -191,8 +265,237 @@ local function petUp()
 	return (call(UnitExists, "pet") and not call(UnitIsDead, "pet")) and true or false
 end
 
+-- ------------------------------------------------------------------ group
+-- In a party or raid, your raid buff also has to be on everyone near you.
+-- Members who are out of range, offline, dead or out of sight don't count
+-- (you couldn't buff them anyway). A member counts as covered when they have
+-- your buff or the same kind of buff from anyone. Checked about once a second.
+local GROUP_EVERY = 1
+local groupAt, groupCache = 0, {}
+Buffs.who = {}
+
+local function groupUnits()
+	local out = {}
+	if call(IsInRaid) then
+		for i = 1, (call(GetNumGroupMembers) or 0) do
+			out[#out + 1] = "raid" .. i
+		end
+	elseif call(IsInGroup) then
+		for i = 1, (call(GetNumSubgroupMembers) or 0) do
+			out[#out + 1] = "party" .. i
+		end
+	end
+	return out
+end
+
+-- Can we read this unit's buffs right now? On WoW Forever the game hides them
+-- (secret values) in combat and on some maps; then we can't tell what's missing.
+local function aurasReadable(unit)
+	if not (issecretvalue and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
+		return true
+	end
+	local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, "HELPFUL")
+	if not ok then
+		return false
+	end
+	if type(aura) ~= "table" then
+		return true
+	end
+	local id, name = aura.spellId, aura.name
+	return not (issecretvalue(id) or issecretvalue(name))
+end
+Buffs.AurasReadable = aurasReadable
+
+local function reachable(unit)
+	if not call(UnitExists, unit) or call(UnitIsUnit, unit, "player") then
+		return false
+	end
+	if call(UnitIsConnected, unit) == false or call(UnitIsDeadOrGhost, unit) then
+		return false
+	end
+	if UnitIsVisible and not call(UnitIsVisible, unit) then
+		return false
+	end
+	if UnitInRange then
+		local inRange, checked = call(UnitInRange, unit)
+		if issecretvalue and (issecretvalue(inRange) or issecretvalue(checked)) then
+			return false
+		end
+		if checked and not inRange then
+			return false
+		end
+	end
+	return aurasReadable(unit)
+end
+
+local function unitHasAny(unit, list)
+	if not (ns.Sim and ns.Sim.AuraUp) then
+		return true
+	end
+	for _, id in ipairs(list or {}) do
+		if ns.Sim.AuraUp(id, unit) then
+			return true
+		end
+	end
+	return false
+end
+
+local function memberCovered(unit, entry)
+	if unitHasAny(unit, { entry.spell }) or unitHasAny(unit, entry.alt) then
+		return true
+	end
+	if not entry.cats then
+		return false
+	end
+	for _, cat in ipairs(entry.cats) do
+		if not unitHasAny(unit, EQUIVALENT[cat]) then
+			return false
+		end
+	end
+	return true
+end
+
+-- The first group member near you who lacks this buff (name), or nil.
+local function groupMissing(entry)
+	local key = entry.spell
+	if groupCache[key] ~= nil then
+		return groupCache[key] or nil
+	end
+	local who = false
+	for _, unit in ipairs(groupUnits()) do
+		if reachable(unit) and not memberCovered(unit, entry) then
+			who = call(UnitName, unit) or unit
+			break
+		end
+	end
+	groupCache[key] = who
+	return who or nil
+end
+
+local function myAura(id, unit)
+	return ns.Sim and ns.Sim.MyAuraUp and ns.Sim.MyAuraUp(id, unit or "player") or false
+end
+
+-- Is this category covered on you by someone else's buff? Your own buff from
+-- the choice set doesn't count.
+local function othersCover(cat, entry)
+	local anyMine = false
+	for _, opt in ipairs(entry.choose) do
+		if myAura(opt.spell) then
+			anyMine = true
+		end
+	end
+	-- the game's buff tray says it's covered and none of it is yours
+	if not anyMine and CATEGORY[cat] and GetRaidBuffTrayAuraInfo and call(GetRaidBuffTrayAuraInfo, CATEGORY[cat]) ~= nil then
+		return true
+	end
+	for _, id in ipairs(EQUIVALENT[cat] or {}) do
+		if auraUp(id) then
+			local yours = false
+			for _, opt in ipairs(entry.choose) do
+				if opt.spell == id and myAura(id) then
+					yours = true
+				end
+			end
+			if not yours then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- The one option from a choice set you should keep up (nil = all covered).
+local function pickChoice(entry)
+	for _, opt in ipairs(entry.choose) do
+		if known(opt.spell) then
+			local needed = false
+			for _, cat in ipairs(opt.cats) do
+				if not othersCover(cat, entry) then
+					needed = true
+				end
+			end
+			if needed then
+				return opt
+			end
+		end
+	end
+	return nil
+end
+
+local function missingChoice(entry)
+	local opt = pickChoice(entry)
+	if not opt then
+		return false
+	end
+	if not myAura(opt.spell) then
+		return true, nil, opt.spell
+	end
+	if ns.db and ns.db.buffGroup ~= false then
+		local who = groupMissing({ spell = opt.spell, cats = opt.cats })
+		if who then
+			return true, who, opt.spell
+		end
+	end
+	return false
+end
+
+local function role()
+	return ns.db and ns.db.role or "damage"
+end
+
+-- the spell to suggest: the first known one for your role, else the entry's
+local function showFor(entry)
+	local list = entry.show and entry.show[role()]
+	for _, id in ipairs(list or {}) do
+		if known(id) then
+			return id
+		end
+	end
+	if entry.spell and known(entry.spell) then
+		return entry.spell
+	end
+	for _, id in ipairs(entry.any or {}) do
+		if known(id) then
+			return id
+		end
+	end
+end
+
+local function usableNow(id)
+	if not (C_Spell and C_Spell.IsSpellUsable) then
+		return true
+	end
+	local ok, usable = pcall(C_Spell.IsSpellUsable, ns.API.Resolve(id) or id)
+	if not ok or (issecretvalue and issecretvalue(usable)) then
+		return false
+	end
+	return usable == true
+end
+
 local function missing(entry)
 	local kind = entry.kind or "aura"
+	if kind == "choice" then
+		return missingChoice(entry)
+	elseif kind == "anyof" then
+		if anyUp(entry.any) then
+			return false
+		end
+		local pick = showFor(entry)
+		return pick ~= nil, nil, pick
+	elseif kind == "weapon" then
+		if not ns.BuildWeapon then
+			return false
+		end
+		local ok, id, _, need = pcall(ns.BuildWeapon)
+		if ok and id and need then
+			return true, nil, id
+		end
+		return false
+	end
+	if entry.usable and not usableNow(entry.spell) then
+		return false
+	end
 	if kind == "stance" then
 		return not stanceUp(entry.spell)
 	elseif kind == "seal" then
@@ -204,32 +507,55 @@ local function missing(entry)
 		if ns.CLASSTOKEN == "WARLOCK" and auraUp(GRIMOIRE_OF_SACRIFICE) then
 			return false
 		end
+		if entry.noPet and anyUp(entry.noPet) then
+			return false
+		end
+		local last = ns.db and ns.db.lastDemon
+		if ns.CLASSTOKEN == "WARLOCK" and last and known(last) then
+			return true, nil, last
+		end
 		return true
 	elseif kind == "imbue" then
 		return not imbueUp(entry.hand)
-	end
-	if auraUp(entry.spell) or anyUp(entry.alt) then
-		return false
 	end
 	if entry.needs and not Buffs.CategoryUp(entry.needs) then
 		-- e.g. Blessing of Might only after Kings/stats is covered
 		return false
 	end
-	if entry.cats then
+	local selfHas = auraUp(entry.spell) or anyUp(entry.alt)
+	if not selfHas then
+		if not entry.cats then
+			return true
+		end
 		for _, cat in ipairs(entry.cats) do
 			if not Buffs.CategoryUp(cat) then
 				return true
 			end
 		end
-		return false
 	end
-	return true
+	-- raid buffs: someone near you in the group still needs it
+	if (entry.cats or entry.group) and ns.db and ns.db.buffGroup ~= false then
+		local who = groupMissing(entry)
+		if who then
+			return true, who
+		end
+	end
+	return false
 end
 
 -- Should reminders show at all right now?
 local function active()
-	if ns.GAME ~= "mists" then
+	if ns.GAME ~= "mists" and ns.GAME ~= "forever" then
 		return false
+	end
+	if ns.GAME == "forever" then
+		-- Forever hides buffs from addons in combat (and on some maps)
+		if call(InCombatLockdown) or call(UnitAffectingCombat, "player") then
+			return false
+		end
+		if not aurasReadable("player") then
+			return false
+		end
 	end
 	if ns.db and ns.db.showBuffs == false then
 		return false
@@ -237,7 +563,7 @@ local function active()
 	if call(UnitIsDeadOrGhost, "player") then
 		return false
 	end
-	if call(UnitInVehicle, "player") or call(UnitOnTaxi, "player") then
+	if call(UnitInVehicle, "player") or call(UnitOnTaxi, "player") or call(IsMounted) then
 		return false
 	end
 	return true
@@ -251,7 +577,7 @@ function Buffs.Missing()
 	end
 	local token = ns.ClassToken and ns.ClassToken()
 	ns.CLASSTOKEN = token
-	local list = CLASS[token]
+	local list = (ns.GAME == "forever" and FOREVER or CLASS)[token]
 	if not list then
 		return {}
 	end
@@ -260,16 +586,39 @@ function Buffs.Missing()
 	if ns.Sim and ns.Sim.BeginPass then
 		ns.Sim.BeginPass() -- fresh aura scan
 	end
-	local out, seen = {}, {}
+	local t = call(GetTime) or 0
+	if t - groupAt >= GROUP_EVERY or t < groupAt then
+		groupAt = t
+		for k in pairs(groupCache) do
+			groupCache[k] = nil
+		end
+	end
+	local out, seen, who = {}, {}, {}
 	for _, entry in ipairs(list) do
 		if #out >= 4 then
 			break
 		end
-		if forSpec(entry, spec) and (not entry.combat or inCombat) and known(entry.spell) and not seen[entry.spell] and missing(entry) then
-			local id = ns.API.Resolve(entry.spell) or entry.spell
-			out[#out + 1] = id
-			seen[entry.spell] = true
+		local okRole = true
+		if entry.roles then
+			okRole = false
+			for _, r in ipairs(entry.roles) do
+				if r == role() then
+					okRole = true
+				end
+			end
+		end
+		local key = entry.spell or entry.kind
+		local canCheck = entry.choose or entry.any or entry.kind == "weapon" or (entry.spell and known(entry.spell))
+		if okRole and forSpec(entry, spec) and (not entry.combat or inCombat) and canCheck and not seen[key] then
+			local miss, name, pick = missing(entry)
+			if miss then
+				local id = ns.API.Resolve(pick or entry.spell) or pick or entry.spell
+				out[#out + 1] = id
+				who[id] = name
+				seen[key] = true
+			end
 		end
 	end
+	Buffs.who = who
 	return out
 end

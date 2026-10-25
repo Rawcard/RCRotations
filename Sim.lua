@@ -318,6 +318,11 @@ function Sim.AuraUp(id, unit)
 	return findAura(id, unit or "player") ~= nil
 end
 
+-- ...and was it cast by you?
+function Sim.MyAuraUp(id, unit)
+	return findAura(id, unit or "player", true) ~= nil
+end
+
 local function auraRemain(a)
 	if not a then
 		return 0

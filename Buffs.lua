@@ -44,6 +44,11 @@ Buffs.EQUIVALENT = EQUIVALENT
 --   kind    "aura" (default), "stance" (seal/presence/stance/form), "pet",
 --           "imbue" (shaman weapon enchant: "main" or "off")
 --   combat  only remind in combat (forms you leave on purpose)
+--   choose  kind "choice": you can only keep ONE of these up (a paladin's own
+--           blessing, a warrior's own shout). Only one is ever shown: the
+--           first whose buff nobody else covers. Yours doesn't count toward
+--           "covered", so with Kings up and a druid's Mark of the Wild there,
+--           it tells you to switch to Might.
 local CLASS = {
 	DEATHKNIGHT = {
 		{ spell = 48263, kind = "stance", specs = { 1 } }, -- Blood Presence
@@ -76,8 +81,8 @@ local CLASS = {
 	PALADIN = {
 		{ spell = 20165, kind = "seal", specs = { 1 } }, -- Seal of Insight (Holy)
 		{ spell = 31801, kind = "seal", specs = { 2, 3 } }, -- Seal of Truth (Prot, Ret)
-		{ spell = 20217, cats = { "stats" } }, -- Blessing of Kings
-		{ spell = 19740, cats = { "mastery" }, needs = "stats" }, -- Blessing of Might, once stats are covered
+		-- one blessing per paladin: Kings, or Might when someone else covers stats
+		{ kind = "choice", spell = 20217, choose = { { spell = 20217, cats = { "stats" } }, { spell = 19740, cats = { "mastery" } } } },
 		{ spell = 25780, specs = { 2 } }, -- Righteous Fury
 	},
 	PRIEST = {
@@ -104,8 +109,8 @@ local CLASS = {
 		{ spell = 688, kind = "pet", specs = { 3 } }, -- Summon Imp
 	},
 	WARRIOR = {
-		{ spell = 6673, cats = { "ap" } }, -- Battle Shout
-		{ spell = 469, cats = { "stamina" }, needs = "ap" }, -- Commanding Shout, once attack power is covered
+		-- one shout per warrior: Battle Shout, or Commanding when someone else covers attack power
+		{ kind = "choice", spell = 6673, choose = { { spell = 6673, cats = { "ap" } }, { spell = 469, cats = { "stamina" } } } },
 	},
 }
 Buffs.CLASS = CLASS
@@ -274,8 +279,79 @@ local function groupMissing(entry)
 	return who or nil
 end
 
+local function myAura(id, unit)
+	return ns.Sim and ns.Sim.MyAuraUp and ns.Sim.MyAuraUp(id, unit or "player") or false
+end
+
+-- Is this category covered on you by someone else's buff? Your own buff from
+-- the choice set doesn't count.
+local function othersCover(cat, entry)
+	local anyMine = false
+	for _, opt in ipairs(entry.choose) do
+		if myAura(opt.spell) then
+			anyMine = true
+		end
+	end
+	-- the game's buff tray says it's covered and none of it is yours
+	if not anyMine and CATEGORY[cat] and GetRaidBuffTrayAuraInfo and call(GetRaidBuffTrayAuraInfo, CATEGORY[cat]) ~= nil then
+		return true
+	end
+	for _, id in ipairs(EQUIVALENT[cat] or {}) do
+		if auraUp(id) then
+			local yours = false
+			for _, opt in ipairs(entry.choose) do
+				if opt.spell == id and myAura(id) then
+					yours = true
+				end
+			end
+			if not yours then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- The one option from a choice set you should keep up (nil = all covered).
+local function pickChoice(entry)
+	for _, opt in ipairs(entry.choose) do
+		if known(opt.spell) then
+			local needed = false
+			for _, cat in ipairs(opt.cats) do
+				if not othersCover(cat, entry) then
+					needed = true
+				end
+			end
+			if needed then
+				return opt
+			end
+		end
+	end
+	return nil
+end
+
+local function missingChoice(entry)
+	local opt = pickChoice(entry)
+	if not opt then
+		return false
+	end
+	if not myAura(opt.spell) then
+		return true, nil, opt.spell
+	end
+	if ns.db and ns.db.buffGroup ~= false then
+		local who = groupMissing({ spell = opt.spell, cats = opt.cats })
+		if who then
+			return true, who, opt.spell
+		end
+	end
+	return false
+end
+
 local function missing(entry)
 	local kind = entry.kind or "aura"
+	if kind == "choice" then
+		return missingChoice(entry)
+	end
 	if kind == "stance" then
 		return not stanceUp(entry.spell)
 	elseif kind == "seal" then
@@ -362,10 +438,10 @@ function Buffs.Missing()
 		if #out >= 4 then
 			break
 		end
-		if forSpec(entry, spec) and (not entry.combat or inCombat) and known(entry.spell) and not seen[entry.spell] then
-			local miss, name = missing(entry)
+		if forSpec(entry, spec) and (not entry.combat or inCombat) and (entry.choose or known(entry.spell)) and not seen[entry.spell] then
+			local miss, name, pick = missing(entry)
 			if miss then
-				local id = ns.API.Resolve(entry.spell) or entry.spell
+				local id = ns.API.Resolve(pick or entry.spell) or pick or entry.spell
 				out[#out + 1] = id
 				who[id] = name
 				seen[entry.spell] = true

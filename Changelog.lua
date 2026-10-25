@@ -11,6 +11,11 @@ ns.CHANGELOG = {
 			"A \"What's new\" window at login with these notes and a button to copy the Workshop app link. Tick \"Don't show again for this version\" at the bottom to stop it until the next update. Open it anytime with /rcr news or the \"What's new\" button in the menu.",
 			"A big \"Get the Workshop app\" button at the top of the menu, and a \"Copy app link\" button on the Rotation page. Press Ctrl+C in the box that opens, then paste the link into your web browser.",
 			"RCRotations windows open side by side instead of on top of each other: the rotation picker, import, What's new and copy-link boxes line up to the right of the menu (the row shrinks a little if it wouldn't fit on your screen). Drag any of them to move the whole row. Closing the menu closes them all.",
+			"WoW Forever: a new test runs the whole addon on a simulated Forever client for all nine classes and every role, through fights where the game hides combat data from addons (secret values), and checks a spell is always suggested and flashed. It runs on every update.",
+			"WoW Forever: a few more checks (is the target alive, hostile, targeting you) now treat a hidden value as unknown instead of risking an error.",
+			"WoW Forever: name-only nameplates work when the game hides whether a plate is an enemy in combat (the bar fades through the game's own secret-safe call).",
+			"WoW Forever: the menu, picker, import and What's new windows no longer measure wrapped text. The original Forever Rotation found that this can freeze the Forever client.",
+			"The addon's owner is now listed as Raw Card.",
 		},
 	},
 	{

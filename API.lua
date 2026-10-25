@@ -420,15 +420,15 @@ function ns.API.EnemyCount(maxYards)
 			return false
 		end
 		local okDead, dead = pcall(UnitIsDead, unit)
-		if okDead and dead then
+		if okDead and readable(dead) and dead then
 			return false
 		end
 		local okAtk, atk = pcall(UnitCanAttack, "player", unit)
-		if okAtk and atk then
+		if okAtk and readable(atk) and atk then
 			return true
 		end
 		local okR, react = pcall(UnitReaction, "player", unit)
-		return okR and type(react) == "number" and react <= 4
+		return okR and readable(react) and type(react) == "number" and react <= 4
 	end
 	local function inFight(unit)
 		local okC, combat = pcall(UnitAffectingCombat, unit)
@@ -1044,6 +1044,9 @@ end
 local function unitIsDead(unit)
 	if UnitIsDeadOrGhost then
 		local ok, dead = pcall(UnitIsDeadOrGhost, unit)
+		if ok and not readable(dead) then
+			ok = false
+		end
 		if ok and dead == true then
 			return true
 		end
@@ -1053,7 +1056,7 @@ local function unitIsDead(unit)
 	end
 	if UnitIsDead then
 		local ok, dead = pcall(UnitIsDead, unit)
-		if ok and dead == true then
+		if ok and readable(dead) and dead == true then
 			return true
 		end
 	end
@@ -1235,7 +1238,7 @@ local function unitFriendly(unit)
 		return false
 	end
 	local okDead, dead = pcall(UnitIsDead, unit)
-	if okDead and dead then
+	if okDead and readable(dead) and dead then
 		return false
 	end
 	local okAtk, atk = pcall(UnitCanAttack, "player", unit)
@@ -1705,7 +1708,7 @@ function ns.API.StepOk(spellID, opt, timeShift)
 	end
 	if opt.ifTargeting then
 		local ok, onMe = pcall(UnitIsUnit, "targettarget", "player")
-		if not ok or not onMe then
+		if not ok or not readable(onMe) or not onMe then
 			return false
 		end
 	end

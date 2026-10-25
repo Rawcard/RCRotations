@@ -23,5 +23,7 @@ jobs:
         run: |
           pip install lupa
           python3 tools/test_sim.py
+      - name: WoW Forever tests (all classes, secret values in combat)
+        run: python3 tools/test_forever.py
       - name: Workshop app tests
         run: node app/test/wow.test.js

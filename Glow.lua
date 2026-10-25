@@ -254,7 +254,7 @@ local function overlay(button, key, texture, r, g, b, scale, alpha)
 end
 
 -- ---------------------------------------------------------------------------
--- RC SpellFlash style (ported from Rob's RC-SpellFlash 2.1.1)
+-- RC SpellFlash style (ported from Raw Card's RC-SpellFlash 2.1.1)
 -- Colored additive fill + pulsing 4-edge outline, parented to UIParent so a
 -- hidden bar header (RCDiabloUI) cannot hide the flash. Toggle: ns.db.spellFlash
 -- (nil/true = SpellFlash style, false = original Forever Rotation skull).

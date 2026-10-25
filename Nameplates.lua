@@ -54,6 +54,29 @@ local function on()
 	return ns.db and ns.db.hidePlates == true
 end
 
+-- WoW Forever (like retail Midnight) can hand addons "secret" values in
+-- combat: they can be passed to some widget functions but not tested or
+-- compared. Whether a plate is hostile may be one, so hiding goes through
+-- SetAlphaFromBoolean when it is.
+local function secret(v)
+	return issecretvalue and issecretvalue(v) or false
+end
+
+-- alpha = hidden (0) when hide is true, shown (1) when false; hide may be secret
+local function fade(region, hide, hiddenAlpha, shownAlpha)
+	if not region or not region.SetAlpha then
+		return
+	end
+	hiddenAlpha, shownAlpha = hiddenAlpha or 0, shownAlpha or 1
+	if secret(hide) then
+		if region.SetAlphaFromBoolean and pcall(region.SetAlphaFromBoolean, region, hide, hiddenAlpha, shownAlpha) then
+			return
+		end
+		hide = true -- can't tell: enemy plates are what this option shows
+	end
+	pcall(region.SetAlpha, region, hide and hiddenAlpha or shownAlpha)
+end
+
 -- The health bar of one Blizzard nameplate: hidden (alpha 0) or shown.
 -- Names, cast bars and raid marks are left alone. Changing alpha is allowed
 -- in combat; it doesn't touch the protected plate frame itself.
@@ -112,7 +135,7 @@ end
 local function nameColor(unit)
 	if unit then
 		local ok, denied = pcall(UnitIsTapDenied or function() end, unit)
-		if ok and denied then
+		if ok and not secret(denied) and denied then
 			return 0.5, 0.5, 0.5
 		end
 		if UnitSelectionColor then
@@ -122,7 +145,7 @@ local function nameColor(unit)
 			end
 		end
 		local ok3, reaction = pcall(UnitReaction, unit, "player")
-		if ok3 and reaction and reaction >= 4 then
+		if ok3 and reaction and not secret(reaction) and reaction >= 4 then
 			return 1, 1, 0
 		end
 	end
@@ -136,13 +159,11 @@ end
 local function ownName(plate, uf, hide, unit)
 	local theirs = type(uf.Name) == "table" and uf.Name or nil
 	local mine = plate.rcrName
-	if not hide then
+	if not secret(hide) and not hide then
 		if mine then
 			mine:Hide()
 		end
-		if theirs and theirs.SetAlpha then
-			pcall(theirs.SetAlpha, theirs, 1)
-		end
+		fade(theirs, false)
 		return
 	end
 	if not mine then
@@ -167,9 +188,7 @@ local function ownName(plate, uf, hide, unit)
 				pcall(mine.SetFont, mine, font, size, flags)
 			end
 		end
-		if theirs.SetAlpha then
-			pcall(theirs.SetAlpha, theirs, 0)
-		end
+		fade(theirs, hide)
 	end
 	local text = unit and UnitName and UnitName(unit)
 	if not text and theirs and theirs.GetText then
@@ -177,29 +196,40 @@ local function ownName(plate, uf, hide, unit)
 	end
 	mine:SetText(text or "")
 	local r, g, b2 = nameColor(unit)
-	mine:SetTextColor(r, g, b2)
+	if not pcall(mine.SetTextColor, mine, r, g, b2) then
+		mine:SetTextColor(1, 0, 0)
+	end
 	if mine.holder then
 		mine.holder:Show()
 	end
 	mine:Show()
+	-- ours shows exactly when theirs is hidden
+	fade(mine, hide, 1, 0)
 end
 
 local function styleBar(plate, hide, unit)
 	for _, bar in ipairs(healthBars(plate)) do
-		pcall(bar.SetAlpha, bar, hide and 0 or 1)
+		fade(bar, hide)
 	end
 	local uf = plate and plate.unitFrame
 	if type(uf) == "table" and uf ~= plate.UnitFrame then
 		for _, t in ipairs(addonExtras(uf)) do
-			pcall(t.SetAlpha, t, hide and 0 or 1)
+			fade(t, hide)
 		end
 		ownName(plate, uf, hide, unit)
 	end
 end
 
+-- true / false, or a secret boolean on WoW Forever in combat
 local function hostileUnit(unit)
 	local ok, can = pcall(UnitCanAttack, "player", unit)
-	return ok and can and true or false
+	if not ok then
+		return false
+	end
+	if secret(can) then
+		return can
+	end
+	return can and true or false
 end
 
 local function forEachPlate(fn)
@@ -319,10 +349,10 @@ end)
 -- updates); put the hidden look back right after it does.
 if hooksecurefunc and type(CompactUnitFrame_UpdateAll) == "function" then
 	hooksecurefunc("CompactUnitFrame_UpdateAll", function(uf)
-		if on() and uf and type(uf.unit) == "string" and uf.unit:find("^nameplate") and hostileUnit(uf.unit) then
-			local bar = uf.healthBar or uf.HealthBar
-			if bar and bar.SetAlpha then
-				pcall(bar.SetAlpha, bar, 0)
+		if on() and uf and type(uf.unit) == "string" and uf.unit:find("^nameplate") then
+			local hostile = hostileUnit(uf.unit)
+			if secret(hostile) or hostile then
+				fade(uf.healthBar or uf.HealthBar, hostile)
 			end
 		end
 	end)

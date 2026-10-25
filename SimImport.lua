@@ -808,7 +808,9 @@ local function ensureWindow()
 	local sub = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	sub:SetPoint("TOPLEFT", 16, -36)
 	sub:SetPoint("RIGHT", -16, 0)
+	sub:SetHeight(40) -- fixed heights: measuring wrapped text can freeze the Forever client
 	sub:SetJustifyH("LEFT")
+	sub:SetJustifyV("TOP")
 	sub:SetTextColor(0.8, 0.8, 0.8)
 	win.sub = sub
 
@@ -852,7 +854,9 @@ local function ensureWindow()
 	local status = win:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	status:SetPoint("BOTTOMLEFT", 16, 46)
 	status:SetPoint("RIGHT", -16, 0)
+	status:SetHeight(24)
 	status:SetJustifyH("LEFT")
+	status:SetJustifyV("BOTTOM")
 	win.status = status
 
 	local importBtn = goldButton(win, 140, ns.T("SIM_IMPORT_BUTTON"))

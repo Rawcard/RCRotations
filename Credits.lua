@@ -1,13 +1,13 @@
 --[[
   RCRotations credit line.
-  RCRotations by Rob is a fork of Forever Rotation by Vohnka (wow-forever.fr), MIT license.
+  RCRotations by Raw Card is a fork of Forever Rotation by Vohnka (wow-forever.fr), MIT license.
   /rcrmsg on|off
 ]]
 
 RCRotationsCreditDB = RCRotationsCreditDB or {}
 
 local CREDIT = {
-	LINE = "|cff66ccff%s|r by |cffffd100Rob|r \226\128\148 based on Forever Rotation by |cffffd100Vohnka|r (MIT)",
+	LINE = "|cff66ccff%s|r by |cffffd100Raw Card|r \226\128\148 based on Forever Rotation by |cffffd100Vohnka|r (MIT)",
 	ON = "|cff66ccffRCRotations|r \226\128\148 credit message: |cff66ff66ON|r",
 	OFF = "|cff66ccffRCRotations|r \226\128\148 credit message: |cffff6060OFF|r",
 	STATE = "|cff66ccffRCRotations|r \226\128\148 credit message: ",

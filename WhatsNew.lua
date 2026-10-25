@@ -190,6 +190,7 @@ local function build()
 	text:SetWidth(500)
 	text:SetJustifyH("LEFT")
 	text:SetJustifyV("TOP")
+	text:SetWordWrap(true)
 	if text.SetSpacing then
 		text:SetSpacing(3)
 	end
@@ -207,9 +208,13 @@ local function build()
 	appTitle:SetPoint("TOPLEFT", 14, -12)
 	appTitle:SetText(ns.T("OPT_CARD_WORKSHOP"))
 	local appText = app:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	appText:SetPoint("TOPLEFT", appTitle, "BOTTOMLEFT", 0, -6)
-	appText:SetWidth(300)
+	-- fixed position and size: the Forever client can freeze when it has to
+	-- measure wrapped text (text anchored to text, or auto-height text)
+	appText:SetPoint("TOPLEFT", 14, -34)
+	appText:SetSize(300, 44)
 	appText:SetJustifyH("LEFT")
+	appText:SetJustifyV("TOP")
+	appText:SetWordWrap(true)
 	appText:SetText(ns.T("NEWS_APP_TEXT"))
 	local appBtn = goldButton(app, 190, 34, ns.T("NEWS_COPY_APP"), true)
 	appBtn:SetPoint("RIGHT", -14, 0)
@@ -242,8 +247,18 @@ function ns.ShowWhatsNew()
 	end
 	news.title:SetText(ns.T("NEWS_TITLE"))
 	news.text:SetText(changelogText())
-	local h = news.text.GetStringHeight and news.text:GetStringHeight() or 400
-	news.body:SetHeight(math.max(10, (h or 400) + 8))
+	-- Estimate the height instead of measuring the text (measuring wrapped
+	-- text can freeze the Forever client): ~80 characters per line, 16px a line.
+	local lines = 0
+	for _, v in ipairs(ns.CHANGELOG or {}) do
+		lines = lines + 2
+		for _, item in ipairs(v.items or {}) do
+			lines = lines + math.max(1, math.ceil(#item / 80))
+		end
+	end
+	local h = lines * 16 + 16
+	news.text:SetHeight(h)
+	news.body:SetHeight(h)
 	news.check:SetChecked(db().newsHidden == currentVersion())
 	news:Show()
 	return news

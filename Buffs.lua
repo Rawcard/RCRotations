@@ -115,6 +115,75 @@ local CLASS = {
 }
 Buffs.CLASS = CLASS
 
+-- WoW Forever (Classic-style buffs; IDs from the Forever spellbook in Data.lua).
+-- Buffs there don't share categories the way MoP raid buffs do, so each one is
+-- your own buff (any rank, or its group version). Extra fields:
+--   any    kind "anyof": any one of these counts (paladin blessings and auras,
+--          mage/warlock armor, hunter aspects, shaman shields)
+--   show   which spell to suggest per role ({ heal = ..., tank = ... }); the
+--          first one you know wins, otherwise the entry's spell
+--   roles  only for these roles (the role button in the menu)
+--   group  in a group, also check it's on everyone near you
+--   usable only when the game says you can cast it now (Battle Shout needs rage)
+local F = ns.Spell or {}
+local FP, FD, FPr, FM, FL, FSh, FH, FW = F.Paladin or {}, F.Druid or {}, F.Priest or {}, F.Mage or {}, F.Warlock or {}, F.Shaman or {}, F.Hunter or {}, F.Warrior or {}
+local GREATER = { Might = 25782, Wisdom = 25894, Kings = 25898, Salvation = 25895, Light = 25890, Sanctuary = 25899 }
+local FOREVER = {
+	DRUID = {
+		{ spell = FD.MarkoftheWild, alt = { 21849 }, group = true }, -- Mark / Gift of the Wild
+		{ spell = FD.Thorns, roles = { "tank" } },
+	},
+	HUNTER = {
+		-- any aspect counts (Cheetah / Pack too: you're travelling)
+		{ kind = "anyof", spell = FH.AspectHawk, any = { FH.AspectHawk, FH.AspectMonkey, FH.AspectWild, FH.AspectBeast, FH.AspectCheetah, FH.AspectPack },
+			show = { melee = { FH.AspectMonkey } } },
+		{ spell = FH.TrueshotAura },
+		{ spell = FH.CallPet, kind = "pet" },
+	},
+	MAGE = {
+		{ spell = FM.ArcaneIntellect, alt = { 23028 }, group = true }, -- Arcane Intellect / Brilliance
+		{ kind = "anyof", spell = FM.FrostArmor, any = { FM.FrostArmor, FM.IceArmor, FM.MageArmor }, show = { damage = { FM.IceArmor, FM.FrostArmor } } },
+	},
+	PALADIN = {
+		{ kind = "anyof", spell = FP.BlessingMight, any = { FP.BlessingMight, FP.BlessingWisdom, FP.BlessingKings, FP.BlessingSalvation, FP.BlessingLight, FP.BlessingSanctuary,
+			GREATER.Might, GREATER.Wisdom, GREATER.Kings, GREATER.Salvation, GREATER.Light, GREATER.Sanctuary },
+			show = { heal = { FP.BlessingWisdom }, tank = { FP.BlessingKings, FP.BlessingSanctuary, FP.BlessingMight }, damage = { FP.BlessingKings, FP.BlessingMight } } },
+		{ kind = "anyof", spell = FP.DevotionAura, any = { FP.DevotionAura, FP.RetributionAura, FP.ConcentrationAura, FP.SanctityAura, FP.FireResistAura, FP.FrostResistAura, FP.ShadowResistAura },
+			show = { heal = { FP.ConcentrationAura, FP.DevotionAura }, damage = { FP.SanctityAura, FP.RetributionAura, FP.DevotionAura } } },
+		{ spell = FP.RighteousFury, roles = { "tank" } },
+	},
+	PRIEST = {
+		{ spell = FPr.PowerWordFortitude, alt = { 21562 }, group = true }, -- Fortitude / Prayer of Fortitude
+		{ spell = FPr.InnerFire },
+		{ spell = FPr.DivineSpirit, alt = { 27681 }, group = true }, -- talent; Prayer of Spirit
+		{ spell = FPr.Shadowform, kind = "stance", roles = { "damage" } }, -- talent
+	},
+	ROGUE = {
+		{ kind = "weapon" }, -- poisons: the same choice as the weapon window
+	},
+	SHAMAN = {
+		{ kind = "anyof", spell = FSh.LightningShield, any = { FSh.LightningShield, FSh.WaterShield }, show = { heal = { FSh.WaterShield } } },
+		{ kind = "weapon" }, -- weapon imbue
+	},
+	WARLOCK = {
+		{ kind = "anyof", spell = FL.DemonSkin, any = { FL.DemonArmor, FL.DemonSkin }, show = { damage = { FL.DemonArmor, FL.DemonSkin } } },
+		-- the demon you summoned last (Imp until then); Demonic Sacrifice's buffs mean no pet
+		{ spell = FL.SummonImp, kind = "pet", noPet = { 18789, 18790, 18791, 18792 } },
+	},
+	WARRIOR = {
+		{ spell = FW.BattleShout, usable = true },
+	},
+}
+Buffs.FOREVER = FOREVER
+local SUMMONS = { [FL.SummonImp or 0] = true, [FL.SummonVoidwalker or 0] = true, [FL.SummonSuccubus or 0] = true,
+	[FL.SummonFelhunter or 0] = true, [FL.SummonIncubus or 0] = true, [FL.SummonFelguard or 0] = true }
+-- remember the last demon a warlock summoned (Forever)
+function Buffs.NoteCast(spellID)
+	if spellID and SUMMONS[spellID] and ns.db then
+		ns.db.lastDemon = spellID
+	end
+end
+
 local GRIMOIRE_OF_SACRIFICE = 108503
 
 -- ------------------------------------------------------------------ checks
@@ -219,6 +288,24 @@ local function groupUnits()
 	return out
 end
 
+-- Can we read this unit's buffs right now? On WoW Forever the game hides them
+-- (secret values) in combat and on some maps; then we can't tell what's missing.
+local function aurasReadable(unit)
+	if not (issecretvalue and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then
+		return true
+	end
+	local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, unit, 1, "HELPFUL")
+	if not ok then
+		return false
+	end
+	if type(aura) ~= "table" then
+		return true
+	end
+	local id, name = aura.spellId, aura.name
+	return not (issecretvalue(id) or issecretvalue(name))
+end
+Buffs.AurasReadable = aurasReadable
+
 local function reachable(unit)
 	if not call(UnitExists, unit) or call(UnitIsUnit, unit, "player") then
 		return false
@@ -231,11 +318,14 @@ local function reachable(unit)
 	end
 	if UnitInRange then
 		local inRange, checked = call(UnitInRange, unit)
+		if issecretvalue and (issecretvalue(inRange) or issecretvalue(checked)) then
+			return false
+		end
 		if checked and not inRange then
 			return false
 		end
 	end
-	return true
+	return aurasReadable(unit)
 end
 
 local function unitHasAny(unit, list)
@@ -253,6 +343,9 @@ end
 local function memberCovered(unit, entry)
 	if unitHasAny(unit, { entry.spell }) or unitHasAny(unit, entry.alt) then
 		return true
+	end
+	if not entry.cats then
+		return false
 	end
 	for _, cat in ipairs(entry.cats) do
 		if not unitHasAny(unit, EQUIVALENT[cat]) then
@@ -347,10 +440,61 @@ local function missingChoice(entry)
 	return false
 end
 
+local function role()
+	return ns.db and ns.db.role or "damage"
+end
+
+-- the spell to suggest: the first known one for your role, else the entry's
+local function showFor(entry)
+	local list = entry.show and entry.show[role()]
+	for _, id in ipairs(list or {}) do
+		if known(id) then
+			return id
+		end
+	end
+	if entry.spell and known(entry.spell) then
+		return entry.spell
+	end
+	for _, id in ipairs(entry.any or {}) do
+		if known(id) then
+			return id
+		end
+	end
+end
+
+local function usableNow(id)
+	if not (C_Spell and C_Spell.IsSpellUsable) then
+		return true
+	end
+	local ok, usable = pcall(C_Spell.IsSpellUsable, ns.API.Resolve(id) or id)
+	if not ok or (issecretvalue and issecretvalue(usable)) then
+		return false
+	end
+	return usable == true
+end
+
 local function missing(entry)
 	local kind = entry.kind or "aura"
 	if kind == "choice" then
 		return missingChoice(entry)
+	elseif kind == "anyof" then
+		if anyUp(entry.any) then
+			return false
+		end
+		local pick = showFor(entry)
+		return pick ~= nil, nil, pick
+	elseif kind == "weapon" then
+		if not ns.BuildWeapon then
+			return false
+		end
+		local ok, id, _, need = pcall(ns.BuildWeapon)
+		if ok and id and need then
+			return true, nil, id
+		end
+		return false
+	end
+	if entry.usable and not usableNow(entry.spell) then
+		return false
 	end
 	if kind == "stance" then
 		return not stanceUp(entry.spell)
@@ -362,6 +506,13 @@ local function missing(entry)
 		end
 		if ns.CLASSTOKEN == "WARLOCK" and auraUp(GRIMOIRE_OF_SACRIFICE) then
 			return false
+		end
+		if entry.noPet and anyUp(entry.noPet) then
+			return false
+		end
+		local last = ns.db and ns.db.lastDemon
+		if ns.CLASSTOKEN == "WARLOCK" and last and known(last) then
+			return true, nil, last
 		end
 		return true
 	elseif kind == "imbue" then
@@ -383,7 +534,7 @@ local function missing(entry)
 		end
 	end
 	-- raid buffs: someone near you in the group still needs it
-	if entry.cats and ns.db and ns.db.buffGroup ~= false then
+	if (entry.cats or entry.group) and ns.db and ns.db.buffGroup ~= false then
 		local who = groupMissing(entry)
 		if who then
 			return true, who
@@ -394,8 +545,17 @@ end
 
 -- Should reminders show at all right now?
 local function active()
-	if ns.GAME ~= "mists" then
+	if ns.GAME ~= "mists" and ns.GAME ~= "forever" then
 		return false
+	end
+	if ns.GAME == "forever" then
+		-- Forever hides buffs from addons in combat (and on some maps)
+		if call(InCombatLockdown) or call(UnitAffectingCombat, "player") then
+			return false
+		end
+		if not aurasReadable("player") then
+			return false
+		end
 	end
 	if ns.db and ns.db.showBuffs == false then
 		return false
@@ -417,7 +577,7 @@ function Buffs.Missing()
 	end
 	local token = ns.ClassToken and ns.ClassToken()
 	ns.CLASSTOKEN = token
-	local list = CLASS[token]
+	local list = (ns.GAME == "forever" and FOREVER or CLASS)[token]
 	if not list then
 		return {}
 	end
@@ -438,13 +598,24 @@ function Buffs.Missing()
 		if #out >= 4 then
 			break
 		end
-		if forSpec(entry, spec) and (not entry.combat or inCombat) and (entry.choose or known(entry.spell)) and not seen[entry.spell] then
+		local okRole = true
+		if entry.roles then
+			okRole = false
+			for _, r in ipairs(entry.roles) do
+				if r == role() then
+					okRole = true
+				end
+			end
+		end
+		local key = entry.spell or entry.kind
+		local canCheck = entry.choose or entry.any or entry.kind == "weapon" or (entry.spell and known(entry.spell))
+		if okRole and forSpec(entry, spec) and (not entry.combat or inCombat) and canCheck and not seen[key] then
 			local miss, name, pick = missing(entry)
 			if miss then
 				local id = ns.API.Resolve(pick or entry.spell) or pick or entry.spell
 				out[#out + 1] = id
 				who[id] = name
-				seen[entry.spell] = true
+				seen[key] = true
 			end
 		end
 	end

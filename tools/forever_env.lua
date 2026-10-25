@@ -266,7 +266,8 @@ local function enemy(u)
 	for _, p in ipairs(PLATES) do if u == p then return true end end
 	return false
 end
-function UnitExists(u) return u == "player" or enemy(u) end
+PET = false
+function UnitExists(u) if u == "pet" then return PET end return u == "player" or enemy(u) end
 function UnitIsUnit(a, b) return a == b end
 function UnitCanAttack(a, u) if u == "player" then return false end return SB(a == "player" and enemy(u)) end
 function UnitIsEnemy(a, u) if u == "player" then return false end return SB(a == "player" and enemy(u)) end
@@ -319,7 +320,7 @@ C_SpellBook = {
 	IsSpellInSpellBook = function(id) return KNOWN[id] == true end,
 	FindSpellBookSlotForSpell = function(id) return KNOWN[id] and 1 or nil end,
 }
-local AURAS = {
+AURAS = {
 	player = { { spellId = 1, name = "Buff" } },
 	target = { { spellId = 2, name = "Debuff", harmful = true } },
 }
@@ -332,7 +333,8 @@ C_UnitAuras = {
 			if (a.harmful and true or false) == (harm and true or false) then
 				n = n + 1
 				if n == i then
-					return { spellId = S(a.spellId), name = S(a.name), applications = S(0), expirationTime = S(0), duration = S(0), sourceUnit = S("player"), isHarmful = a.harmful }
+					local function SA(v) if AURAS_SECRET and not NO_SECRETS then return secret(v) end return S(v) end
+					return { spellId = SA(a.spellId), name = SA(a.name), applications = SA(0), expirationTime = SA(0), duration = SA(0), sourceUnit = SA("player"), isHarmful = a.harmful }
 				end
 			end
 		end

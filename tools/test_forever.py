@@ -185,7 +185,64 @@ step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)
 step("copy link", ns.ShowCopyLink)
 step("close menu", ns.ToggleOptions)
-step("buffs (MoP only)", function() assert(#ns.Buffs.Missing() == 0, "buff reminders are MoP-only") end)
+-- buff reminders (Forever list): out of combat only, never when buffs are hidden
+step("buffs", function()
+	COMBAT, AURAS_SECRET = false, false
+	AURAS.player = {}
+	local m = ns.Buffs.Missing()
+	report.buffs = #m
+	BUFFS_SEEN = {}
+	for i, id in ipairs(m) do BUFFS_SEEN[i] = id end
+	COMBAT = true
+	assert(#ns.Buffs.Missing() == 0, "no buff reminders in combat on Forever")
+	COMBAT = false
+	AURAS.player = { { spellId = 1, name = "Buff" } }
+	AURAS_SECRET = true
+	assert(#ns.Buffs.Missing() == 0, "no buff reminders while buffs are hidden")
+	AURAS_SECRET = false
+	-- every reminder goes away once its buff is up
+	AURAS.player = {}
+	for _, id in ipairs(m) do
+		AURAS.player[#AURAS.player + 1] = { spellId = id, name = "Spell" .. id }
+	end
+	PET = true
+	local left = ns.Buffs.Missing()
+	PET = false
+	for _, id in ipairs(left) do
+		for _, was in ipairs(m) do
+			assert(id ~= was, "reminder for " .. id .. " stays after the buff is up")
+		end
+	end
+	AURAS.player = { { spellId = 1, name = "Buff" } }
+	local function has(list, id) for _, x in ipairs(list) do if x == id then return true end end return false end
+	local S = ns.Spell
+	if CLASS_FILE == "PALADIN" then
+		-- another paladin's Greater Blessing of Kings and any aura count
+		AURAS.player = { { spellId = 25898, name = "Spell25898" }, { spellId = S.Paladin.RetributionAura, name = "Spell" .. S.Paladin.RetributionAura } }
+		assert(#ns.Buffs.Missing() == 0, "paladin: any blessing (even a Greater one) and any aura count")
+	elseif CLASS_FILE == "WARLOCK" then
+		AURAS.player = { { spellId = S.Warlock.DemonArmor, name = "Spell" .. S.Warlock.DemonArmor } }
+		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-9", S.Warlock.SummonFelhunter)
+		assert(has(ns.Buffs.Missing(), S.Warlock.SummonFelhunter), "warlock: suggests the demon summoned last")
+	elseif CLASS_FILE == "DRUID" then
+		-- group: a party member near you without your Mark
+		local origExists, origName = UnitExists, UnitName
+		IsInGroup = function() return true end
+		GetNumSubgroupMembers = function() return 1 end
+		UnitExists = function(u) if u == "party1" then return true end return origExists(u) end
+		UnitName = function(u) if u == "party1" then return "Leo" end return origName(u) end
+		AURAS.player = { { spellId = S.Druid.MarkoftheWild, name = "Spell" .. S.Druid.MarkoftheWild } }
+		AURAS.party1 = {}
+		NOW = NOW + 2
+		assert(has(ns.Buffs.Missing(), S.Druid.MarkoftheWild), "druid: party member without Mark of the Wild")
+		AURAS.party1 = { { spellId = 21849, name = "Spell21849" } }
+		NOW = NOW + 2
+		assert(not has(ns.Buffs.Missing(), S.Druid.MarkoftheWild), "druid: Gift of the Wild on them counts")
+		IsInGroup = function() return false end
+		UnitExists, UnitName = origExists, origName
+	end
+	AURAS.player = { { spellId = 1, name = "Buff" } }
+end)
 for _, cmd in ipairs({ "lock", "unlock", "flash", "flash", "soon", "soon", "news", "app" }) do
 	step("slash " .. cmd, SlashCmdList.RCROT, cmd)
 end
@@ -196,6 +253,7 @@ for k in pairs(MISSING) do missing[#missing + 1] = k end
 table.sort(missing)
 report.missing = table.concat(missing, " ")
 report.flash = report.flash or 0
+report.buffs = report.buffs or 0
 report.list = ns.UsingBuiltInList and ns.UsingBuiltInList() and "built-in" or "other"
 REPORT = report
 """
@@ -213,7 +271,9 @@ def run(cls, cid, no_secrets=False):
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
     roles = {str(k): int(v) for k, v in r.roles.items()}
-    return roles, str(r.missing), str(r.list), int(r.flash)
+    seen = g.BUFFS_SEEN
+    buffs = [int(seen[i]) for i in range(1, len(seen) + 1)] if seen else []
+    return roles, str(r.missing), str(r.list), int(r.flash), buffs
 
 
 def main():
@@ -221,7 +281,7 @@ def main():
     allmissing = set()
     for cls, cid in CLASSES:
         try:
-            roles, missing, lst, flashes = run(cls, cid)
+            roles, missing, lst, flashes, buffs = run(cls, cid)
         except Exception as e:  # noqa: BLE001
             failed += 1
             print("FAIL %-8s %s" % (cls, str(e)[:600]))
@@ -231,8 +291,8 @@ def main():
         status = "OK  " if not empty and flashes > 0 else "FAIL"
         if empty or flashes == 0:
             failed += 1
-        print("%s %-8s list=%s  action-bar flash in %d/%d roles  combat ticks with a suggestion: %s%s" % (
-            status, cls, lst, flashes, len(roles), ", ".join("%s %d/40" % kv for kv in sorted(roles.items())),
+        print("%s %-8s list=%s  buffs reminded with none up: %s  action-bar flash in %d/%d roles  combat ticks with a suggestion: %s%s" % (
+            status, cls, lst, buffs, flashes, len(roles), ", ".join("%s %d/40" % kv for kv in sorted(roles.items())),
             ("  (nothing suggested for: %s)" % ", ".join(empty)) if empty else ""))
     if allmissing:
         print("APIs the addon looked up that this test doesn't provide: " + " ".join(sorted(allmissing)))

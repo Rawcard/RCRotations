@@ -968,6 +968,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 			if ns.API and ns.API.NoteSelfBuff then
 				ns.API.NoteSelfBuff(id)
 			end
+			if ns.Buffs and ns.Buffs.NoteCast and id and not (issecretvalue and issecretvalue(id)) then
+				ns.Buffs.NoteCast(id)
+			end
 			if ns.API and ns.API.NoteSpellCast then
 				ns.API.NoteSpellCast(id or spellID)
 			end

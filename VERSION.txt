@@ -31,6 +31,14 @@
   combat (the bar fades through the game's own secret-safe call).
 - WoW Forever: the menu, picker, import and What's new windows no longer measure wrapped text.
   The original Forever Rotation found that this can freeze the Forever client.
+- WoW Forever: missing buff reminders, with a Forever buff list for every class: Mark of the Wild
+  and Thorns (bear), Fortitude, Inner Fire, Divine Spirit and Shadowform, Arcane Intellect and an
+  armor, a paladin blessing and aura (any of yours or another paladin's counts, Greater ones too)
+  and Righteous Fury (tank), hunter aspect, Trueshot Aura and pet, shaman shield and weapon imbue,
+  rogue poisons, warlock armor and demon (the one you summoned last), Battle Shout. Group buffs
+  (Gift of the Wild, Prayer of Fortitude, Arcane Brilliance) count, and in a group your Mark,
+  Fortitude, Intellect and Spirit are checked on everyone near you. Reminders show out of combat
+  only: Forever hides buffs from addons in combat, and the bar stays empty whenever it can't read them.
 - The addon's owner is now listed as Raw Card.
 
 # 1.5.0

@@ -9,6 +9,7 @@ ns.CHANGELOG = {
 			"In a party or raid, your raid buff (Fortitude, Kings, Mark of the Wild, Brilliance, Dark Intent, shouts, Horn of Winter...) is also checked on everyone near you. If someone in range is missing it (and has no equivalent buff), the reminder shows; hover it to see who.",
 			"A \"What's new\" window at login with these notes and a button to copy the Workshop app link. Tick \"Don't show again for this version\" at the bottom to stop it until the next update. Open it anytime with /rcr news or the \"What's new\" button in the menu.",
 			"A big \"Get the Workshop app\" button at the top of the menu, and a \"Copy app link\" button on the Rotation page. Press Ctrl+C in the box that opens, then paste the link into your web browser.",
+			"RCRotations windows open side by side instead of on top of each other: the rotation picker, import, What's new and copy-link boxes line up to the right of the menu (the row shrinks a little if it wouldn't fit on your screen). Drag any of them to move the whole row. Closing the menu closes them all.",
 		},
 	},
 	{

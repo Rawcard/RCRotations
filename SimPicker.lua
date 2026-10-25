@@ -137,6 +137,9 @@ local function ensureFrame()
 	if UISpecialFrames then
 		table.insert(UISpecialFrames, "RCRotationsPicker")
 	end
+	if ns.RegisterWindow then
+		ns.RegisterWindow(frame)
+	end
 	return frame
 end
 
@@ -267,6 +270,9 @@ function Sim.ShowPicker(force)
 	end
 	frame:SetSize(width, 58 + #list * 32 + 36 + 40)
 	frame:Show()
+	if ns.WindowsLayout then
+		ns.WindowsLayout()
+	end
 	return true
 end
 

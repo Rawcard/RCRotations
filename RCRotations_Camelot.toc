@@ -15,6 +15,7 @@
 Credits.lua
 Compat.lua
 Locale.lua
+Windows.lua
 API.lua
 Data.lua
 Physics.lua

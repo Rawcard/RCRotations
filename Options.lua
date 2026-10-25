@@ -474,6 +474,9 @@ local function ensureOptions()
 	})
 	frame:Hide()
 	tinsert(UISpecialFrames, frame:GetName())
+	if ns.RegisterMenu then
+		ns.RegisterMenu(frame)
+	end
 
 	local titleBar = CreateFrame("Frame", nil, frame)
 	titleBar:SetPoint("TOPLEFT", 12, -10)

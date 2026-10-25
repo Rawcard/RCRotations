@@ -91,6 +91,9 @@ local function panel(name, w, h, title)
 		tinsert(UISpecialFrames, name)
 	end
 	f:Hide()
+	if ns.RegisterWindow then
+		ns.RegisterWindow(f)
+	end
 	return f
 end
 

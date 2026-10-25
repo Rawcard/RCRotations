@@ -890,6 +890,9 @@ local function ensureWindow()
 	if UISpecialFrames then
 		table.insert(UISpecialFrames, "RCRotationsImport")
 	end
+	if ns.RegisterWindow then
+		ns.RegisterWindow(win)
+	end
 	return win
 end
 

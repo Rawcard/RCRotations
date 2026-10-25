@@ -290,8 +290,11 @@ local function sfOnUpdate(self, elapsed)
 		return
 	end
 	self:SetAlpha(1)
-	self.animTime = (self.animTime or 0) + elapsed
-	local pulse = (math.sin(self.animTime * 3) + 1) / 2
+	-- One shared clock for every flash, so the rotation, defensive and red buff
+	-- flashes all pulse together.
+	local t = GetTime and GetTime() or ((self.animTime or 0) + elapsed)
+	self.animTime = t
+	local pulse = (math.sin(t * 3) + 1) / 2
 	local alpha = 0.3 + (pulse * 0.4)
 	for _, edge in pairs(self.edges) do
 		edge:SetAlpha(alpha)

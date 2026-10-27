@@ -1,4 +1,9 @@
-1.5.1
+1.5.2
+
+# 1.5.2
+
+- Wrath Titan Reforged (client 3.80) is listed as supported, so CurseForge offers RCRotations to Titan Reforged players. It works there like on Wrath Classic: import a rotation from wowsims.com or make one in the Workshop app.
+- The GitHub release and test jobs use GitHub's newer Node 24 actions (no more Node.js 20 warning).
 
 # 1.5.1
 

@@ -2,6 +2,13 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.2",
+		items = {
+			"Wrath Titan Reforged (client 3.80) is listed as supported, so CurseForge offers RCRotations to Titan Reforged players. It works there like on Wrath Classic: import a rotation from wowsims.com or make one in the Workshop app.",
+			"The GitHub release and test jobs use GitHub's newer Node 24 actions (no more Node.js 20 warning).",
+		},
+	},
+	{
 		version = "1.5.1",
 		items = {
 			"No flashing on your action bars while you're mounted. The HUD still shows what's next; the flashes come back as soon as you dismount. Missing buff reminders also wait until you dismount.",
@@ -28,12 +35,6 @@ ns.CHANGELOG = {
 			"Seal, presence, Horn of Winter and Inner Fire moved out of the rotation into these reminders.",
 			"Turn them off with /rcr buffs or Options > General > HUD.",
 			"Name-only enemy nameplates: RCRotations counts enemies for AoE through enemy nameplates, so with nameplates off it always thinks there's one target. The new option (Options > Extra, or /rcr plates) turns enemy nameplates on and hides their health bars: you still see enemy names and cast bars. Works with Blizzard's nameplates and with ElvUI's (there the name stays centered, and the health %, level, target glow and highlight hide with the bar). Your old setting comes back when you turn it off. If nameplates are off, you get a one-time tip about it.",
-		},
-	},
-	{
-		version = "1.4.3",
-		items = {
-			"Locking the HUD sticks: once you lock it, it stays locked on every login and on all your characters, and they all share the same HUD position. Unlock it with the new \"Unlock HUD\" button at the top of the menu (/rcr), next to Role.",
 		},
 	},
 }

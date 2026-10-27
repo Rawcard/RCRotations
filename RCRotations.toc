@@ -1,8 +1,8 @@
-## Interface: 11508, 11509, 20505, 20506, 30405, 40402, 50504, 16001
+## Interface: 11508, 11509, 20505, 20506, 30405, 38002, 40402, 50504, 16001
 ## ExcludeLoadGameType: standard
 ## Title: |cff66ccffRC|r|cffd4a017Rotations|r
 ## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT); MoP rotations from WoWSims (MIT).
-## Version: 1.5.1
+## Version: 1.5.2
 ## Author: Raw Card
 ## X-Curse-Project-ID: 1747270
 ## X-Original-Author: Vohnka (Forever Rotation, MIT)

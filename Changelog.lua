@@ -2,7 +2,7 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
-		version = "1.5.3",
+		version = "1.5.4",
 		items = {
 			"WoW Forever: proper rotations for every class, built in. RCRotations now includes the WoWSims Forever rotations (31 of them: Retribution with Unsealed Wrath, Shockadin, Protection, Affliction, Demonology, Destruction, SM/Ruin, Arcane, Fire, Frost, Frostfire, Beast Mastery, Marksmanship, Survival, Arms, Fury, Protection, Balance, Feral Cat and Bear, Rogue, Shadow, Smite, Elemental, Enhancement...), updated automatically as WoWSims updates them.",
 			"WoW Forever: Auto picks the rotation for you (the default). Below level 20 it uses a simple starter rotation for your class; from 20 on, the rotation for your playstyle whose talent build is closest to yours. Respec, level up or change playstyle and it follows (chat says so). Healing playstyles keep the built-in heal lists.",

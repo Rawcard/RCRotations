@@ -272,6 +272,26 @@ step("buffs", function()
 	local function has(list, id) for _, x in ipairs(list) do if x == id then return true end end return false end
 	local S = ns.Spell
 	if CLASS_FILE == "PALADIN" then
+		-- Blessing of Kings is a talent: not learned -> never suggested, even though
+		-- the game answers a lookup by its name
+		local kings = S.Paladin.BlessingKings
+		local gsi, wasRole = C_Spell.GetSpellInfo, ns.db.role
+		KNOWN[kings] = nil
+		C_Spell.GetSpellInfo = function(id)
+			if id == "Spell" .. kings then return { name = id, spellID = kings, iconID = 1 } end
+			return gsi(id)
+		end
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.db.role = "damage"
+		AURAS.player = {}
+		local m2 = ns.Buffs.Missing()
+		C_Spell.GetSpellInfo = gsi
+		KNOWN[kings] = true
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.db.role = wasRole
+		assert(not has(m2, kings), "Blessing of Kings suggested without the talent")
+		assert(has(m2, S.Paladin.BlessingMight), "Blessing of Might suggested instead")
+		AURAS.player = { { spellId = 1, name = "Buff" } }
 		-- another paladin's Greater Blessing of Kings and any aura count
 		AURAS.player = { { spellId = 25898, name = "Spell25898" }, { spellId = S.Paladin.RetributionAura, name = "Spell" .. S.Paladin.RetributionAura } }
 		assert(#ns.Buffs.Missing() == 0, "paladin: any blessing (even a Greater one) and any aura count")

@@ -14,6 +14,8 @@
 - WoW Forever Paladins: a seal you already have isn't asked for again. The addon now reads your
   seal (and how long seals last) whenever your buffs are visible, so one cast before a login or
   /reload counts, and it no longer assumes you have no seal when it can't tell.
+- Spells you haven't learned (talents like Blessing of Kings) are no longer suggested. Right
+  after login the addon could count a spell as known just because the game recognised its name.
 - Choose a rotation yourself any time with /rcr apl: Auto is first, then every rotation for
   your class. A rotation you made in the Workshop app is used ahead of the built-in ones.
 - WoW Forever Paladins: two new playstyles, picked with the playstyle button (or /rcr role).

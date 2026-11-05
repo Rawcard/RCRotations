@@ -790,14 +790,20 @@ function ns.API.Resolve(spellID)
 				resolveCache[spellID] = fromName
 				return fromName
 			end
+			-- Before the spellbook has been read, a name lookup can return a
+			-- spell the game knows but you haven't learned (a talent like
+			-- Blessing of Kings): only take it when you know it.
 			local bookId = findPlayerSpellByName(name)
-			if bookId then
+			if bookId and (spellBookIndex or playerKnows(bookId)) then
 				resolveCache[spellID] = bookId
 				return bookId
 			end
 		end
 	end
-	resolveCache[spellID] = false
+	-- "not known" is only remembered once the spellbook has been read
+	if spellBookIndex then
+		resolveCache[spellID] = false
+	end
 	return nil
 end
 

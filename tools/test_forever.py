@@ -252,6 +252,28 @@ local missing = {}
 for k in pairs(MISSING) do missing[#missing + 1] = k end
 table.sort(missing)
 report.missing = table.concat(missing, " ")
+-- several enemies in a fight: the enemy count and the auto AoE switch, also
+-- with hostility, combat state and range hidden (WoW Forever in combat)
+do
+	TARGET, COMBAT = true, true
+	ns.db.combatMode, ns.db.autoEnemies = "auto", 3
+	local cid = CheckInteractDistance
+	for _, hide in ipairs({ false, true }) do
+		SECRET_BOOLS = hide
+		CheckInteractDistance = function() return nil end -- not allowed in combat
+		NOW = NOW + 1
+		local n, n8 = ns.API.EnemyCount(), ns.API.EnemyCount(8)
+		NOW = NOW + 1
+		local mode = ns.ResolveCombatMode()
+		CheckInteractDistance = cid
+		local what = hide and "hidden values" or "readable values"
+		if n ~= 3 or n8 ~= 3 then error("3 enemies in a fight (" .. what .. "): counted " .. tostring(n) .. " / " .. tostring(n8) .. " within 8 yd") end
+		if mode ~= "aoe" then error("3 enemies (" .. what .. "): auto mode should switch to AoE, got " .. tostring(mode)) end
+	end
+	SECRET_BOOLS = false
+	ns.db.combatMode, ns.db.autoEnemies = nil, nil
+	report.aoe = "ok"
+end
 -- nothing to press (a low level character): melee classes get Auto Attack
 do
 	local saved = KNOWN

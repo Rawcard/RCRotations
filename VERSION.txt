@@ -7,6 +7,12 @@
   then stays on the HUD without flashing, so you don't click Attack again and stop your swings.
   This covers Paladins, Warriors, Rogues, tanks, Enhancement Shamans, melee Hunters, and Druids
   in Cat or Bear Form.
+- WoW Forever: multi-target spells work in fights again. Forever doesn't let addons check how
+  close enemies are during combat, so spells that need several enemies within a few yards
+  (Consecration, Whirlwind, Swipe, your own "enemies within X yards" rules...) counted none and
+  never showed. The enemy count now uses your enemy nameplates in the fight when the distance
+  can't be checked, and it also works when Forever hides whether a unit is hostile or in combat.
+  Nameplates must be on.
 
 # 1.5.2
 

@@ -414,29 +414,61 @@ function ns.API.EnemyCount(maxYards)
 		return enemyCountVal
 	end
 	local count = 0
+	-- WoW Forever (and Retail) can hide hostility, combat state and range from
+	-- addons in combat. Every answer is only used when it can be read; a hidden
+	-- one counts as "yes", since enemy nameplates near you in a fight are
+	-- almost always enemies in that fight. (Testing a hidden yes/no in an "if"
+	-- is an error, so each check compares only readable values.)
+	local function answer(fn, ...)
+		local ok, v = pcall(fn, ...)
+		if not ok or rawequal(v, nil) then
+			return nil
+		end
+		if not readable(v) then
+			return "hidden"
+		end
+		return v
+	end
+	local function yes(v)
+		return v == true or v == 1
+	end
 	local function hostile(unit)
-		local okEx, exists = pcall(UnitExists, unit)
-		if not okEx or not exists then
+		if not yes(answer(UnitExists, unit)) then
 			return false
 		end
-		local okDead, dead = pcall(UnitIsDead, unit)
-		if okDead and readable(dead) and dead then
+		local dead = answer(UnitIsDead, unit)
+		if yes(dead) then
 			return false
 		end
-		local okAtk, atk = pcall(UnitCanAttack, "player", unit)
-		if okAtk and readable(atk) and atk then
-			return true
+		local atk = UnitCanAttack and answer(UnitCanAttack, "player", unit)
+		if atk ~= nil and atk ~= "hidden" then
+			return yes(atk)
 		end
-		local okR, react = pcall(UnitReaction, "player", unit)
-		return okR and readable(react) and type(react) == "number" and react <= 4
+		local react = UnitReaction and answer(UnitReaction, "player", unit)
+		if type(react) == "number" then
+			return react <= 4
+		end
+		local friend = UnitIsFriend and answer(UnitIsFriend, "player", unit)
+		if friend ~= nil and friend ~= "hidden" then
+			return not yes(friend)
+		end
+		-- all hidden: still never count your own group (friendly nameplates on)
+		local raid = UnitInRaid and answer(UnitInRaid, unit)
+		if (UnitInParty and yes(answer(UnitInParty, unit))) or (raid ~= nil and raid ~= "hidden") then
+			return false
+		end
+		if UnitIsPlayer and yes(answer(UnitIsPlayer, unit)) and UnitIsPVP and not yes(answer(UnitIsPVP, "player")) then
+			return false
+		end
+		return atk == "hidden" or react == "hidden" or friend == "hidden"
 	end
 	local function inFight(unit)
-		local okC, combat = pcall(UnitAffectingCombat, unit)
-		if okC and combat then
+		local combat = answer(UnitAffectingCombat, unit)
+		if combat == "hidden" or yes(combat) then
 			return true
 		end
-		local okP, pcombat = pcall(UnitAffectingCombat, "player")
-		return not (okP and pcombat)
+		-- out of combat yourself: count everything (pulling a pack)
+		return not yes(answer(UnitAffectingCombat, "player"))
 	end
 	local function inYards(unit)
 		if not maxYards or maxYards <= 0 then
@@ -449,33 +481,16 @@ function ns.API.EnemyCount(maxYards)
 		if maxY and maxY <= maxYards then
 			return true
 		end
-		-- ~10 yd band via duel interact when yards <= 10.
-		if maxYards <= 10 then
-			local close
-			if CheckInteractDistance then
-				local ok, result = pcall(CheckInteractDistance, unit, 3)
-				if ok then
-					close = safe(result, nil)
-				end
-				if close == nil then
-					ok, result = pcall(CheckInteractDistance, unit, 2)
-					if ok then
-						close = safe(result, nil)
-					end
-				end
+		if maxYards <= 28 and CheckInteractDistance then
+			local close = answer(CheckInteractDistance, unit, maxYards <= 10 and 3 or 1)
+			if maxYards <= 10 and (close == nil or close == "hidden") then
+				close = answer(CheckInteractDistance, unit, 2)
 			end
-			return close == true or close == 1
-		end
-		if maxYards <= 28 then
-			if CheckInteractDistance then
-				local ok, result = pcall(CheckInteractDistance, unit, 1)
-				if ok then
-					result = safe(result, nil)
-					return result == true or result == 1
-				end
+			if close ~= nil and close ~= "hidden" then
+				return yes(close)
 			end
-			return true
 		end
+		-- range not available (in combat on WoW Forever and Retail): count it
 		return true
 	end
 	for i = 1, 40 do

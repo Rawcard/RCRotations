@@ -259,11 +259,15 @@ setmetatable(_G, { __index = function(t, k)
 end })
 
 function InCombatLockdown() return COMBAT end
-function UnitAffectingCombat(u) return COMBAT and (u == "player" or u == "target") end
 local PLATES = { "nameplate1", "nameplate2", "nameplate3" }
 local function enemy(u)
 	if u == "target" then return TARGET end
 	for _, p in ipairs(PLATES) do if u == p then return true end end
+	return false
+end
+function UnitAffectingCombat(u)
+	if u == "player" then return COMBAT end
+	if u == "target" or (u or ""):match("^nameplate") then return SB(COMBAT and enemy(u)) end
 	return false
 end
 PET = false
@@ -271,7 +275,7 @@ function UnitExists(u) if u == "pet" then return PET end return u == "player" or
 function UnitIsUnit(a, b) return a == b end
 function UnitCanAttack(a, u) if u == "player" then return false end return SB(a == "player" and enemy(u)) end
 function UnitIsEnemy(a, u) if u == "player" then return false end return SB(a == "player" and enemy(u)) end
-function UnitIsFriend(a, u) return not enemy(u) end
+function UnitIsFriend(a, u) return SB(not enemy(u)) end
 function UnitReaction(a, b) if enemy(a) or enemy(b) then return S(2) end return 5 end
 function UnitIsPlayer(u) return u == "player" end
 function UnitPlayerControlled(u) return u == "player" end

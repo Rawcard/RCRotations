@@ -1,0 +1,102 @@
+{
+ "type": "TypeAPL",
+ "priorityList": [
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 21084
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 21084
+         }
+        }
+       },
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 20375
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 20271
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 679
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 879
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 26573
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "cmp": {
+         "op": "OpGe",
+         "lhs": {
+          "numberTargets": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "2"
+          }
+         }
+        }
+       },
+       {
+        "cmp": {
+         "op": "OpGe",
+         "lhs": {
+          "currentManaPercent": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "40%"
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

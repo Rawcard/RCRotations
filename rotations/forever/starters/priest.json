@@ -1,0 +1,85 @@
+{
+ "type": "TypeAPL",
+ "priorityList": [
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 17
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 17
+         }
+        }
+       },
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 6788
+         }
+        }
+       },
+       {
+        "cmp": {
+         "op": "OpLt",
+         "lhs": {
+          "currentHealthPercent": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "80%"
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 589
+     }
+    },
+    "condition": {
+     "not": {
+      "val": {
+       "dotIsActive": {
+        "spellId": {
+         "spellId": 589
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 8092
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 585
+     }
+    }
+   }
+  }
+ ]
+}

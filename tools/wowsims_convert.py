@@ -79,6 +79,9 @@ SUPPORTED = {
     "dotIsActive", "dotIsActiveOnAllTargets", "dotRemainingTime", "dotLowestRemainingTime",
     "dotTickFrequency", "totemRemainingTime",
     "autoTimeToNext", "autoTimeSinceLast", "spellInRange", "talentIsKnown",
+    "autoSwingTime", "targetIsMobType", "maxMana", "talentRank",
+    "warlockAssignedCurseIsActive", "warlockAssignedCurseIsActiveOnAllTargets",
+    "druidBleedIsActive", "auraIsActiveOnAnyTarget", "currentManaRegen",
 }
 
 # Kinds with no live equivalent: replaced by a constant, reported as approximated.
@@ -129,6 +132,12 @@ STAND_IN = {
     "auraIsActiveWithReactionTime": None,  # handled as auraIsActive
     "auraIsInactiveWithReactionTime": None,
     "auraIcdIsReadyWithReactionTime": True,
+    "multipleCdUsages": True,
+    "unitMovementSpeed": 0,
+    "spellExpectedDpet": 0,
+    "warlockBaneIsActiveOnAllTargets": False,
+    "selectedPotion": 0,
+    "selectedConjured": 0,
 }
 ALIASES = {
     "auraIsActiveWithReactionTime": "auraIsActive",
@@ -141,6 +150,7 @@ DROPPED_ACTIONS = {
     "activateAura", "activateAuraWithStacks", "activateAllStatBuffProcAuras", "cancelAura",
     "triggerIcd", "itemSwap", "move", "moveDuration", "damageAmplifier", "resetSequence",
     "customRotation", "warlockNextExhaleTarget", "catOptimalRotationAction", "guardianHotwDpsRotation",
+    "startAttack",
 }
 
 OPS = {"OpEq": "==", "OpNe": "~=", "OpLt": "<", "OpLe": "<=", "OpGt": ">", "OpGe": ">="}
@@ -156,6 +166,10 @@ ECLIPSE = {"NeutralPhase": "neutral", "SolarPhase": "solar", "LunarPhase": "luna
 TOTEM = {"Earth": 2, "Air": 4, "Fire": 1, "Water": 3}  # GetTotemInfo slots
 
 
+# A Warlock's "assigned curse" (a WoWSims setting): Curse of Agony in game.
+ASSIGNED_CURSE = ("CurseOfAgony", 980)
+
+
 class Unsupported(Exception):
     pass
 
@@ -164,7 +178,7 @@ def parse_const(val):
     v = str(val).strip()
     if v in ("true", "false"):
         return v == "true"
-    m = re.fullmatch(r"(-?[0-9.]+)\s*(ms|s|%)?", v)
+    m = re.fullmatch(r"(-?[0-9.]+)\s*(ms|s|m|h|%)?", v)
     if not m:
         raise Unsupported("const:" + v)
     n = float(m.group(1))
@@ -173,6 +187,10 @@ def parse_const(val):
         n = n / 1000.0
     elif unit == "%":
         n = n / 100.0
+    elif unit == "m":
+        n = n * 60.0
+    elif unit == "h":
+        n = n * 3600.0
     return int(n) if n == int(n) and unit != "%" and unit != "ms" else n
 
 
@@ -222,6 +240,10 @@ class Converter:
 
         if kind == "const":
             return parse_const(body.get("val", "0"))
+        if kind == "warlockIsAssignedCurse":
+            # WoWSims' curse setting; in game the assigned curse is Curse of Agony
+            self.approximated["warlockIsAssignedCurse"] += 1
+            return body.get("curseType") == ASSIGNED_CURSE[0]
         if kind == "variableRef":
             name = body.get("name")
             if name in ctx["placeholders"]:
@@ -284,6 +306,8 @@ class Converter:
             out["unit"] = unit_of(body.get("sourceUnit"), "player")
         if kind == "isExecutePhase":
             out["pct"] = EXECUTE.get(body.get("threshold"), 0.2)
+        if kind == "targetIsMobType":
+            out["mob"] = str(body.get("mobType", "")).replace("MobType", "").lower()
         if "runeType" in body:
             out["rune"] = RUNE_TYPE.get(body["runeType"], "blood")
         if "runeSlot" in body:
@@ -312,6 +336,8 @@ class Converter:
             return
         kind = keys[0]
         body = act[kind] if isinstance(act[kind], dict) else {}
+        if kind == "castWarlockAssignedCurse":
+            kind, body = "castSpell", {"spellId": {"spellId": ASSIGNED_CURSE[1]}}
 
         def with_cond(extra):
             if cond is None:

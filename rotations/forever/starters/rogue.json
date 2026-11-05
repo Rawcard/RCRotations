@@ -1,0 +1,101 @@
+{
+ "type": "TypeAPL",
+ "priorityList": [
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 5171
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 5171
+         }
+        }
+       },
+       {
+        "cmp": {
+         "op": "OpGe",
+         "lhs": {
+          "currentComboPoints": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "2"
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 2098
+     }
+    },
+    "condition": {
+     "or": {
+      "vals": [
+       {
+        "cmp": {
+         "op": "OpGe",
+         "lhs": {
+          "currentComboPoints": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "4"
+          }
+         }
+        }
+       },
+       {
+        "and": {
+         "vals": [
+          {
+           "cmp": {
+            "op": "OpGe",
+            "lhs": {
+             "currentComboPoints": {}
+            },
+            "rhs": {
+             "const": {
+              "val": "1"
+             }
+            }
+           }
+          },
+          {
+           "isExecutePhase": {
+            "threshold": "E20"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 1752
+     }
+    }
+   }
+  }
+ ]
+}

@@ -332,6 +332,12 @@ C_Spell = {
 	GetSpellPowerCost = function() return {} end,
 	SpellHasRange = function() return true end,
 	GetSpellLink = function(id) return "|Hspell:" .. tostring(id) .. "|h[Spell]|h" end,
+	-- DoTs and debuffs (the starters' and common ones)
+	IsSpellHarmful = function(id)
+		local H = { [172] = true, [980] = true, [348] = true, [589] = true, [8921] = true, [8050] = true,
+			[1978] = true, [1130] = true, [772] = true, [1490] = true, [17862] = true, [5570] = true, [770] = true }
+		return H[id] == true
+	end,
 }
 C_SpellBook = {
 	GetNumSpellBookSkillLines = function() return 0 end,

@@ -28,6 +28,7 @@ Options.lua
 Glow.lua
 Rotations.lua
 SimData_Mists.lua
+SimData_Forever.lua
 Sim.lua
 SimImport.lua
 Buffs.lua

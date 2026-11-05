@@ -179,8 +179,12 @@ function Sim.ShowPicker(force)
 		end
 		return false
 	end
+	local forever = ns.GAME == "forever" and #list > 0
 	if not force then
-		if #list == 0 and ns.UsingBuiltInList and ns.UsingBuiltInList() then
+		if forever then
+			-- WoW Forever: Auto picks for you; the picker opens with /rcr apl.
+			return false
+		elseif #list == 0 and ns.UsingBuiltInList and ns.UsingBuiltInList() then
 			-- WoW Forever: the built-in Forever Rotation list is in use; no prompt.
 			return false
 		elseif #list == 0 then
@@ -207,6 +211,18 @@ function Sim.ShowPicker(force)
 	frame.sub:SetText(name and T("SIM_PICK_TITLE", "Choose your %s rotation"):format(name) or T("SIM_PICK_TITLE_GENERIC", "Choose your rotation"))
 	frame.hint:SetText(T("SIM_PICK_HINT", "Saved for this character. Change it any time with /rcr apl."))
 	local width = 300
+	-- Forever: "Auto" first (starter below level 20, then the closest build to
+	-- your talents), then every rotation
+	local entries = {}
+	if forever then
+		local autoRot = Sim.AutoPick and Sim.AutoPick(list, token)
+		entries[1] = { auto = true, file = Sim.AUTO,
+			name = T("SIM_PICK_AUTO", "Auto: %s"):format(autoRot and autoRot.name or T("SIM_PICK_AUTO_BUILTIN", "built-in list")) }
+	end
+	for _, rot in ipairs(list) do
+		entries[#entries + 1] = rot
+	end
+	list = entries
 	for i, rot in ipairs(list) do
 		local btn = buttonAt(i)
 		btn:ClearAllPoints()
@@ -236,7 +252,16 @@ function Sim.ShowPicker(force)
 			label = label .. "  |cff888888" .. T("SIM_PICK_DEFAULT", "(default)") .. "|r"
 		end
 		btn.label:SetText(label)
-		btn.selected = (rot == current) and (savedPick(token, spec) ~= nil or #list == 1)
+		if forever then
+			local saved = savedPick(token, spec)
+			if rot.auto then
+				btn.selected = saved == nil or saved == Sim.AUTO
+			else
+				btn.selected = saved == rot.file
+			end
+		else
+			btn.selected = (rot == current) and (savedPick(token, spec) ~= nil or #list == 1)
+		end
 		styleButton(btn, btn.selected)
 		btn:SetScript("OnClick", function()
 			choose(rot, token, spec)

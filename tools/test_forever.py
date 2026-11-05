@@ -81,6 +81,17 @@ for _, id in pairs(book) do
 		if slot < 60 then slot = slot + 1; ACTION[slot] = id end
 	end
 end
+-- ...and every spell its bundled WoWSims Forever rotations use (in game, every
+-- rank shares a name and the addon uses the rank you have)
+local bundled = ns.SimData and ns.SimData.specs and ns.SimData.specs[CLASS_FILE]
+for _, rot in ipairs(bundled and bundled[0] or {}) do
+	for _, it in ipairs(rot.list or {}) do
+		if it.id and not KNOWN[it.id] then
+			KNOWN[it.id] = true
+			if slot < 120 then slot = slot + 1; ACTION[slot] = it.id end
+		end
+	end
+end
 if ns.API and ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
 if ns.GlowInvalidate then pcall(ns.GlowInvalidate) end
 fire("ACTIONBAR_SLOT_CHANGED", 0)
@@ -296,6 +307,83 @@ local missing = {}
 for k in pairs(MISSING) do missing[#missing + 1] = k end
 table.sort(missing)
 report.missing = table.concat(missing, " ")
+-- Auto rotation: the starter below level 20, then the WoWSims Forever build
+-- closest to your talents (for your playstyle); healing uses the built-in list
+do
+	local Sim = ns.Sim
+	local list, token = Sim.Rotations()
+	assert(list and #list >= 2, "Forever: bundled rotations for " .. CLASS_FILE)
+	assert(list[1].starter, "the starter comes first")
+	local roleWas, lvl, tabs = ns.db.role, UnitLevel, GetTalentTabInfo
+	local level, pts = 10, { 0, 0, 0 }
+	UnitLevel = function() return level end
+	GetNumTalentTabs = function() return 3 end
+	GetTalentTabInfo = function(i) return "Tree" .. i, nil, pts[i] end
+	local function pick() Sim.InvalidateTalents() return Sim.AutoPick(list, token) end
+	ns.db.simPick = nil
+	assert(Sim.IsAuto(token, 0), "Auto is the default")
+	ns.db.role = roles[1]
+	assert(pick() == list[1], "level 10: the starter")
+	-- the starter suggests a spell in a fight
+	TARGET, COMBAT = true, true
+	fire("PLAYER_TARGET_CHANGED")
+	NOW = NOW + 20
+	local sq = ns.BuildQueue()
+	assert(sq[1] and sq[1] ~= 6603, "level 10 starter: suggests a spell (got " .. tostring(sq[1]) .. ")")
+	report.starter = sq[1]
+	-- a DoT you just cast isn't suggested again while debuffs are hidden
+	if CLASS_FILE == "WARLOCK" then
+		AURAS_SECRET = true
+		local first = ns.BuildQueue()[1]
+		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-dot", first)
+		NOW = NOW + 1.6
+		local again = ns.BuildQueue()[1]
+		AURAS_SECRET = false
+		assert(first and again ~= first, "hidden debuffs: " .. tostring(first) .. " suggested again right after casting it")
+	end
+	level = 60
+	local defaultRole = ({ DRUID = "hybrid", HUNTER = "range", SHAMAN = "caster" })[CLASS_FILE] or "damage"
+	local checked = 0
+	for _, rot in ipairs(list) do
+		if not rot.starter and rot.talents then
+			ns.db.role = (rot.role == "damage") and defaultRole or rot.role
+			pts = { rot.talents[1], rot.talents[2], rot.talents[3] }
+			local got = pick()
+			assert(got, "level 60 " .. rot.name .. ": something picked")
+			local same = got == rot or (got.talents and got.talents[1] == pts[1] and got.talents[2] == pts[2] and got.talents[3] == pts[3])
+			assert(same, ("level 60 with %s talents (%d/%d/%d): picked %s"):format(rot.name, pts[1], pts[2], pts[3], tostring(got.name)))
+			checked = checked + 1
+		end
+	end
+	-- healing: no WoWSims healer rotation, the built-in heal list stays
+	local hasHeal = false
+	for _, r in ipairs(roles) do if r == "heal" then hasHeal = true end end
+	if hasHeal then
+		ns.db.role = "heal"
+		assert(pick() == nil, "heal playstyle: built-in list")
+	end
+	-- Paladin playstyles name a build
+	if CLASS_FILE == "PALADIN" then
+		pts = { 0, 0, 0 }
+		ns.db.role = "twist"
+		assert(pick().style == "twist", "Seal Twist playstyle: the Unsealed Wrath build")
+		ns.db.role = "shockadin"
+		assert(pick().style == "shockadin", "Shockadin playstyle: the Holy Shock build")
+	end
+	-- picker: Auto first; /rcr apl cycles Auto -> each rotation -> Auto
+	ns.db.role = roles[1]
+	step("picker", Sim.ShowPicker, true)
+	local seenAuto = false
+	for _ = 1, #list + 1 do
+		local _, _, isAuto = Sim.Cycle()
+		if isAuto then seenAuto = true end
+	end
+	assert(seenAuto and Sim.IsAuto(token, 0), "cycling comes back to Auto")
+	UnitLevel, GetTalentTabInfo = lvl, tabs
+	Sim.InvalidateTalents()
+	ns.db.role = roleWas
+	report.auto = checked
+end
 -- several enemies in a fight: the enemy count and the auto AoE switch, also
 -- with hostility, combat state and range hidden (WoW Forever in combat)
 do

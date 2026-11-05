@@ -12,7 +12,8 @@
   (Consecration, Whirlwind, Swipe, your own "enemies within X yards" rules...) counted none and
   never showed. The enemy count now uses your enemy nameplates in the fight when the distance
   can't be checked, and it also works when Forever hides whether a unit is hostile or in combat.
-  Nameplates must be on.
+  Enemy nameplates have to be turned on, but they can be invisible (shrunk to nothing or hidden):
+  the addon only needs them to exist, not to be seen.
 
 # 1.5.2
 

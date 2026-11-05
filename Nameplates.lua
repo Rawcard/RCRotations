@@ -16,6 +16,9 @@ ns.Plates = Plates
 
 local HIDDEN = {
 	nameplateShowEnemies = "1",
+	-- see enemy names (and count them for multi-target) from further away;
+	-- the game caps it at its own maximum
+	nameplateMaxDistance = "60",
 }
 
 local pending
@@ -131,17 +134,23 @@ local function addonExtras(uf)
 	return out
 end
 
--- Name color the way Blizzard's nameplates do it: red for hostile, yellow for
--- neutral, grey once someone else has tagged it.
+-- Name color: red for hostile, yellow for neutral, and purple once someone
+-- else has tagged it (Blizzard uses grey, which reads as dead).
+local TAPPED = { 0.72, 0.45, 1 }
+Plates.TAPPED = TAPPED
 local function nameColor(unit)
 	if unit then
 		local ok, denied = pcall(UnitIsTapDenied or function() end, unit)
 		if ok and not secret(denied) and denied then
-			return 0.5, 0.5, 0.5
+			return TAPPED[1], TAPPED[2], TAPPED[3]
 		end
 		if UnitSelectionColor then
 			local ok2, r, g, b = pcall(UnitSelectionColor, unit)
-			if ok2 and type(r) == "number" then
+			if ok2 and type(r) == "number" and not secret(r) and not secret(g) and not secret(b) then
+				-- the game's grey for a tagged mob
+				if math.abs(r - g) < 0.05 and math.abs(g - b) < 0.05 and r > 0.3 and r < 0.7 then
+					return TAPPED[1], TAPPED[2], TAPPED[3]
+				end
 				return r, g, b
 			end
 		end
@@ -152,6 +161,8 @@ local function nameColor(unit)
 	end
 	return 1, 0, 0
 end
+
+Plates.NameColor = nameColor
 
 -- ElvUI places its name at the left end of its own health bar, and keeps
 -- putting it back there. So while bars are hidden its name is faded out and
@@ -528,12 +539,12 @@ function Plates.Apply()
 		end
 	end
 	if on() then
-		if not ns.db.plateBackup then
-			local backup = {}
-			for name in pairs(HIDDEN) do
-				backup[name] = getCVar(name)
+		ns.db.plateBackup = ns.db.plateBackup or {}
+		-- remember your own value of each setting first (also ones added later)
+		for name in pairs(HIDDEN) do
+			if ns.db.plateBackup[name] == nil then
+				ns.db.plateBackup[name] = getCVar(name)
 			end
-			ns.db.plateBackup = backup
 		end
 		for name, value in pairs(HIDDEN) do
 			setCVar(name, value)

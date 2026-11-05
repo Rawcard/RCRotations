@@ -407,7 +407,7 @@ C_UnitAuras = {
 }
 AuraUtil = { FindAuraByName = function() return nil end, ForEachAura = function() end }
 C_CVar = { GetCVar = function(k) return CVARS[k] end, SetCVar = function(k, v) CVARS[k] = v end }
-CVARS = { nameplateShowEnemies = "0" }
+CVARS = { nameplateShowEnemies = "0", nameplateMaxDistance = "41" }
 function GetCVar(k) return CVARS[k] end
 function SetCVar(k, v) CVARS[k] = v end
 C_AddOns = { IsAddOnLoaded = function() return false end, GetAddOnMetadata = function(_, k) if k == "Version" then return "1.5.1" end end }

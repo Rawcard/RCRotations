@@ -1,4 +1,11 @@
-1.5.5
+1.5.6
+
+# 1.5.6
+
+- Enemy names only (/rcr plates): names show from further away (the game's longest nameplate
+  distance; your own setting comes back when you turn the option off), so you see them, and the
+  addon counts them for multi-target, sooner.
+- A mob someone else has tagged now has a purple name instead of grey, since grey looks dead.
 
 # 1.5.5
 

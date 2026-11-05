@@ -188,6 +188,21 @@ SECRET_BOOLS, COMBAT = false, false
 fire("PLAYER_REGEN_ENABLED")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "out of combat: enemy plate hidden (bar, level, health text, icons)")
+assert(CVARS.nameplateMaxDistance == "60", "names seen from further away (nameplateMaxDistance 60)")
+do -- a mob someone else tagged: purple, not grey (grey reads as dead)
+	local wasTap, wasSel = UnitIsTapDenied, UnitSelectionColor
+	UnitIsTapDenied = function() return true end
+	local r, g, b = ns.Plates.NameColor("nameplate1")
+	assert(r == ns.Plates.TAPPED[1] and g == ns.Plates.TAPPED[2] and b == ns.Plates.TAPPED[3], "tagged mob: purple name")
+	UnitIsTapDenied = function() return false end
+	UnitSelectionColor = function() return 0.5, 0.5, 0.5 end -- the game's grey
+	r, g, b = ns.Plates.NameColor("nameplate1")
+	assert(r == ns.Plates.TAPPED[1], "tagged mob (game's grey): purple name")
+	UnitSelectionColor = function() return 1, 0, 0 end
+	r, g, b = ns.Plates.NameColor("nameplate1")
+	assert(r == 1 and g == 0 and b == 0, "hostile mob: red name")
+	UnitIsTapDenied, UnitSelectionColor = wasTap, wasSel
+end
 assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: the enemy name still shows")
 local eq = PLATES_LIST[3].unitFrame.QuestIcons
 local elvName = PLATES_LIST[3].rcrName
@@ -221,6 +236,7 @@ end
 step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
+assert(CVARS.nameplateMaxDistance == "41", "option off: your own nameplate distance back")
 assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
 assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back (centered on their frame when the anchor couldn't be read)")
 step("menu", ns.ToggleOptions)

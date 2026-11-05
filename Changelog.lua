@@ -2,6 +2,13 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.6",
+		items = {
+			"Enemy names only (/rcr plates): names show from further away (the game's longest nameplate distance; your own setting comes back when you turn the option off), so you see them, and the addon counts them for multi-target, sooner.",
+			"A mob someone else has tagged now has a purple name instead of grey, since grey looks dead.",
+		},
+	},
+	{
 		version = "1.5.5",
 		items = {
 			"Blessing of Kings (and other talents you didn't take) are no longer suggested. WoW Forever's spellbook lists spells you haven't learned too, greyed out or inside a flyout (the Paladin \"Blessings\" button), and the addon counted those as known.",
@@ -24,13 +31,6 @@ ns.CHANGELOG = {
 			"WoW Forever: multi-target spells work in fights again. Forever doesn't let addons check how close enemies are during combat, so spells that need several enemies within a few yards (Consecration, Whirlwind, Swipe, your own \"enemies within X yards\" rules...) counted none and never showed. The enemy count now uses your enemy nameplates in the fight when the distance can't be checked, and it also works when Forever hides whether a unit is hostile or in combat. Enemy nameplates have to be turned on, but they can be invisible (shrunk to nothing or hidden): the addon only needs them to exist, not to be seen.",
 			"Enemy names only (/rcr plates) works on WoW Forever's new nameplates. They showed the whole plate (health bar, level, health number, icons). Now only the enemy's name shows, above the character, and it stays that way when the game updates the plate. Quest and loot icons sit right beside the name instead of far out at the ends of the hidden bar (Blizzard and ElvUI nameplates).",
 			"WoW Forever: missing buff reminders above the main icon stay up in combat. Forever hides your buffs from addons during a fight, so they used to vanish. Now the ones missing when the fight started stay, and each goes away as soon as you cast it.",
-		},
-	},
-	{
-		version = "1.5.2",
-		items = {
-			"Wrath Titan Reforged (client 3.80) is listed as supported, so CurseForge offers RCRotations to Titan Reforged players. It works there like on Wrath Classic: import a rotation from wowsims.com or make one in the Workshop app.",
-			"The GitHub release and test jobs use GitHub's newer Node 24 actions (no more Node.js 20 warning).",
 		},
 	},
 }

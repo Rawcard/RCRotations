@@ -1,0 +1,527 @@
+{
+  "type": "TypeAPL",
+  "prepullActions": [
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14325,
+            "rank": 4
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-22s"
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14322,
+            "rank": 6
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-20s"
+        }
+      }
+    },
+    {
+      "action": {
+        "move": {
+          "rangeFromTarget": {
+            "variableRef": {
+              "name": "Pull range"
+            }
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-19s"
+        }
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Weave",
+      "actions": [
+        {
+          "action": {
+            "condition": {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "unitDistance": {
+                    "sourceUnit": {
+                      "type": "Self"
+                    }
+                  }
+                },
+                "rhs": {
+                  "const": {
+                    "val": "5"
+                  }
+                }
+              }
+            },
+            "startAttack": {}
+          }
+        },
+        {
+          "notes": "In melee with the GCD about to come up: wait for it, so the melee key goes out before I leave.",
+          "action": {
+            "condition": {
+              "and": {
+                "vals": [
+                  {
+                    "cmp": {
+                      "op": "OpLe",
+                      "lhs": {
+                        "unitDistance": {
+                          "sourceUnit": {
+                            "type": "Self"
+                          }
+                        }
+                      },
+                      "rhs": {
+                        "const": {
+                          "val": "5"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpGt",
+                      "lhs": {
+                        "gcdTimeToReady": {}
+                      },
+                      "rhs": {
+                        "const": {
+                          "val": "0s"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpLe",
+                      "lhs": {
+                        "gcdTimeToReady": {}
+                      },
+                      "rhs": {
+                        "const": {
+                          "val": "400ms"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "wait": {
+              "duration": {
+                "gcdTimeToReady": {}
+              }
+            }
+          }
+        },
+        {
+          "notes": "In melee with Strider Kick about to come up: wait for it.",
+          "action": {
+            "condition": {
+              "and": {
+                "vals": [
+                  {
+                    "cmp": {
+                      "op": "OpLe",
+                      "lhs": {
+                        "unitDistance": {
+                          "sourceUnit": {
+                            "type": "Self"
+                          }
+                        }
+                      },
+                      "rhs": {
+                        "const": {
+                          "val": "5"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "spellIsKnown": {
+                      "spellId": {
+                        "spellId": 1317257,
+                        "rank": 1
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpLe",
+                      "lhs": {
+                        "spellCurrentCost": {
+                          "spellId": {
+                            "spellId": 1317257,
+                            "rank": 1
+                          }
+                        }
+                      },
+                      "rhs": {
+                        "currentMana": {}
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpGt",
+                      "lhs": {
+                        "max": {
+                          "vals": [
+                            {
+                              "spellTimeToReady": {
+                                "spellId": {
+                                  "spellId": 1317257,
+                                  "rank": 1
+                                }
+                              }
+                            },
+                            {
+                              "gcdTimeToReady": {}
+                            }
+                          ]
+                        }
+                      },
+                      "rhs": {
+                        "const": {
+                          "val": "0s"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "cmp": {
+                      "op": "OpLe",
+                      "lhs": {
+                        "max": {
+                          "vals": [
+                            {
+                              "spellTimeToReady": {
+                                "spellId": {
+                                  "spellId": 1317257,
+                                  "rank": 1
+                                }
+                              }
+                            },
+                            {
+                              "gcdTimeToReady": {}
+                            }
+                          ]
+                        }
+                      },
+                      "rhs": {
+                        "const": {
+                          "val": "400ms"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "wait": {
+              "duration": {
+                "max": {
+                  "vals": [
+                    {
+                      "spellTimeToReady": {
+                        "spellId": {
+                          "spellId": 1317257,
+                          "rank": 1
+                        }
+                      }
+                    },
+                    {
+                      "gcdTimeToReady": {}
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        {
+          "notes": "I swung since my last Auto Shot: walk out to my spot and shoot.",
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "cmp": {
+                    "op": "OpLe",
+                    "lhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "RangedAuto"
+                      }
+                    },
+                    "rhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "MainHandAuto"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "move": {
+              "rangeFromTarget": {
+                "variableRef": {
+                  "name": "Shoot spot"
+                }
+              }
+            }
+          }
+        },
+        {
+          "notes": "Auto Shot went off since my last swing: walk in and swing.",
+          "action": {
+            "condition": {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "autoTimeSinceLast": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "autoTimeSinceLast": {
+                    "autoType": "MainHandAuto"
+                  }
+                }
+              }
+            },
+            "move": {
+              "rangeFromTarget": {
+                "variableRef": {
+                  "name": "Melee spot"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Walk in",
+      "actions": [
+        {
+          "notes": "Walk to my spot, looking again every reaction time. Stop while my Auto Shot's windup is close or running, and react to each shot before walking on.",
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "and": {
+                    "vals": [
+                      {
+                        "spellInRange": {
+                          "spellId": {
+                            "spellId": 14287,
+                            "rank": 8
+                          }
+                        }
+                      },
+                      {
+                        "or": {
+                          "vals": [
+                            {
+                              "variableRef": {
+                                "name": "Windup close"
+                              }
+                            },
+                            {
+                              "variableRef": {
+                                "name": "Just shot"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "move": {
+              "rangeFromTarget": {
+                "variableRef": {
+                  "name": "Shoot spot"
+                }
+              },
+              "recheckWhileMoving": true
+            }
+          }
+        },
+        {
+          "notes": "Standing for my Auto Shot.",
+          "action": {
+            "wait": {
+              "duration": {
+                "inputDelay": {}
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "valueVariables": [
+    {
+      "name": "Ranged range",
+      "value": {
+        "const": {
+          "val": "13.19"
+        }
+      }
+    },
+    {
+      "name": "Walk-in range",
+      "value": {
+        "const": {
+          "val": "4.99"
+        }
+      }
+    },
+    {
+      "name": "Melee spot",
+      "value": {
+        "min": {
+          "vals": [
+            {
+              "variableRef": {
+                "name": "Walk-in range"
+              }
+            },
+            {
+              "const": {
+                "val": "4.99"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Not weaving yet",
+      "value": {
+        "cmp": {
+          "op": "OpGt",
+          "lhs": {
+            "autoTimeSinceLast": {
+              "autoType": "MainHandAuto"
+            }
+          },
+          "rhs": {
+            "currentTime": {}
+          }
+        }
+      }
+    },
+    {
+      "name": "Shoot spot",
+      "value": {
+        "max": {
+          "vals": [
+            {
+              "variableRef": {
+                "name": "Ranged range"
+              }
+            },
+            {
+              "const": {
+                "val": "11.67"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Pull range",
+      "value": {
+        "const": {
+          "val": "25"
+        }
+      }
+    },
+    {
+      "name": "Windup close",
+      "value": {
+        "or": {
+          "vals": [
+            {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "inputDelay": {}
+                }
+              }
+            },
+            {
+              "cmp": {
+                "op": "OpGe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "math": {
+                    "op": "OpSub",
+                    "lhs": {
+                      "autoSwingTime": {
+                        "autoType": "Ranged"
+                      }
+                    },
+                    "rhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "RangedAuto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Just shot",
+      "value": {
+        "cmp": {
+          "op": "OpLt",
+          "lhs": {
+            "autoTimeSinceLast": {
+              "autoType": "RangedAuto"
+            }
+          },
+          "rhs": {
+            "inputDelay": {}
+          }
+        }
+      }
+    }
+  ]
+}

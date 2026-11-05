@@ -1,0 +1,148 @@
+{
+  "type": "TypeAPL",
+  "groups": [
+    {
+      "name": "Walk in",
+      "actions": [
+        {
+          "notes": "Walk to my spot, looking again every reaction time. Stop while my Auto Shot's windup is close or running, and react to each shot before walking on.",
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "and": {
+                    "vals": [
+                      {
+                        "spellInRange": {
+                          "spellId": {
+                            "spellId": 14287,
+                            "rank": 8
+                          }
+                        }
+                      },
+                      {
+                        "or": {
+                          "vals": [
+                            {
+                              "variableRef": {
+                                "name": "Windup close"
+                              }
+                            },
+                            {
+                              "variableRef": {
+                                "name": "Just shot"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "move": {
+              "rangeFromTarget": {
+                "variableRef": {
+                  "name": "Shoot spot"
+                }
+              },
+              "recheckWhileMoving": true
+            }
+          }
+        },
+        {
+          "notes": "Standing for my Auto Shot.",
+          "action": {
+            "wait": {
+              "duration": {
+                "inputDelay": {}
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "valueVariables": [
+    {
+      "name": "Shoot spot",
+      "value": {
+        "const": {
+          "val": "12"
+        }
+      }
+    },
+    {
+      "name": "Pull range",
+      "value": {
+        "const": {
+          "val": "25"
+        }
+      }
+    },
+    {
+      "name": "Windup close",
+      "value": {
+        "or": {
+          "vals": [
+            {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "inputDelay": {}
+                }
+              }
+            },
+            {
+              "cmp": {
+                "op": "OpGe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "math": {
+                    "op": "OpSub",
+                    "lhs": {
+                      "autoSwingTime": {
+                        "autoType": "Ranged"
+                      }
+                    },
+                    "rhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "RangedAuto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Just shot",
+      "value": {
+        "cmp": {
+          "op": "OpLt",
+          "lhs": {
+            "autoTimeSinceLast": {
+              "autoType": "RangedAuto"
+            }
+          },
+          "rhs": {
+            "inputDelay": {}
+          }
+        }
+      }
+    }
+  ]
+}

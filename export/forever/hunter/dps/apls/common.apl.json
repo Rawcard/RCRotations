@@ -1,0 +1,76 @@
+{
+  "type": "TypeAPL",
+  "valueVariables": [
+    {
+      "name": "Pull range",
+      "value": {
+        "const": {
+          "val": "25"
+        }
+      }
+    },
+    {
+      "name": "Windup close",
+      "value": {
+        "or": {
+          "vals": [
+            {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "inputDelay": {}
+                }
+              }
+            },
+            {
+              "cmp": {
+                "op": "OpGe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "math": {
+                    "op": "OpSub",
+                    "lhs": {
+                      "autoSwingTime": {
+                        "autoType": "Ranged"
+                      }
+                    },
+                    "rhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "RangedAuto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Just shot",
+      "value": {
+        "cmp": {
+          "op": "OpLt",
+          "lhs": {
+            "autoTimeSinceLast": {
+              "autoType": "RangedAuto"
+            }
+          },
+          "rhs": {
+            "inputDelay": {}
+          }
+        }
+      }
+    }
+  ]
+}

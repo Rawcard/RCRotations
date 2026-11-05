@@ -1,0 +1,124 @@
+{
+  "type": "TypeAPL",
+  "prepullActions": [
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14325,
+            "rank": 4
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-22s"
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14322,
+            "rank": 6
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-20s"
+        }
+      }
+    },
+    {
+      "action": {
+        "move": {
+          "rangeFromTarget": {
+            "variableRef": {
+              "name": "Pull range"
+            }
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-19s"
+        }
+      }
+    }
+  ],
+  "valueVariables": [
+    {
+      "name": "Pull range",
+      "value": {
+        "const": {
+          "val": "25"
+        }
+      }
+    },
+    {
+      "name": "Windup close",
+      "value": {
+        "or": {
+          "vals": [
+            {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "inputDelay": {}
+                }
+              }
+            },
+            {
+              "cmp": {
+                "op": "OpGe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "math": {
+                    "op": "OpSub",
+                    "lhs": {
+                      "autoSwingTime": {
+                        "autoType": "Ranged"
+                      }
+                    },
+                    "rhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "RangedAuto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Just shot",
+      "value": {
+        "cmp": {
+          "op": "OpLt",
+          "lhs": {
+            "autoTimeSinceLast": {
+              "autoType": "RangedAuto"
+            }
+          },
+          "rhs": {
+            "inputDelay": {}
+          }
+        }
+      }
+    }
+  ]
+}

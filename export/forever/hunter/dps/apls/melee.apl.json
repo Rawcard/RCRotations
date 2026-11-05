@@ -1,0 +1,392 @@
+{
+  "type": "TypeAPL",
+  "prepullActions": [
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14325,
+            "rank": 4
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-22s"
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 1299447,
+            "rank": 4
+          }
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-20s"
+        }
+      }
+    },
+    {
+      "action": {
+        "groupReference": {
+          "groupName": "Move to starting range"
+        }
+      },
+      "doAtValue": {
+        "const": {
+          "val": "-19s"
+        }
+      }
+    }
+  ],
+  "priorityList": [
+    {
+      "action": {
+        "condition": {
+          "cmp": {
+            "op": "OpGe",
+            "lhs": {
+              "currentTime": {}
+            },
+            "rhs": {
+              "const": {
+                "val": "5s"
+              }
+            }
+          }
+        },
+        "autocastOtherCooldowns": {}
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14266,
+            "tag": 1
+          }
+        }
+      }
+    },
+    {
+      "action": {
+        "condition": {
+          "not": {
+            "val": {
+              "auraIsActive": {
+                "sourceUnit": {
+                  "type": "CurrentTarget"
+                },
+                "auraId": {
+                  "spellId": 14325
+                }
+              }
+            }
+          }
+        },
+        "castSpell": {
+          "spellId": {
+            "spellId": 14325,
+            "rank": 4
+          }
+        }
+      }
+    },
+    {
+      "notes": "Start of the fight: walk into melee, shooting on the way without losing an Auto Shot.",
+      "action": {
+        "condition": {
+          "cmp": {
+            "op": "OpGt",
+            "lhs": {
+              "unitDistance": {
+                "sourceUnit": {
+                  "type": "Self"
+                }
+              }
+            },
+            "rhs": {
+              "variableRef": {
+                "name": "Melee range"
+              }
+            }
+          }
+        },
+        "groupReference": {
+          "groupName": "Walk in"
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14271,
+            "rank": 4
+          }
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 1317257,
+            "rank": 1
+          }
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14305,
+            "rank": 5
+          }
+        }
+      }
+    },
+    {
+      "action": {
+        "condition": {
+          "variableRef": {
+            "name": "Use Summon Hawk"
+          }
+        },
+        "castSpell": {
+          "spellId": {
+            "spellId": 1293527,
+            "rank": 4
+          }
+        }
+      }
+    },
+    {
+      "action": {
+        "castSpell": {
+          "spellId": {
+            "spellId": 14268,
+            "rank": 3
+          }
+        }
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Move to starting range",
+      "actions": [
+        {
+          "action": {
+            "move": {
+              "rangeFromTarget": {
+                "variableRef": {
+                  "name": "Pull range"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Walk in",
+      "actions": [
+        {
+          "notes": "Instants on the way in.",
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "dotIsActive": {
+                    "spellId": {
+                      "spellId": 13555,
+                      "rank": 8
+                    }
+                  }
+                }
+              }
+            },
+            "castSpell": {
+              "spellId": {
+                "spellId": 13555,
+                "rank": 8
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "castSpell": {
+              "spellId": {
+                "spellId": 14287,
+                "rank": 8
+              }
+            }
+          }
+        },
+        {
+          "action": {
+            "castSpell": {
+              "spellId": {
+                "spellId": 2643
+              }
+            }
+          }
+        },
+        {
+          "notes": "Walk into melee, looking again every reaction time. Stop while my Auto Shot's windup is close or running, and react to each shot before walking on.",
+          "action": {
+            "condition": {
+              "not": {
+                "val": {
+                  "and": {
+                    "vals": [
+                      {
+                        "spellInRange": {
+                          "spellId": {
+                            "spellId": 14287,
+                            "rank": 8
+                          }
+                        }
+                      },
+                      {
+                        "or": {
+                          "vals": [
+                            {
+                              "variableRef": {
+                                "name": "Windup close"
+                              }
+                            },
+                            {
+                              "variableRef": {
+                                "name": "Just shot"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "move": {
+              "rangeFromTarget": {
+                "variableRef": {
+                  "name": "Melee range"
+                }
+              },
+              "recheckWhileMoving": true
+            }
+          }
+        },
+        {
+          "notes": "Standing for my Auto Shot.",
+          "action": {
+            "wait": {
+              "duration": {
+                "inputDelay": {}
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "valueVariables": [
+    {
+      "name": "Melee range",
+      "value": {
+        "const": {
+          "val": "5.00"
+        }
+      }
+    },
+    {
+      "name": "Use Summon Hawk",
+      "value": {
+        "const": {
+          "val": "true"
+        }
+      }
+    },
+    {
+      "name": "Pull range",
+      "value": {
+        "const": {
+          "val": "25"
+        }
+      }
+    },
+    {
+      "name": "Windup close",
+      "value": {
+        "or": {
+          "vals": [
+            {
+              "cmp": {
+                "op": "OpLe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "inputDelay": {}
+                }
+              }
+            },
+            {
+              "cmp": {
+                "op": "OpGe",
+                "lhs": {
+                  "autoTimeToNext": {
+                    "autoType": "RangedAuto"
+                  }
+                },
+                "rhs": {
+                  "math": {
+                    "op": "OpSub",
+                    "lhs": {
+                      "autoSwingTime": {
+                        "autoType": "Ranged"
+                      }
+                    },
+                    "rhs": {
+                      "autoTimeSinceLast": {
+                        "autoType": "RangedAuto"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Just shot",
+      "value": {
+        "cmp": {
+          "op": "OpLt",
+          "lhs": {
+            "autoTimeSinceLast": {
+              "autoType": "RangedAuto"
+            }
+          },
+          "rhs": {
+            "inputDelay": {}
+          }
+        }
+      }
+    }
+  ]
+}

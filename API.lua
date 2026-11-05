@@ -105,6 +105,25 @@ local function notLearnedItem(info)
 	return false
 end
 
+-- Is this spell learned, inside a spellbook flyout? (GetFlyoutSlotInfo's
+-- isKnown; a flyout lists spells you don't have too)
+local function flyoutKnows(flyoutID, spellID)
+	if not flyoutID or not GetFlyoutInfo or not GetFlyoutSlotInfo then
+		return false
+	end
+	local ok, _, _, numSlots = pcall(GetFlyoutInfo, flyoutID)
+	if not ok or type(numSlots) ~= "number" then
+		return false
+	end
+	for i = 1, numSlots do
+		local okS, sid, overrideID, isKnown = pcall(GetFlyoutSlotInfo, flyoutID, i)
+		if okS and (sid == spellID or overrideID == spellID) then
+			return isKnown == true
+		end
+	end
+	return false
+end
+
 local function readBookItem(index, bank)
 	if index == nil or bank == nil then
 		return nil, nil
@@ -707,7 +726,14 @@ local function playerKnows(id)
 					local okI, got = pcall(C_SpellBook.GetSpellBookItemInfo, slot, bank or (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0)
 					info = okI and type(got) == "table" and got or nil
 				end
-				if not (info and notLearnedItem(info)) then
+				-- a flyout button (WoW Forever's "Blessings"): it holds every
+				-- blessing, learned or not, so ask the flyout about this spell
+				local flyout = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.Flyout or 4
+				if info and safe(info.itemType, nil) == flyout then
+					if flyoutKnows(safe(info.actionID, nil), id) then
+						return true
+					end
+				elseif not (info and notLearnedItem(info)) then
 					return true
 				end
 			end
@@ -884,8 +910,9 @@ function ns.API.SpellCheck(arg)
 	if okS and slot and SB.GetSpellBookItemInfo then
 		local okI, info = pcall(SB.GetSpellBookItemInfo, slot, bank or 0)
 		if okI and type(info) == "table" then
-			say(("  book slot %s: %s, type %s, passive %s, offspec %s"):format(tostring(slot), tostring(info.name),
-				tostring(info.itemType), tostring(info.isPassive), tostring(info.isOffSpec)))
+			say(("  book slot %s: %s, type %s, passive %s, offspec %s, flyout knows it %s"):format(tostring(slot), tostring(info.name),
+				tostring(info.itemType), tostring(info.isPassive), tostring(info.isOffSpec),
+				tostring(flyoutKnows(info.actionID, id))))
 		end
 	end
 	say("  override " .. ans(C_Spell and C_Spell.GetOverrideSpell, id)

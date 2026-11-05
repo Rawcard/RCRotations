@@ -278,6 +278,8 @@ step("buffs", function()
 		local gsi, wasRole = C_Spell.GetSpellInfo, ns.db.role
 		KNOWN[kings] = nil
 		FUTURE[kings] = true -- greyed out in the spellbook
+		-- ...and in the "Blessings" flyout next to Might, as on WoW Forever
+		FLYOUT = { S.Paladin.BlessingMight, kings }
 		C_Spell.GetSpellInfo = function(id)
 			if id == "Blessing of Kings" then return { name = id, spellID = kings, iconID = 1 } end
 			return gsi(id)
@@ -296,7 +298,7 @@ step("buffs", function()
 			assert(#lines >= 5 and lines[#lines]:find("not known"), "spellcheck: " .. table.concat(lines, " / "))
 			SPELLCHECK = table.concat(lines, "\n")
 		end
-		KNOWN[kings], FUTURE[kings] = true, nil
+		KNOWN[kings], FUTURE[kings], FLYOUT = true, nil, {}
 		ns.API.RebuildSpellBookIndex(true)
 		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
 		ns.db.role = wasRole

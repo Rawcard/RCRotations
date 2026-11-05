@@ -351,16 +351,30 @@ local function book()
 	table.sort(items, function(a, b) return a.id < b.id end)
 	return items
 end
+-- FLYOUT: spells grouped in one spellbook flyout button (WoW Forever's
+-- Paladin "Blessings"); it lists them learned or not
+FLYOUT = {}
+function GetFlyoutInfo(id) if id == 77 then return "Blessings", "", #FLYOUT, true end end
+function GetFlyoutSlotInfo(id, i)
+	local sid = FLYOUT[i]
+	if id == 77 and sid then return sid, sid, KNOWN[sid] == true, C_Spell.GetSpellName(sid) end
+end
 C_SpellBook = {
 	GetNumSpellBookSkillLines = function() return 1 end,
 	GetSpellBookSkillLineInfo = function(i) if i == 1 then return { itemIndexOffset = 0, numSpellBookItems = #book() } end end,
 	GetSpellBookItemInfo = function(i)
+		if i == 999 and #FLYOUT > 0 then return { name = "Blessings", itemType = 4, actionID = 77, isPassive = false, isOffSpec = false } end
 		local it = book()[i]
 		if not it then return nil end
 		return { name = C_Spell.GetSpellName(it.id), spellID = it.id, itemType = it.t, isPassive = false, isOffSpec = false }
 	end,
 	IsSpellInSpellBook = function(id) return KNOWN[id] == true end,
 	FindSpellBookSlotForSpell = function(id, hidden, flyouts, future)
+		if flyouts ~= false then
+			for _, sid in ipairs(FLYOUT) do
+				if sid == id then return 999, 0 end -- the flyout button's slot
+			end
+		end
 		for i, it in ipairs(book()) do
 			if it.id == id and (it.t == 1 or future) then return i, 0 end
 		end

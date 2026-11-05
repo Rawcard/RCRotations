@@ -4,7 +4,7 @@ ns.CHANGELOG = {
 	{
 		version = "1.5.5",
 		items = {
-			"Blessing of Kings (and other talents you didn't take) are no longer suggested. WoW Forever's spellbook also lists spells you haven't learned, greyed out, and the addon counted those as known.",
+			"Blessing of Kings (and other talents you didn't take) are no longer suggested. WoW Forever's spellbook lists spells you haven't learned too, greyed out or inside a flyout (the Paladin \"Blessings\" button), and the addon counted those as known.",
 			"WoW Forever: in combat, Seal of Righteousness (or a DoT) is no longer asked for again right after you cast it. In a fight the game can give addons no buffs or debuffs at all, which read as \"none\"; now what you cast counts until the fight ends.",
 			"/rcr spellcheck <spell>: shows what the game says about whether you know a spell.",
 		},

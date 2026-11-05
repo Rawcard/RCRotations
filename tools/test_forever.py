@@ -288,6 +288,14 @@ step("buffs", function()
 		AURAS.player = {}
 		local m2 = ns.Buffs.Missing()
 		C_Spell.GetSpellInfo = gsi
+		do -- /rcr spellcheck prints every answer, no errors
+			local lines, wasPrint = {}, ns.Print
+			ns.Print = function(t) lines[#lines + 1] = tostring(t) end
+			step("spellcheck", SlashCmdList.RCROT, "spellcheck Blessing of Kings")
+			ns.Print = wasPrint
+			assert(#lines >= 5 and lines[#lines]:find("not known"), "spellcheck: " .. table.concat(lines, " / "))
+			SPELLCHECK = table.concat(lines, "\n")
+		end
 		KNOWN[kings], FUTURE[kings] = true, nil
 		ns.API.RebuildSpellBookIndex(true)
 		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
@@ -610,6 +618,8 @@ def run(cls, cid, no_secrets=False):
     r = g.REPORT
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
         print(g.PLATECHECK)
+    if cls == "PALADIN" and os.environ.get("SHOW_PLATECHECK"):
+        print(g.SPELLCHECK)
     roles = {str(k): int(v) for k, v in r.roles.items()}
     seen = g.BUFFS_SEEN
     buffs = [int(seen[i]) for i in range(1, len(seen) + 1)] if seen else []

@@ -1131,6 +1131,10 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Tick then
 			ns.Tick()
 		end
+	elseif msg:match("^spellcheck") then
+		if ns.API.SpellCheck then
+			ns.API.SpellCheck((msg:gsub("^spellcheck%s*", "")))
+		end
 	elseif msg == "platecheck" then
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()

@@ -834,6 +834,68 @@ function ns.API.Resolve(spellID)
 	return nil
 end
 
+-- /rcr spellcheck <spell name or ID>: every answer the game gives about
+-- whether you know a spell, to find out why the addon thinks you do.
+function ns.API.SpellCheck(arg)
+	local say = ns.Print or print
+	local id = tonumber(arg)
+	if not id and type(arg) == "string" and arg ~= "" then
+		if ns.Spell then
+			for _, class in pairs(ns.Spell) do
+				for _, sid in pairs(type(class) == "table" and class or {}) do
+					local n = type(sid) == "number" and ns.API.SpellName(sid)
+					if type(n) == "string" and n:lower() == arg:lower() then
+						id = sid
+					end
+				end
+			end
+		end
+		id = id or spellIdFromName(arg)
+	end
+	if not id then
+		say("spellcheck: no spell called " .. tostring(arg))
+		return
+	end
+	local function ans(fn, ...)
+		if not fn then
+			return "n/a"
+		end
+		local r = { pcall(fn, ...) }
+		if not r[1] then
+			return "error"
+		end
+		local out = {}
+		for i = 2, math.min(#r, 4) do
+			out[#out + 1] = (readable(r[i]) and tostring(r[i])) or "hidden"
+		end
+		return #out > 0 and table.concat(out, ",") or "nil"
+	end
+	local name = ns.API.SpellName(id)
+	say(("spellcheck %s (%d), playstyle %s, RCRotations %s:"):format(tostring(name), id, tostring(ns.db and ns.db.role),
+		tostring(C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version"))))
+	say("  IsPlayerSpell " .. ans(IsPlayerSpell, id)
+		.. " | IsSpellKnownOrOverridesKnown " .. ans(IsSpellKnownOrOverridesKnown, id)
+		.. " | IsSpellKnown " .. ans(IsSpellKnown, id))
+	local SB = C_SpellBook or {}
+	say("  IsSpellInSpellBook " .. ans(SB.IsSpellInSpellBook, id)
+		.. " | FindSpellBookSlotForSpell " .. ans(SB.FindSpellBookSlotForSpell, id)
+		.. " | learned only " .. ans(SB.FindSpellBookSlotForSpell, id, false, true, false, false))
+	local okS, slot, bank = pcall(SB.FindSpellBookSlotForSpell, id, false, true, true, true)
+	if okS and slot and SB.GetSpellBookItemInfo then
+		local okI, info = pcall(SB.GetSpellBookItemInfo, slot, bank or 0)
+		if okI and type(info) == "table" then
+			say(("  book slot %s: %s, type %s, passive %s, offspec %s"):format(tostring(slot), tostring(info.name),
+				tostring(info.itemType), tostring(info.isPassive), tostring(info.isOffSpec)))
+		end
+	end
+	say("  override " .. ans(C_Spell and C_Spell.GetOverrideSpell, id)
+		.. " | by name " .. tostring(name and spellIdFromName(name))
+		.. " | in book index " .. tostring(spellBookIndex and name and spellBookIndex[normSpellName(name) or ""] or (spellBookIndex and "no" or "not read yet")))
+	resolveCache[id] = nil
+	local r = ns.API.Resolve(id)
+	say(("  => addon says: %s"):format(r and ("KNOWN as " .. tostring(r) .. " " .. tostring(ns.API.SpellName(r))) or "not known"))
+end
+
 function ns.API.Known(spellID)
 	return ns.API.Resolve(spellID) ~= nil
 end

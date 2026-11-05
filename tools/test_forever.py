@@ -178,6 +178,11 @@ fire("PLAYER_REGEN_ENABLED")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "out of combat: enemy plate hidden (bar, level, health text, icons)")
 assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: the enemy name still shows")
+local eq = PLATES_LIST[3].unitFrame.QuestIcons
+local elvName = PLATES_LIST[3].rcrName
+assert(elvName, "ElvUI plate: our name")
+assert(eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
+assert(eq.Item.pts[1][2] == elvName and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, beside the name")
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
 assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
 -- the game anchors it back to the bar: it comes back beside the name
@@ -190,6 +195,7 @@ step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
 assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
+assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back")
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)

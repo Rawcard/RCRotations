@@ -391,6 +391,19 @@ for i, unit in ipairs(PLATES) do
 	if i == 3 then
 		p.unitFrame = { Health = bar(), Name = perm("name"), TargetIndicator = { Shadow = bar(), Spark = bar() } }
 		p.unitFrame.Health.Text = bar()
+		-- ElvUI quest icons: "!" at the right end, the quest item bag at the left end
+		local function icon(x)
+			local t = bar()
+			t.GetNumPoints = function(self) return #self.pts end
+			t.GetPoint = function(self, i) local pt = self.pts[i or 1]; if pt then return unpack(pt) end end
+			t.GetCenter = function() return x, 400 end
+			return t
+		end
+		local qi = perm("questicons")
+		qi.Default, qi.Item = icon(700), icon(300)
+		qi.Default:SetPoint("RIGHT", qi, "RIGHT", 0, 0)
+		qi.Item:SetPoint("LEFT", qi, "LEFT", 0, 0)
+		p.unitFrame.QuestIcons = qi
 	else
 		-- Blizzard plate: a frame with its own bar, level and health text
 		p.UnitFrame = bar()

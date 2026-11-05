@@ -192,7 +192,23 @@ local function iconCandidates(plate, uf)
 	end
 	walk(uf, 1)
 	walk(plate, 2)
-	return out
+	-- ElvUI's quest icons (uf.QuestIcons: Default "!", Item, Loot, Skull, Chat)
+	-- are laid out from the plate's edges; they go beside the name too
+	local forced = {}
+	local q = type(uf.QuestIcons) == "table" and uf.QuestIcons or nil
+	if q then
+		for _, k in ipairs({ "Default", "Item", "Loot", "Skull", "Chat" }) do
+			local r = q[k]
+			if type(r) == "table" and r.SetPoint then
+				forced[r] = true
+				if not seen[r] then
+					seen[r] = true
+					out[#out + 1] = r
+				end
+			end
+		end
+	end
+	return out, forced
 end
 
 local function ignoresParentAlpha(r)
@@ -204,7 +220,14 @@ local function ignoresParentAlpha(r)
 end
 
 -- which side of the plate an icon belongs on, from where the game put it
-local function iconSide(plate, r, points)
+local function iconSide(plate, r, points, byCenter)
+	if byCenter then
+		local ok1, x = pcall(r.GetCenter, r)
+		local ok2, px = pcall(plate.GetCenter, plate)
+		if ok1 and ok2 and type(x) == "number" and type(px) == "number" and not secret(x) and not secret(px) then
+			return x < px and "left" or "right"
+		end
+	end
 	local p = points[1]
 	if p then
 		local rel = tostring(p[3] or "")
@@ -222,37 +245,63 @@ local function iconSide(plate, r, points)
 	return "right"
 end
 
-local function tuck(r, mine)
-	local side = r.rcrSide
-	r.rcrTucking = true
-	pcall(r.ClearAllPoints, r)
-	if side == "left" then
-		pcall(r.SetPoint, r, "RIGHT", mine, "LEFT", -3, 0)
-	else
-		pcall(r.SetPoint, r, "LEFT", mine, "RIGHT", 3, 0)
+-- line the icons up beside the name: left ones going left, right ones going
+-- right, each next to the one before (only the icons showing take a place)
+local function layoutIcons(plate, mine)
+	local prev = { left = mine, right = mine }
+	for _, r in ipairs(plate.rcrIcons or {}) do
+		if r.rcrTucked then
+			local side = r.rcrSide == "left" and "left" or "right"
+			r.rcrTucking = true
+			pcall(r.ClearAllPoints, r)
+			if side == "left" then
+				pcall(r.SetPoint, r, "RIGHT", prev.left, "LEFT", -3, 0)
+			else
+				pcall(r.SetPoint, r, "LEFT", prev.right, "RIGHT", 3, 0)
+			end
+			r.rcrTucking = nil
+			local okS, shown = pcall(r.IsShown, r)
+			if not okS or shown ~= false then
+				prev[side] = r
+			end
+		end
 	end
-	r.rcrTucking = nil
 end
 
 local function tuckIcons(plate, uf, mine, hide)
 	local list = plate.rcrIcons
 	if hide then
 		list = list or {}
-		for _, r in ipairs(iconCandidates(plate, uf)) do
-			if not r.rcrSide and ignoresParentAlpha(r) and r.ClearAllPoints and r.SetPoint and r.GetPoint then
+		local candidates, forced = iconCandidates(plate, uf)
+		for _, r in ipairs(candidates) do
+			if not r.rcrSide and (forced[r] or ignoresParentAlpha(r)) and r.ClearAllPoints and r.SetPoint and r.GetPoint then
 				local points = {}
 				local okN, n = pcall(r.GetNumPoints, r)
 				for i = 1, (okN and tonumber(n)) or 0 do
 					points[i] = { r:GetPoint(i) }
 				end
 				r.rcrPoints = points
-				r.rcrSide = iconSide(plate, r, points)
+				r.rcrSide = iconSide(plate, r, points, forced[r])
 				list[#list + 1] = r
 				-- the game moves them back now and then: tuck them in again
 				if hooksecurefunc then
+					-- an icon appearing or going away: close up the row
+					for _, m in ipairs({ "Show", "Hide" }) do
+						if r[m] then
+							hooksecurefunc(r, m, function()
+								if r.rcrTucked and plate.rcrName and not plate.rcrLaying then
+									plate.rcrLaying = true
+									pcall(layoutIcons, plate, plate.rcrName)
+									plate.rcrLaying = nil
+								end
+							end)
+						end
+					end
 					hooksecurefunc(r, "SetPoint", function(self)
-						if not self.rcrTucking and self.rcrTucked and plate.rcrName then
-							tuck(self, plate.rcrName)
+						if not self.rcrTucking and self.rcrTucked and plate.rcrName and not plate.rcrLaying then
+							plate.rcrLaying = true
+							pcall(layoutIcons, plate, plate.rcrName)
+							plate.rcrLaying = nil
 						end
 					end)
 				end
@@ -261,8 +310,10 @@ local function tuckIcons(plate, uf, mine, hide)
 		plate.rcrIcons = list
 		for _, r in ipairs(list) do
 			r.rcrTucked = true
-			tuck(r, mine)
 		end
+		plate.rcrLaying = true
+		pcall(layoutIcons, plate, mine)
+		plate.rcrLaying = nil
 	elseif list then
 		for _, r in ipairs(list) do
 			if r.rcrTucked then

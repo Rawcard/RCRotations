@@ -178,12 +178,18 @@ fire("PLAYER_REGEN_ENABLED")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "out of combat: enemy plate hidden (bar, level, health text, icons)")
 assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: the enemy name still shows")
+local qi = PLATES_LIST[1].UnitFrame.QuestIcon
+assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
+-- the game anchors it back to the bar: it comes back beside the name
+qi:SetPoint("LEFT", PLATES_LIST[1].UnitFrame.healthBar, "RIGHT", 4, 0)
+assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays beside the name when the game moves it")
 -- the game resets the plate's alpha (range, target change): it stays hidden
 PLATES_LIST[1].UnitFrame:SetAlpha(1)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "plate stays hidden when the game sets its alpha again")
 step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
+assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)

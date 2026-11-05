@@ -11,6 +11,7 @@
 -- bar of each enemy plate as it appears.
 local addonName, ns = ...
 local Plates = {}
+local unpack = unpack or table.unpack
 ns.Plates = Plates
 
 local HIDDEN = {
@@ -156,6 +157,127 @@ end
 -- putting it back there. So while bars are hidden its name is faded out and
 -- RCRotations shows the same name, in the same font with Blizzard's name color, centered on the
 -- game's nameplate frame, which always sits right above the character.
+-- Icons that stay visible on a faded plate (WoW Forever's quest objective and
+-- loot icons ignore the plate's alpha). They sit at the ends of the health bar,
+-- which is hidden, so they'd float far from the name: tuck them in beside our
+-- name instead, and put them back when the option is off.
+local function iconCandidates(plate, uf)
+	local out, seen = {}, {}
+	local function addRegions(f)
+		if f.GetRegions then
+			local ok, regions = pcall(function() return { f:GetRegions() } end)
+			for _, r in ipairs(ok and regions or {}) do
+				if not seen[r] then
+					seen[r] = true
+					out[#out + 1] = r
+				end
+			end
+		end
+	end
+	local function walk(f, depth)
+		if type(f) ~= "table" or not f.GetChildren then
+			return
+		end
+		local ok, kids = pcall(function() return { f:GetChildren() } end)
+		for _, k in ipairs(ok and kids or {}) do
+			if type(k) == "table" and not seen[k] and k ~= uf and not (plate.rcrName and k == plate.rcrName.holder) then
+				seen[k] = true
+				out[#out + 1] = k
+				addRegions(k)
+				if depth < 2 then
+					walk(k, depth + 1)
+				end
+			end
+		end
+	end
+	walk(uf, 1)
+	walk(plate, 2)
+	return out
+end
+
+local function ignoresParentAlpha(r)
+	if not r.IsIgnoringParentAlpha then
+		return false
+	end
+	local ok, yes = pcall(r.IsIgnoringParentAlpha, r)
+	return ok and yes == true
+end
+
+-- which side of the plate an icon belongs on, from where the game put it
+local function iconSide(plate, r, points)
+	local p = points[1]
+	if p then
+		local rel = tostring(p[3] or "")
+		if rel:find("LEFT") then
+			return "left"
+		elseif rel:find("RIGHT") then
+			return "right"
+		end
+	end
+	local ok1, x = pcall(r.GetCenter, r)
+	local ok2, px = pcall(plate.GetCenter, plate)
+	if ok1 and ok2 and type(x) == "number" and type(px) == "number" and not secret(x) and not secret(px) then
+		return x < px and "left" or "right"
+	end
+	return "right"
+end
+
+local function tuck(r, mine)
+	local side = r.rcrSide
+	r.rcrTucking = true
+	pcall(r.ClearAllPoints, r)
+	if side == "left" then
+		pcall(r.SetPoint, r, "RIGHT", mine, "LEFT", -3, 0)
+	else
+		pcall(r.SetPoint, r, "LEFT", mine, "RIGHT", 3, 0)
+	end
+	r.rcrTucking = nil
+end
+
+local function tuckIcons(plate, uf, mine, hide)
+	local list = plate.rcrIcons
+	if hide then
+		list = list or {}
+		for _, r in ipairs(iconCandidates(plate, uf)) do
+			if not r.rcrSide and ignoresParentAlpha(r) and r.ClearAllPoints and r.SetPoint and r.GetPoint then
+				local points = {}
+				local okN, n = pcall(r.GetNumPoints, r)
+				for i = 1, (okN and tonumber(n)) or 0 do
+					points[i] = { r:GetPoint(i) }
+				end
+				r.rcrPoints = points
+				r.rcrSide = iconSide(plate, r, points)
+				list[#list + 1] = r
+				-- the game moves them back now and then: tuck them in again
+				if hooksecurefunc then
+					hooksecurefunc(r, "SetPoint", function(self)
+						if not self.rcrTucking and self.rcrTucked and plate.rcrName then
+							tuck(self, plate.rcrName)
+						end
+					end)
+				end
+			end
+		end
+		plate.rcrIcons = list
+		for _, r in ipairs(list) do
+			r.rcrTucked = true
+			tuck(r, mine)
+		end
+	elseif list then
+		for _, r in ipairs(list) do
+			if r.rcrTucked then
+				r.rcrTucked = nil
+				r.rcrTucking = true
+				pcall(r.ClearAllPoints, r)
+				for _, p in ipairs(r.rcrPoints or {}) do
+					pcall(r.SetPoint, r, unpack(p))
+				end
+				r.rcrTucking = nil
+			end
+		end
+	end
+end
+
 local function ownName(plate, uf, hide, unit)
 	local theirs = (type(uf.Name) == "table" and uf.Name) or (type(uf.name) == "table" and uf.name) or nil
 	local mine = plate.rcrName
@@ -164,6 +286,7 @@ local function ownName(plate, uf, hide, unit)
 			mine:Hide()
 		end
 		fade(theirs, false)
+		tuckIcons(plate, uf, mine, false)
 		return
 	end
 	if not mine then
@@ -220,6 +343,7 @@ local function ownName(plate, uf, hide, unit)
 	mine:Show()
 	-- ours shows exactly when theirs is hidden
 	fade(mine, hide, 1, 0)
+	pcall(tuckIcons, plate, uf, mine, true)
 end
 
 -- Blizzard may set the plate's alpha again (range, target changes): put ours back.

@@ -16,7 +16,8 @@
   the addon only needs them to exist, not to be seen.
 - Enemy names only (/rcr plates) works on WoW Forever's new nameplates. They showed the whole
   plate (health bar, level, health number, icons). Now only the enemy's name shows, above the
-  character, and it stays that way when the game updates the plate.
+  character, and it stays that way when the game updates the plate. Quest and loot icons sit
+  right beside the name instead of far out at the ends of the hidden bar.
 - WoW Forever: missing buff reminders above the main icon stay up in combat. Forever hides your
   buffs from addons during a fight, so they used to vanish. Now the ones missing when the fight
   started stay, and each goes away as soon as you cast it.

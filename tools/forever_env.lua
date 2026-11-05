@@ -396,6 +396,14 @@ for i, unit in ipairs(PLATES) do
 		p.UnitFrame = bar()
 		p.UnitFrame.healthBar, p.UnitFrame.name, p.UnitFrame.unit = bar(), perm("name"), unit
 		p.UnitFrame.LevelText, p.UnitFrame.HealthText = bar(), bar()
+		-- a quest objective icon: ignores the plate's alpha, sits at the bar's right end
+		local q = bar()
+		q.IsIgnoringParentAlpha = function() return true end
+		q.GetNumPoints = function(self) return #self.pts end
+		q.GetPoint = function(self, i) local pt = self.pts[i or 1]; if pt then return unpack(pt) end end
+		q:SetPoint("LEFT", p.UnitFrame.healthBar, "RIGHT", 4, 0)
+		p.UnitFrame.QuestIcon = q
+		p.UnitFrame.GetChildren = function() return p.UnitFrame.healthBar, q end
 	end
 	plateList[i] = p
 end

@@ -63,7 +63,11 @@ local function now()
 end
 
 local function inCombat()
-	return call(UnitAffectingCombat, "player") and true or false
+	local v = call(UnitAffectingCombat, "player")
+	if not readable(v) then
+		return (InCombatLockdown and InCombatLockdown()) and true or false
+	end
+	return v and true or false
 end
 
 local function healthFrac(unit)
@@ -333,8 +337,9 @@ local function scanAuras(unit, filter)
 		end
 	end
 	pass.auras[key] = list
-	-- your buffs are readable: keep the seal tracking in step with them
-	if unit == "player" and filter == "HELPFUL" and API.SyncSeals then
+	-- your buffs are readable (out of combat): keep the seal tracking in step
+	-- with them. Not in combat: there the list can come back empty.
+	if unit == "player" and filter == "HELPFUL" and API.SyncSeals and not inCombat() then
 		local hidden = false
 		for _, a in ipairs(list) do
 			if a.id == nil and a.name == nil then
@@ -353,6 +358,14 @@ end
 local heldPlayerAura, heldTargetAura
 local function findAura(id, unit, mine)
 	unit = unit or "player"
+	-- WoW Forever in combat: your buffs may be hidden or not given at all, so
+	-- your seal (and Unsealed Wrath echoes) come from what you cast
+	if unit == "player" and ns.GAME == "forever" and inCombat() and heldPlayerAura then
+		local tracked = (API.EchoStacks and API.EchoStacks(id) ~= nil) or (API.SealUp and API.SealUp(id) ~= nil)
+		if tracked then
+			return heldPlayerAura(id, true)
+		end
+	end
 	local name = spellName(id)
 	local filters
 	if mine then
@@ -397,8 +410,8 @@ end
 -- Your own buffs while they're hidden: seals from the last one you cast,
 -- Unsealed Wrath echoes counted from your swings, other self-buffs from your
 -- casts (API.HasAura keeps track of those).
-heldPlayerAura = function(id)
-	if not playerAurasHidden() then
+heldPlayerAura = function(id, force)
+	if not force and not playerAurasHidden() then
 		return nil
 	end
 	local stacks = API.EchoStacks and API.EchoStacks(id)
@@ -433,7 +446,8 @@ end
 -- Your debuffs on the target while they're hidden (WoW Forever in combat):
 -- from your casts, as the built-in lists track them (API.HasAura).
 heldTargetAura = function(id)
-	local hidden = false
+	-- hidden entries, or (Forever in combat) maybe no list at all
+	local hidden = ns.GAME == "forever" and inCombat()
 	for _, a in ipairs(scanAuras("target", "HARMFUL")) do
 		if a.id == nil and a.name == nil then
 			hidden = true

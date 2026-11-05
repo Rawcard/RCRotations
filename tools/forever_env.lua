@@ -372,6 +372,8 @@ AURAS = {
 }
 C_UnitAuras = {
 	GetAuraDataByIndex = function(unit, i, filter)
+		-- AURAS_NONE: in combat the game gives addons no auras at all
+		if AURAS_NONE and COMBAT then return nil end
 		local list = AURAS[unit] or {}
 		local harm = type(filter) == "string" and filter:find("HARMFUL")
 		local n = 0

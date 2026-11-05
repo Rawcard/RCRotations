@@ -372,6 +372,18 @@ do
 		NOW = NOW + 1
 		q = ns.BuildQueue()
 		assert(q[1] == 21084, "no seal: asks for Seal of Righteousness (got " .. tostring(q[1]) .. ")")
+		-- in combat with no auras given at all: the seal you just cast counts
+		for _, mode in ipairs({ "hidden", "none" }) do
+			COMBAT, AURAS_SECRET, AURAS_NONE = true, mode == "hidden", mode == "none"
+			NOW = NOW + 1
+			fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-seal-" .. mode, 21084)
+			for _ = 1, 3 do
+				NOW = NOW + 1.5
+				q = ns.BuildQueue()
+				assert(q[1] ~= 21084 and q[1] ~= SOR, "in combat (" .. mode .. " buffs): Seal of Righteousness asked for again right after casting it")
+			end
+		end
+		COMBAT, AURAS_SECRET, AURAS_NONE = false, false, false
 	end
 	-- the starter suggests a spell in a fight
 	TARGET, COMBAT = true, true
@@ -382,13 +394,16 @@ do
 	report.starter = sq[1]
 	-- a DoT you just cast isn't suggested again while debuffs are hidden
 	if CLASS_FILE == "WARLOCK" then
-		AURAS_SECRET = true
-		local first = ns.BuildQueue()[1]
-		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-dot", first)
-		NOW = NOW + 1.6
-		local again = ns.BuildQueue()[1]
-		AURAS_SECRET = false
-		assert(first and again ~= first, "hidden debuffs: " .. tostring(first) .. " suggested again right after casting it")
+		for _, mode in ipairs({ "hidden", "none" }) do
+			AURAS_SECRET, AURAS_NONE = mode == "hidden", mode == "none"
+			NOW = NOW + 30
+			local first = ns.BuildQueue()[1]
+			fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-dot-" .. mode, first)
+			NOW = NOW + 1.6
+			local again = ns.BuildQueue()[1]
+			assert(first and again ~= first, mode .. " debuffs: " .. tostring(first) .. " suggested again right after casting it")
+		end
+		AURAS_SECRET, AURAS_NONE = false, false
 	end
 	level = 60
 	local defaultRole = ({ DRUID = "hybrid", HUNTER = "range", SHAMAN = "caster" })[CLASS_FILE] or "damage"

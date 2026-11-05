@@ -14,6 +14,9 @@
   can't be checked, and it also works when Forever hides whether a unit is hostile or in combat.
   Enemy nameplates have to be turned on, but they can be invisible (shrunk to nothing or hidden):
   the addon only needs them to exist, not to be seen.
+- Enemy names only (/rcr plates) works on WoW Forever's new nameplates. They showed the whole
+  plate (health bar, level, health number, icons). Now only the enemy's name shows, above the
+  character, and it stays that way when the game updates the plate.
 
 # 1.5.2
 

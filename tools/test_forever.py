@@ -169,17 +169,21 @@ update(0.6)
 SECRET_BOOLS, COMBAT = true, true
 update(0.6)
 fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-local p1 = PLATES_LIST[1].UnitFrame.healthBar
-assert((p1.fromBool or 0) > 0, "secret hostility: Blizzard plate bar faded with SetAlphaFromBoolean")
+local p1 = PLATES_LIST[1].UnitFrame
+assert((p1.fromBool or 0) > 0, "secret hostility: Blizzard plate faded with SetAlphaFromBoolean")
 local p3 = PLATES_LIST[3].unitFrame.Health
 assert((p3.fromBool or 0) > 0, "secret hostility: ElvUI plate bar faded with SetAlphaFromBoolean")
 SECRET_BOOLS, COMBAT = false, false
 fire("PLAYER_REGEN_ENABLED")
 update(0.6)
-assert(PLATES_LIST[1].UnitFrame.healthBar.alpha == 0, "out of combat: enemy plate bar hidden")
+assert(PLATES_LIST[1].UnitFrame.alpha == 0, "out of combat: enemy plate hidden (bar, level, health text, icons)")
+assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: the enemy name still shows")
+-- the game resets the plate's alpha (range, target change): it stays hidden
+PLATES_LIST[1].UnitFrame:SetAlpha(1)
+assert(PLATES_LIST[1].UnitFrame.alpha == 0, "plate stays hidden when the game sets its alpha again")
 step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
-assert(PLATES_LIST[1].UnitFrame.healthBar.alpha == 1, "option off: bar back")
+assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)

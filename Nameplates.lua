@@ -157,7 +157,7 @@ end
 -- RCRotations shows the same name, in the same font with Blizzard's name color, centered on the
 -- game's nameplate frame, which always sits right above the character.
 local function ownName(plate, uf, hide, unit)
-	local theirs = type(uf.Name) == "table" and uf.Name or nil
+	local theirs = (type(uf.Name) == "table" and uf.Name) or (type(uf.name) == "table" and uf.name) or nil
 	local mine = plate.rcrName
 	if not secret(hide) and not hide then
 		if mine then
@@ -190,11 +190,26 @@ local function ownName(plate, uf, hide, unit)
 		end
 		fade(theirs, hide)
 	end
-	local text = unit and UnitName and UnitName(unit)
-	if not text and theirs and theirs.GetText then
-		text = theirs:GetText()
+	-- the name can be hidden from addons in combat; SetText still takes it
+	local text
+	if unit and UnitName then
+		local okN, n = pcall(UnitName, unit)
+		if okN then
+			text = n
+		end
 	end
-	mine:SetText(text or "")
+	if rawequal(text, nil) and theirs and theirs.GetText then
+		local okT, t = pcall(theirs.GetText, theirs)
+		if okT then
+			text = t
+		end
+	end
+	if rawequal(text, nil) then
+		text = ""
+	end
+	if not pcall(mine.SetText, mine, text) then
+		mine:SetText("")
+	end
 	local r, g, b2 = nameColor(unit)
 	if not pcall(mine.SetTextColor, mine, r, g, b2) then
 		mine:SetTextColor(1, 0, 0)
@@ -207,16 +222,53 @@ local function ownName(plate, uf, hide, unit)
 	fade(mine, hide, 1, 0)
 end
 
-local function styleBar(plate, hide, unit)
-	for _, bar in ipairs(healthBars(plate)) do
-		fade(bar, hide)
+-- Blizzard may set the plate's alpha again (range, target changes): put ours back.
+local function keepFaded(uf)
+	if uf.rcrHooked or not hooksecurefunc or not uf.SetAlpha then
+		return
 	end
-	local uf = plate and plate.unitFrame
-	if type(uf) == "table" and uf ~= plate.UnitFrame then
+	uf.rcrHooked = true
+	hooksecurefunc(uf, "SetAlpha", function(self)
+		if self.rcrSetting then
+			return
+		end
+		local h = self.rcrHide
+		if rawequal(h, nil) or (not secret(h) and not h) then
+			return
+		end
+		self.rcrSetting = true
+		fade(self, h)
+		self.rcrSetting = nil
+	end)
+end
+
+local function styleBar(plate, hide, unit)
+	if type(plate) ~= "table" then
+		return
+	end
+	local blizz = plate.UnitFrame
+	local uf = plate.unitFrame
+	if type(uf) == "table" and uf ~= blizz then
+		-- a nameplate addon (ElvUI, Plater...) draws on top of the plate
+		for _, bar in ipairs(healthBars(plate)) do
+			fade(bar, hide)
+		end
 		for _, t in ipairs(addonExtras(uf)) do
 			fade(t, hide)
 		end
 		ownName(plate, uf, hide, unit)
+		return
+	end
+	if type(blizz) == "table" then
+		-- Blizzard's plate: the whole thing fades (bar, level, health text, icons,
+		-- whatever layout this client uses) and RCRotations shows the name
+		-- above the character instead.
+		blizz.rcrHide = hide
+		keepFaded(blizz)
+		blizz.rcrSetting = true
+		fade(blizz, hide)
+		blizz.rcrSetting = nil
+		ownName(plate, blizz, hide, unit)
 	end
 end
 
@@ -245,7 +297,7 @@ end
 local function restyleAll()
 	forEachPlate(function(plate)
 		local unit = plate.namePlateUnitToken or (plate.UnitFrame and plate.UnitFrame.unit)
-		styleBar(plate, on() and unit and hostileUnit(unit), unit)
+		pcall(styleBar, plate, on() and unit and hostileUnit(unit), unit)
 	end)
 end
 
@@ -315,7 +367,7 @@ frame:SetScript("OnEvent", function(_, event, unit)
 			local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
 			if ok and plate then
 				-- plates are reused, so always set the bar one way or the other
-				styleBar(plate, on() and hostileUnit(unit), unit)
+				pcall(styleBar, plate, on() and hostileUnit(unit), unit)
 			end
 		end
 		return

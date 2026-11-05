@@ -392,7 +392,10 @@ for i, unit in ipairs(PLATES) do
 		p.unitFrame = { Health = bar(), Name = perm("name"), TargetIndicator = { Shadow = bar(), Spark = bar() } }
 		p.unitFrame.Health.Text = bar()
 	else
-		p.UnitFrame = { healthBar = bar(), name = perm("name"), unit = unit }
+		-- Blizzard plate: a frame with its own bar, level and health text
+		p.UnitFrame = bar()
+		p.UnitFrame.healthBar, p.UnitFrame.name, p.UnitFrame.unit = bar(), perm("name"), unit
+		p.UnitFrame.LevelText, p.UnitFrame.HealthText = bar(), bar()
 	end
 	plateList[i] = p
 end

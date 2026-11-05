@@ -357,6 +357,9 @@ convertValue = function(node, ctx, rep)
 		end
 		out.id = sid
 	end
+	if body.talentId ~= nil then
+		out.id = actionId(body.talentId) or 0
+	end
 	if body.auraId ~= nil then
 		local aid = actionId(body.auraId)
 		if not aid then

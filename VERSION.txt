@@ -3,14 +3,22 @@
 # 1.5.3
 
 - WoW Forever Paladins: two new playstyles, picked with the playstyle button (or /rcr role).
-  - Seal Twist, for Retribution with Twist of Light: keeps a seal up, then swaps between Seal
-    of Command and Seal of Righteousness once per swing, so every swing gets both seals
-    (the replaced seal's Echo). It waits until your last swing has used the Echo, and stops
-    twisting below 20% mana. Judgement, Hammer of Wrath, Holy Strike and the rest fit around it.
+  - Seal Twist, for Retribution with Unsealed Wrath: each swing stores an Echo of your seal (up
+    to 3), and a hit with a different seal spends them. Same as the WoWSims Forever rotation:
+    3 swings on Seal of Command, swap to Seal of Righteousness for 1 swing, swap back, with
+    Judgement, Hammer of Wrath, Holy Strike, Consecration and Exorcism around it.
   - Shockadin, for Holy Shock builds: Seal of Righteousness, Divine Favor into Holy Shock,
     Light's Vigil on the enemy (your next Holy Shock skips its cooldown), Judgement,
-    Consecration, Holy Strike. A damage Paladin who knows Holy Shock is switched to Shockadin
-    once; pick Damage again and it stays.
+    Consecration, Holy Strike.
+  - A damage Paladin with Unsealed Wrath is switched to Seal Twist once, with Holy Shock to
+    Shockadin; pick Damage again and it stays.
+- WoW Forever: rotations imported from WoWSims' Forever sim work. They used to show only Auto
+  Attack: swing timing, "spell in range" and "talent known" weren't understood, so most lines
+  were dropped. Your seal and Unsealed Wrath echoes are followed in combat (where the game hides
+  your buffs), the first seal is suggested when you have none, and Hammer of Wrath (below 20%)
+  and Exorcism (Undead and Demons) only show when they can be used.
+- WoW Forever Paladin spell fixes: Holy Strike, Seal of Righteousness, Seal of Fury and Holy
+  Shock use Forever's spell IDs, and Crusader Strike (not in Forever) is gone from the lists.
 - When there's nothing to press (low levels, or everything on cooldown), melee characters now
   see Auto Attack instead of the empty skull. It flashes on your bar until you start swinging,
   then stays on the HUD without flashing, so you don't click Attack again and stop your swings.

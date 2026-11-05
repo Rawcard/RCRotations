@@ -305,9 +305,23 @@ KNOWN = {}
 function IsPlayerSpell(id) return KNOWN[id] == true end
 function IsSpellKnown(id) return KNOWN[id] == true end
 function IsSpellKnownOrOverridesKnown(id) return KNOWN[id] == true end
+-- every rank of a spell shares its name, as in the game (Paladin, from WoWSims Forever)
+local RANKS = {
+	["Seal of Command"] = { 20375, 20915, 20918, 20919, 20920 },
+	["Seal of Righteousness"] = { 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 },
+	["Seal of the Crusader"] = { 21082, 20162, 20305, 20306, 20307, 20308 },
+	["Hammer of Wrath"] = { 24275, 24274, 24239 },
+	["Holy Strike"] = { 679, 678, 1866, 680, 2495, 5569, 10332, 10333 },
+	["Consecration"] = { 26573, 20116, 20922, 20923, 20924 },
+	["Exorcism"] = { 879, 5614, 5615, 10312, 10313, 10314 },
+	["Echo of Command"] = { 1311703 }, ["Echo of Righteousness"] = { 1311704 },
+}
+local RANK_NAME = {}
+for n, ids in pairs(RANKS) do for _, id in ipairs(ids) do RANK_NAME[id] = n end end
+local function spellNameOf(id) return RANK_NAME[id] or ("Spell" .. id) end
 C_Spell = {
-	GetSpellInfo = function(id) if type(id) ~= "number" then return nil end return { name = "Spell" .. id, spellID = id, iconID = 134400, castTime = 0, minRange = 0, maxRange = 30 } end,
-	GetSpellName = function(id) return type(id) == "number" and ("Spell" .. id) or nil end,
+	GetSpellInfo = function(id) if type(id) ~= "number" then return nil end return { name = spellNameOf(id), spellID = id, iconID = 134400, castTime = 0, minRange = 0, maxRange = 30 } end,
+	GetSpellName = function(id) return type(id) == "number" and spellNameOf(id) or nil end,
 	GetSpellTexture = function() return 134400 end,
 	GetSpellCooldown = function() return { startTime = S(0), duration = S(0), isEnabled = true, modRate = 1 } end,
 	GetSpellCharges = function() return nil end,

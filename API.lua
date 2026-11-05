@@ -974,58 +974,108 @@ local function markCooldown(spellID, seconds)
 end
 
 -- ------------------------------------------------------------ seal twisting
--- WoW Forever's Twist of Light (Retribution 31-point talent): replacing Seal of
--- Command, Righteousness, Fury or Justice leaves an Echo, and your next melee
--- swing gets that seal's effect on top of the new one. So the twist is: swap to
--- the other seal once per swing. The game hides your buffs in combat, so the
--- current seal is the last one you cast (tracked here by name, any rank).
-local sealNames, echoNames
+-- WoW Forever's Unsealed Wrath (Retribution talent, 1310735): each melee hit
+-- stores a copy of your active seal (an Echo, up to 3 stacks, 15 sec); landing
+-- a hit with a different seal spends them all, each with that seal's normal
+-- chance to go off. WoWSims' Forever rotation twists like this: 3 swings on
+-- Seal of Command, swap to Seal of Righteousness for 1 swing (spending the
+-- Command echoes), swap back. The game hides your buffs in combat, so the
+-- current seal is the last one you cast (by name, any rank) and the stacks
+-- are counted from your swings since then.
+local UNSEALED_WRATH = 1310735
+local SEAL_KEYS = { "SealCommand", "SealRighteousness", "SealFury", "SealJustice", "SealLight", "SealWisdom", "SealCrusader" }
+local ECHO_OF = { -- Echo aura ID -> the seal it stores
+	[1311703] = "SealCommand", [1311701] = "SealFury", [1311704] = "SealRighteousness",
+	[1311705] = "SealJustice", [1328198] = "SealLight", [1328206] = "SealWisdom",
+}
+local sealNames -- lower-case name -> key
 local function sealSets()
 	if sealNames then
-		return sealNames, echoNames
+		return sealNames
 	end
 	local P = ns.Spell and ns.Spell.Paladin or {}
-	sealNames, echoNames = {}, {}
-	for key, id in pairs(P) do
-		if type(key) == "string" and key:find("^Seal") and type(id) == "number" then
-			local n = ns.API.SpellName(id)
-			if type(n) == "string" and n ~= "" then
-				sealNames[n:lower()] = true
-				if key == "SealCommand" or key == "SealRighteousness" or key == "SealFury" or key == "SealJustice" then
-					echoNames[n:lower()] = true
-				end
-			end
+	sealNames = {}
+	for _, key in ipairs(SEAL_KEYS) do
+		local n = P[key] and ns.API.SpellName(P[key])
+		if type(n) == "string" and n ~= "" then
+			sealNames[n:lower()] = key
 		end
 	end
-	return sealNames, echoNames
+	return sealNames
 end
-local sealNow, sealAt = nil, 0
+local sealNow, sealAt = nil, 0 -- key of the last seal cast, and when
 
 local function noteSeal(spellID)
 	local n = ns.API.SpellName(spellID)
 	if type(n) ~= "string" then
 		return
 	end
-	local seals = sealSets()
-	if seals[n:lower()] then
-		sealNow, sealAt = n:lower(), GetTime()
+	local key = sealSets()[n:lower()]
+	if key then
+		sealNow, sealAt = key, GetTime()
 	end
 end
 
+local SEAL_SECONDS = 30
+-- the seal still up (a seal you cast over 30 sec ago has run out)
+local function liveSeal()
+	if sealNow and GetTime() > sealAt + SEAL_SECONDS then
+		sealNow = nil
+	end
+	return sealNow
+end
+
+-- The seal you have now ("SealCommand"...), and when you cast it.
 function ns.API.CurrentSeal()
-	return sealNow, sealAt
+	return liveSeal(), sealAt
+end
+
+-- Swings landed since a moment (from the swing estimate).
+local function swingsSince(t)
+	if not (ns.Physics and ns.Physics.LastSwingAt) then
+		return 0
+	end
+	local last, speed = ns.Physics.LastSwingAt()
+	if not last or last <= t then
+		return 0
+	end
+	if not speed or speed <= 0 then
+		return 1
+	end
+	return math.floor((last - t) / speed + 1e-6) + 1
+end
+
+-- Echo stacks (Unsealed Wrath) of the seal behind this Echo aura ID, or nil
+-- when the ID isn't an Echo.
+function ns.API.EchoStacks(auraID)
+	local key = ECHO_OF[auraID]
+	if not key then
+		return nil
+	end
+	if key ~= liveSeal() then
+		return 0
+	end
+	return math.min(3, swingsSince(sealAt))
+end
+
+-- Is this seal (any rank) the one you have now? Then also how long it has left.
+function ns.API.SealUp(spellID)
+	local n = ns.API.SpellName(spellID)
+	local key = type(n) == "string" and sealSets()[n:lower()]
+	if not key then
+		return nil
+	end
+	if key ~= liveSeal() then
+		return false, 0
+	end
+	return true, math.max(0, sealAt + SEAL_SECONDS - GetTime())
 end
 
 -- Should the twist swap to this seal now?
 function ns.API.TwistReady(spellID)
-	local seals, echoes = sealSets()
-	local want = ns.API.SpellName(spellID)
-	if type(want) ~= "string" or not seals[want:lower()] then
-		return false
-	end
-	want = want:lower()
-	-- the seal you have now must leave an Echo, and be a different seal
-	if not sealNow or sealNow == want or not echoes[sealNow] then
+	local n = ns.API.SpellName(spellID)
+	local want = type(n) == "string" and sealSets()[n:lower()]
+	if not want or not liveSeal() or want == sealNow then
 		return false
 	end
 	if not ns.API.InCombat() or not ns.API.Hostile() then
@@ -1034,15 +1084,14 @@ function ns.API.TwistReady(spellID)
 	if ns.API.TargetInMelee and not ns.API.TargetInMelee() then
 		return false
 	end
-	-- one swap per swing: the last Echo has to be used up first
-	local swingAt, speed = 0, 0
-	if ns.Physics and ns.Physics.LastSwingAt then
-		swingAt, speed = ns.Physics.LastSwingAt()
+	local swings = swingsSince(sealAt)
+	if sealNow == "SealCommand" and want == "SealRighteousness" then
+		return swings >= 3 -- three Command echoes stored
 	end
-	if swingAt > 0 then
-		return swingAt > sealAt
+	if sealNow == "SealRighteousness" and want == "SealCommand" then
+		return swings >= 1 -- one Righteousness echo, back to Command
 	end
-	return (GetTime() - sealAt) >= ((speed and speed > 0) and speed or 2.5)
+	return false
 end
 
 function ns.API.NoteSpellCast(spellID)
@@ -2753,7 +2802,7 @@ function ns.API.TargetInMelee()
 	elseif token == "DRUID" and S and S.Druid then
 		probe = S.Druid.Claw or S.Druid.Mangle or S.Druid.Maul
 	elseif token == "PALADIN" and S and S.Paladin then
-		probe = S.Paladin.CrusaderStrike or S.Paladin.Judgement
+		probe = S.Paladin.HolyStrike or S.Paladin.Judgement
 	end
 	if probe then
 		local state = ns.API.RangeState(probe, { hostile = true })
@@ -2802,16 +2851,22 @@ function ns.SyncAutoRole()
 	end
 	local token = ns.ClassToken and ns.ClassToken()
 	if token == "PALADIN" and ns.GAME == "forever" then
-		-- Holy Shock (21 Holy points) and Twist of Light (31 Retribution) can't
-		-- both be taken, so a damage Paladin who knows Holy Shock is a Shockadin.
-		-- Once per profile, so picking Damage again afterwards sticks.
+		-- A damage Paladin with Unsealed Wrath (Retribution talent) is a seal
+		-- twister; with Holy Shock (Holy talent) a Shockadin. One talent tree
+		-- can't reach both. Done once per profile, so picking Damage again sticks.
 		local now = GetTime()
 		if ns.db.role == "damage" and not ns.db.shockAuto and now >= (ns.API.shockCheckAt or 0) then
 			ns.API.shockCheckAt = now + 5
 			local P = ns.Spell and ns.Spell.Paladin
-			if P and P.HolyShock and ns.API.Known(P.HolyShock) then
+			local want
+			if ns.API.Known(UNSEALED_WRATH) or (IsPlayerSpell and IsPlayerSpell(UNSEALED_WRATH)) then
+				want = "twist"
+			elseif P and P.HolyShock and ns.API.Known(P.HolyShock) then
+				want = "shockadin"
+			end
+			if want then
 				ns.db.shockAuto = true
-				ns.db.role = "shockadin"
+				ns.db.role = want
 				if ns.InvalidateAPLCache then
 					ns.InvalidateAPLCache()
 				end
@@ -2819,7 +2874,7 @@ function ns.SyncAutoRole()
 					ns.UI.RefreshRoles()
 				end
 				if ns.Print then
-					ns.Print(ns.T("MSG_SHOCKADIN"))
+					ns.Print(ns.T(want == "twist" and "MSG_TWIST" or "MSG_SHOCKADIN"))
 				end
 			end
 		end

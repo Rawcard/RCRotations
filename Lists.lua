@@ -101,7 +101,6 @@ if ns.GAME == "forever" then
 				step("HammerofWrath", P.HammerofWrath, { hp = 20, unit = "target", hostile = true }),
 				step("HolyStrike", P.HolyStrike, { hostile = true }),
 				step("SwiftJudgement", P.SwiftJudgement, { needanybuff = palaSeals, hostile = true }),
-				step("CrusaderStrike", P.CrusaderStrike, { hostile = true }),
 				step("HolyShock", P.HolyShock, { hostile = true }),
 				step("Consecration", P.Consecration, { enemiesMin = 2, enemiesYards = 10, hostile = true }),
 				step("Exorcism", P.Exorcism, { usable = true, creature = undeadDemon, hostile = true }),
@@ -113,7 +112,6 @@ if ns.GAME == "forever" then
 				step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
 				step("HolyShield", P.HolyShield, { combat = true, hostile = true }),
 				step("HolyStrike", P.HolyStrike, { hostile = true }),
-				step("CrusaderStrike", P.CrusaderStrike, { hostile = true }),
 				step("Judgement", P.Judgement, { needanybuff = palaSeals, hostile = true }),
 				step("SwiftJudgement", P.SwiftJudgement, { needanybuff = palaSeals, hostile = true }),
 				step("Consecration", P.Consecration, { enemiesMin = 2, enemiesYards = 10, hostile = true }),
@@ -134,9 +132,10 @@ if ns.GAME == "forever" then
 			},
 		},
 		-- Two WoW Forever Paladin builds as their own playstyles:
-		-- Seal Twist (Retribution with the 31-point Twist of Light): keep a seal up,
-		-- then swap between Seal of Command and Seal of Righteousness once per
-		-- swing; the replaced seal's Echo adds its effect to your next swing.
+		-- Seal Twist (Retribution with Unsealed Wrath): each swing stores an Echo of
+		-- your seal (up to 3); a hit with a different seal spends them. As in the
+		-- WoWSims Forever rotation: 3 swings on Seal of Command, swap to Seal of
+		-- Righteousness for 1 swing, swap back.
 		-- Shockadin (Holy with Holy Shock, 10 sec cooldown in Forever): Seal of
 		-- Righteousness, Divine Favor into Holy Shock, Light's Vigil on the enemy
 		-- (the next Holy Shock skips its cooldown and refunds mana), Judgement,
@@ -146,13 +145,12 @@ if ns.GAME == "forever" then
 			step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
 			step("Judgement", P.Judgement, { needanybuff = palaSeals, hostile = true }),
 			step("HammerofWrath", P.HammerofWrath, { hp = 20, unit = "target", hostile = true }),
-			step("TwistCommand", P.SealCommand, { twist = true, manaMin = 20, hostile = true }),
-			step("TwistRighteousness", P.SealRighteousness, { twist = true, manaMin = 20, hostile = true }),
 			step("HolyStrike", P.HolyStrike, { hostile = true }),
+			step("TwistRighteousness", P.SealRighteousness, { twist = true, hostile = true }),
+			step("TwistCommand", P.SealCommand, { twist = true, hostile = true }),
 			step("SwiftJudgement", P.SwiftJudgement, { needanybuff = palaSeals, hostile = true }),
-			step("CrusaderStrike", P.CrusaderStrike, { hostile = true }),
-			step("Consecration", P.Consecration, { enemiesMin = 2, enemiesYards = 10, manaMin = 30, hostile = true }),
-			step("Exorcism", P.Exorcism, { usable = true, creature = undeadDemon, hostile = true }),
+			step("Consecration", P.Consecration, { manaMin = 10, hostile = true }),
+			step("Exorcism", P.Exorcism, { usable = true, creature = undeadDemon, manaMin = 10, hostile = true }),
 			step("FlashofLight", P.FlashofLight, { hp = 50, heal = true }),
 			step("HolyLight", P.HolyLight, { hp = 40, heal = true }),
 		},
@@ -468,7 +466,6 @@ if ns.GAME == "forever" then
 					step("Consecration", P.Consecration, { hostile = true }),
 					step("HolyWrath", P.HolyWrath, { usable = true, hostile = true }),
 					step("HolyStrike", P.HolyStrike, { hostile = true }),
-					step("CrusaderStrike", P.CrusaderStrike, { hostile = true }),
 					step("Judgement", P.Judgement, { hostile = true }),
 					step("SwiftJudgement", P.SwiftJudgement, { hostile = true }),
 					step("Exorcism", P.Exorcism, { usable = true, hostile = true }),
@@ -482,7 +479,6 @@ if ns.GAME == "forever" then
 					step("HolyStrike", P.HolyStrike, { hostile = true }),
 					step("Judgement", P.Judgement, { hostile = true }),
 					step("SwiftJudgement", P.SwiftJudgement, { hostile = true }),
-					step("CrusaderStrike", P.CrusaderStrike, { hostile = true }),
 					step("HammerofWrath", P.HammerofWrath, { hp = 20, unit = "target", hostile = true }),
 					step("HolyShock", P.HolyShock, { hostile = true }),
 					step("Consecration", P.Consecration, { hostile = true }),

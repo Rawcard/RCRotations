@@ -328,15 +328,32 @@ if CLASS_FILE == "PALADIN" then
 	ns.db.role = "twist"
 	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
 	NOW = NOW + 10
-	ns.API.NoteSpellCast(P.SealRighteousness)
-	assert(not ns.API.TwistReady(P.SealCommand), "twist: no swap before a swing has used the last Echo")
-	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: never 'swap' to the seal you already have")
-	NOW = NOW + 3 -- a swing (2.4 sec weapon)
-	assert(ns.API.TwistReady(P.SealCommand), "twist: after a swing, swap Righteousness -> Command")
+	-- Unsealed Wrath rhythm: 3 swings on Command, 1 on Righteousness
 	ns.API.NoteSpellCast(P.SealCommand)
-	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: one swap per swing")
-	NOW = NOW + 3
-	assert(ns.API.TwistReady(P.SealRighteousness), "twist: next swing, swap back to Righteousness")
+	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: no swap before any swing")
+	assert(not ns.API.TwistReady(P.SealCommand), "twist: never 'swap' to the seal you already have")
+	NOW = NOW + 2.5 -- 1 swing (2.4 sec weapon)
+	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: 1 Command echo is not enough")
+	assert(ns.API.EchoStacks(1311703) >= 1, "Echo of Command stacks counted from swings")
+	NOW = NOW + 5 -- 3 swings
+	assert(ns.API.EchoStacks(1311703) == 3, "Echo of Command: 3 stacks after 3 swings")
+	assert(ns.API.TwistReady(P.SealRighteousness), "twist: after 3 swings on Command, swap to Righteousness")
+	ns.API.NoteSpellCast(P.SealRighteousness)
+	assert(ns.API.EchoStacks(1311703) == 0, "swapping seals spends the Command echoes")
+	assert(not ns.API.TwistReady(P.SealCommand), "twist: Righteousness needs 1 swing first")
+	NOW = NOW + 2.5
+	assert(ns.API.TwistReady(P.SealCommand), "twist: after 1 swing on Righteousness, back to Command")
+	-- auto-pick: Unsealed Wrath known -> Seal Twist
+	KNOWN[1310735] = true
+	local autoWas0 = ns.db.roleAuto
+	ns.db.roleAuto = nil
+	ns.db.role, ns.db.shockAuto, ns.API.shockCheckAt = "damage", nil, 0
+	ns.SyncAutoRole()
+	assert(ns.db.role == "twist", "damage Paladin with Unsealed Wrath switched to Seal Twist")
+	KNOWN[1310735] = nil
+	if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	ns.db.roleAuto = autoWas0
+	ns.db.role = "twist"
 	local seen = {}
 	for _ = 1, 4 do
 		local q = ns.BuildQueue()
@@ -361,6 +378,48 @@ if CLASS_FILE == "PALADIN" then
 	ns.db.role = roles[1]
 	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
 	report.paladin = "twist+shockadin"
+
+	-- a WoWSims Forever Retribution export (seal twisting with Unsealed Wrath)
+	-- imported as-is: it must run the whole rotation, not only Auto Attack
+	for id in RET_EXPORT:gmatch('"spellId":(%d+)') do KNOWN[tonumber(id)] = true end
+	if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	local okI, msgI = ns.Sim.ImportText(RET_EXPORT, "Forever Ret")
+	assert(okI, "WoWSims Forever export imports: " .. tostring(msgI))
+	local castsI = tonumber(tostring(msgI):match("(%d+) spells"))
+	assert(castsI and castsI >= 7, "WoWSims Forever export: most of it converts (" .. tostring(msgI) .. ")")
+	local usable = C_Spell.IsSpellUsable
+	C_Spell.IsSpellUsable = function(id) if id == 24239 or id == 24274 or id == 24275 then return false, false end return usable(id) end
+	TARGET, COMBAT, AURAS_SECRET = true, true, true
+	fire("PLAYER_TARGET_CHANGED")
+	NOW = NOW + 30
+	local got, order = {}, {}
+	for t = 1, 60 do
+		NOW = NOW + 0.5
+		local q = ns.BuildQueue()
+		local id = q[1]
+		if id and id ~= 6603 then
+			got[id] = (got[id] or 0) + 1
+			if t % 2 == 0 then
+				order[#order + 1] = id
+				fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-" .. t, id)
+			end
+		end
+	end
+	C_Spell.IsSpellUsable = usable
+	AURAS_SECRET = false
+	assert(order[1] == 20920, "imported rotation: starts by asking for Seal of Command (got " .. tostring(order[1]) .. ")")
+	for _, need in ipairs({ { 20271, "Judgement" }, { 10333, "Holy Strike" }, { 20293, "twist to Seal of Righteousness" }, { 20924, "Consecration" } }) do
+		assert(got[need[1]], "imported rotation suggests " .. need[2])
+	end
+	assert(not got[24239], "Hammer of Wrath only below 20% health")
+	-- the twist: Righteousness only ever after Command, Command again after it
+	local swaps = 0
+	for i = 2, #order do
+		if order[i] == 20293 then swaps = swaps + 1 end
+	end
+	assert(swaps >= 2, "imported rotation keeps twisting (" .. swaps .. " swaps to Righteousness)")
+	ns.Sim.RemoveImport("PALADIN", ns.Sim.Spec(), "import/forever_ret")
+	if ns.InvalidateTick then ns.InvalidateTick() end
 end
 -- nothing to press (a low level character): melee classes get Auto Attack
 do
@@ -417,6 +476,7 @@ def run(cls, cid, no_secrets=False):
     g.CLASS_FILE = cls
     g.CLASS_ID = cid
     g.NO_SECRETS_WANTED = no_secrets
+    g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):

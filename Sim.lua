@@ -67,8 +67,20 @@ local function inCombat()
 end
 
 local function healthFrac(unit)
-	local cur = num(call(UnitHealth, unit), 0)
-	local max = num(call(UnitHealthMax, unit), 0)
+	local rawCur, rawMax = call(UnitHealth, unit), call(UnitHealthMax, unit)
+	if not readable(rawCur) or not readable(rawMax) then
+		-- hidden in combat (WoW Forever / Retail): the game's percentage may still be readable
+		if type(UnitHealthPercent) == "function" then
+			local curve = type(CurveConstants) == "table" and CurveConstants.ScaleTo100 or nil
+			local ok, pct = pcall(UnitHealthPercent, unit, false, curve)
+			if ok and type(pct) == "number" and readable(pct) then
+				return curve and pct / 100 or pct
+			end
+		end
+		return 1
+	end
+	local cur = num(rawCur, 0)
+	local max = num(rawMax, 0)
 	if max <= 0 then
 		return 1
 	end
@@ -222,6 +234,15 @@ local function canCast(id)
 	end
 	-- Forever marks every spell unusable during the GCD, so it keeps the
 	-- original lenient check; every other client trusts the game's answer.
+	-- That lenient check can't see "only below 20% health" (Hammer of Wrath).
+	if ns.GAME == "forever" and Sim.ExecuteOnly(rid) and healthFrac("target") > 0.2 then
+		return false
+	end
+	-- ...or "Undead and Demon only" (Exorcism)
+	if ns.GAME == "forever" and Sim.UndeadDemonOnly(rid) and API.CreatureMatch
+		and not API.CreatureMatch({ "undead", "demon" }) then
+		return false
+	end
 	if ns.GAME ~= "forever" then
 		local u = usableNow(rid)
 		if u ~= nil then
@@ -229,6 +250,36 @@ local function canCast(id)
 		end
 	end
 	return API.Ready(rid, nil, true) and true or false
+end
+
+-- Spells the game only lets you use on a target below 20% health.
+local EXECUTE_ONLY
+function Sim.ExecuteOnly(id)
+	if not EXECUTE_ONLY then
+		EXECUTE_ONLY = {}
+		local P = ns.Spell and ns.Spell.Paladin
+		local n = P and P.HammerofWrath and API.SpellName and API.SpellName(P.HammerofWrath)
+		if type(n) == "string" then
+			EXECUTE_ONLY[n] = true
+		end
+	end
+	local n = API.SpellName and API.SpellName(id)
+	return type(n) == "string" and EXECUTE_ONLY[n] == true
+end
+
+-- Spells the game only lets you use on Undead and Demons.
+local UNDEAD_DEMON
+function Sim.UndeadDemonOnly(id)
+	if not UNDEAD_DEMON then
+		UNDEAD_DEMON = {}
+		local P = ns.Spell and ns.Spell.Paladin
+		local n = P and P.Exorcism and API.SpellName and API.SpellName(P.Exorcism)
+		if type(n) == "string" then
+			UNDEAD_DEMON[n] = true
+		end
+	end
+	local n = API.SpellName and API.SpellName(id)
+	return type(n) == "string" and UNDEAD_DEMON[n] == true
 end
 
 local function spellName(id)
@@ -286,6 +337,7 @@ local function scanAuras(unit, filter)
 end
 
 -- Find an aura by spell ID (or, failing that, by spell name).
+local heldPlayerAura
 local function findAura(id, unit, mine)
 	unit = unit or "player"
 	local name = spellName(id)
@@ -308,6 +360,51 @@ local function findAura(id, unit, mine)
 					return a
 				end
 			end
+		end
+	end
+	if unit == "player" and heldPlayerAura then
+		return heldPlayerAura(id)
+	end
+	return nil
+end
+
+-- WoW Forever hides your buffs in combat: are they hidden right now?
+local function playerAurasHidden()
+	for _, a in ipairs(scanAuras("player", "HELPFUL")) do
+		if a.id == nil and a.name == nil then
+			return true
+		end
+	end
+	return false
+end
+
+-- Your own buffs while they're hidden: seals from the last one you cast,
+-- Unsealed Wrath echoes counted from your swings, other self-buffs from your
+-- casts (API.HasAura keeps track of those).
+heldPlayerAura = function(id)
+	if not playerAurasHidden() then
+		return nil
+	end
+	local stacks = API.EchoStacks and API.EchoStacks(id)
+	if stacks ~= nil then
+		if stacks > 0 then
+			return { id = id, count = stacks, expires = GetTime() + 15, duration = 15 }
+		end
+		return nil
+	end
+	if API.SealUp then
+		local up, left = API.SealUp(id)
+		if up ~= nil then
+			if up then
+				return { id = id, count = 1, expires = GetTime() + left, duration = 30 }
+			end
+			return nil
+		end
+	end
+	if API.HasAura then
+		local ok, up = pcall(API.HasAura, id, "player", "HELPFUL")
+		if ok and up then
+			return { id = id, count = 1, expires = 0, duration = 0 }
 		end
 	end
 	return nil
@@ -878,10 +975,49 @@ V.spellGcdHastedDuration = function()
 end
 V.spellFullCooldown = function(n)
 	local rid = resolve(n.id) or n.id
-	return num(call(GetSpellBaseCooldown, rid), 0) / 1000
+	local sec = num(call(GetSpellBaseCooldown, rid), 0) / 1000
+	if sec <= 0 and API.SpellCooldownSec then
+		-- the game didn't say (C_Spell only, or a talent-changed cooldown): the
+		-- addon's own table
+		sec = num(API.SpellCooldownSec(rid), 0)
+	end
+	return sec
 end
 
 -- auras
+-- melee swing timing (WoW Forever has no combat log: estimated from weapon speed)
+V.autoTimeToNext = function()
+	if ns.Physics and ns.Physics.LastSwingAt then
+		local last, speed = ns.Physics.LastSwingAt()
+		if last and last > 0 and speed and speed > 0 then
+			return math.max(0, last + speed - now())
+		end
+	end
+	return 1
+end
+V.autoTimeSinceLast = function()
+	if ns.Physics and ns.Physics.LastSwingAt then
+		local last = ns.Physics.LastSwingAt()
+		if last and last > 0 then
+			return math.max(0, now() - last)
+		end
+	end
+	return 1
+end
+V.spellInRange = function(n)
+	if not (API.InSpellRange and n.id) then
+		return true
+	end
+	local ok, inRange = pcall(API.InSpellRange, resolve(n.id) or n.id)
+	if ok and inRange == false then
+		return false
+	end
+	return true
+end
+V.talentIsKnown = function(n)
+	return isPlayerSpell(n.id) or (API.Known and API.Known(n.id)) or false
+end
+
 V.auraIsKnown = function(n)
 	return isPlayerSpell(n.id) or resolve(n.id) ~= nil
 end
@@ -1316,6 +1452,33 @@ function Sim.BuildQueue(rot)
 		end
 	end
 	local q, seen = {}, {}
+	-- WoW Forever Paladins: WoWSims puts the first seal up before the pull, so its
+	-- rotations never ask for one. With no seal up at all, suggest the first seal
+	-- the rotation uses.
+	if ns.GAME == "forever" and token == "PALADIN" and API.SealUp then
+		local anyUp, first = false, nil
+		for _, item in ipairs(list) do
+			if item.id and API.SealUp(item.id) ~= nil then
+				first = first or item.id
+			end
+		end
+		if first then
+			local P = ns.Spell and ns.Spell.Paladin or {}
+			for _, key in ipairs({ "SealCommand", "SealRighteousness", "SealFury", "SealJustice", "SealLight", "SealWisdom", "SealCrusader" }) do
+				if P[key] and V.auraIsActive({ id = P[key], unit = "player" }) then
+					anyUp = true
+					break
+				end
+			end
+			if not anyUp then
+				local rid = resolve(first)
+				if rid and canCast(rid) and not Sim.IsBlocked(first, rid) then
+					q[1] = rid
+					seen[rid] = true
+				end
+			end
+		end
+	end
 	for _, item in ipairs(list) do
 		if #q >= 3 then
 			break

@@ -78,6 +78,7 @@ SUPPORTED = {
     "auraShouldRefresh",
     "dotIsActive", "dotIsActiveOnAllTargets", "dotRemainingTime", "dotLowestRemainingTime",
     "dotTickFrequency", "totemRemainingTime",
+    "autoTimeToNext", "autoTimeSinceLast", "spellInRange", "talentIsKnown",
 }
 
 # Kinds with no live equivalent: replaced by a constant, reported as approximated.
@@ -267,6 +268,8 @@ class Converter:
                 self.approximated[kind + "(item)"] += 1
                 return False if kind.startswith(("spellIs", "spellCan", "aura", "dot")) else 0
             out["id"] = sid
+        if "talentId" in body:
+            out["id"] = action_id(body["talentId"]) or 0
         if "auraId" in body:
             aid = action_id(body["auraId"])
             if aid is None:

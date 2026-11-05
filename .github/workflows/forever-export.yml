@@ -1,0 +1,26 @@
+name: Export WoWSims Forever rotations (one-off)
+on:
+  push:
+    branches: [forever-export]
+    paths: [tools/forever_export.sh, .github/workflows/forever-export.yml]
+permissions:
+  contents: write
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+      - name: Get WoWSims Forever
+        run: git clone --depth 1 https://github.com/wowsims/forever wowsims-forever
+      - name: Export
+        run: tools/forever_export.sh wowsims-forever export/forever
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add export/forever
+          git commit -m "WoWSims Forever rotations as JSON (wowsims/forever@$(git -C wowsims-forever rev-parse --short HEAD))"
+          git push origin HEAD:forever-export

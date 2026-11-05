@@ -67,8 +67,20 @@ local function inCombat()
 end
 
 local function healthFrac(unit)
-	local cur = num(call(UnitHealth, unit), 0)
-	local max = num(call(UnitHealthMax, unit), 0)
+	local rawCur, rawMax = call(UnitHealth, unit), call(UnitHealthMax, unit)
+	if not readable(rawCur) or not readable(rawMax) then
+		-- hidden in combat (WoW Forever / Retail): the game's percentage may still be readable
+		if type(UnitHealthPercent) == "function" then
+			local curve = type(CurveConstants) == "table" and CurveConstants.ScaleTo100 or nil
+			local ok, pct = pcall(UnitHealthPercent, unit, false, curve)
+			if ok and type(pct) == "number" and readable(pct) then
+				return curve and pct / 100 or pct
+			end
+		end
+		return 1
+	end
+	local cur = num(rawCur, 0)
+	local max = num(rawMax, 0)
 	if max <= 0 then
 		return 1
 	end
@@ -222,6 +234,15 @@ local function canCast(id)
 	end
 	-- Forever marks every spell unusable during the GCD, so it keeps the
 	-- original lenient check; every other client trusts the game's answer.
+	-- That lenient check can't see "only below 20% health" (Hammer of Wrath).
+	if ns.GAME == "forever" and Sim.ExecuteOnly(rid) and healthFrac("target") > 0.2 then
+		return false
+	end
+	-- ...or "Undead and Demon only" (Exorcism)
+	if ns.GAME == "forever" and Sim.UndeadDemonOnly(rid) and API.CreatureMatch
+		and not API.CreatureMatch({ "undead", "demon" }) then
+		return false
+	end
 	if ns.GAME ~= "forever" then
 		local u = usableNow(rid)
 		if u ~= nil then
@@ -229,6 +250,36 @@ local function canCast(id)
 		end
 	end
 	return API.Ready(rid, nil, true) and true or false
+end
+
+-- Spells the game only lets you use on a target below 20% health.
+local EXECUTE_ONLY
+function Sim.ExecuteOnly(id)
+	if not EXECUTE_ONLY then
+		EXECUTE_ONLY = {}
+		local P = ns.Spell and ns.Spell.Paladin
+		local n = P and P.HammerofWrath and API.SpellName and API.SpellName(P.HammerofWrath)
+		if type(n) == "string" then
+			EXECUTE_ONLY[n] = true
+		end
+	end
+	local n = API.SpellName and API.SpellName(id)
+	return type(n) == "string" and EXECUTE_ONLY[n] == true
+end
+
+-- Spells the game only lets you use on Undead and Demons.
+local UNDEAD_DEMON
+function Sim.UndeadDemonOnly(id)
+	if not UNDEAD_DEMON then
+		UNDEAD_DEMON = {}
+		local P = ns.Spell and ns.Spell.Paladin
+		local n = P and P.Exorcism and API.SpellName and API.SpellName(P.Exorcism)
+		if type(n) == "string" then
+			UNDEAD_DEMON[n] = true
+		end
+	end
+	local n = API.SpellName and API.SpellName(id)
+	return type(n) == "string" and UNDEAD_DEMON[n] == true
 end
 
 local function spellName(id)
@@ -282,10 +333,24 @@ local function scanAuras(unit, filter)
 		end
 	end
 	pass.auras[key] = list
+	-- your buffs are readable: keep the seal tracking in step with them
+	if unit == "player" and filter == "HELPFUL" and API.SyncSeals then
+		local hidden = false
+		for _, a in ipairs(list) do
+			if a.id == nil and a.name == nil then
+				hidden = true
+				break
+			end
+		end
+		if not hidden then
+			API.SyncSeals(list)
+		end
+	end
 	return list
 end
 
 -- Find an aura by spell ID (or, failing that, by spell name).
+local heldPlayerAura, heldTargetAura
 local function findAura(id, unit, mine)
 	unit = unit or "player"
 	local name = spellName(id)
@@ -309,6 +374,79 @@ local function findAura(id, unit, mine)
 				end
 			end
 		end
+	end
+	if unit == "player" and heldPlayerAura then
+		return heldPlayerAura(id)
+	end
+	if unit == "target" and heldTargetAura then
+		return heldTargetAura(id)
+	end
+	return nil
+end
+
+-- WoW Forever hides your buffs in combat: are they hidden right now?
+local function playerAurasHidden()
+	for _, a in ipairs(scanAuras("player", "HELPFUL")) do
+		if a.id == nil and a.name == nil then
+			return true
+		end
+	end
+	return false
+end
+
+-- Your own buffs while they're hidden: seals from the last one you cast,
+-- Unsealed Wrath echoes counted from your swings, other self-buffs from your
+-- casts (API.HasAura keeps track of those).
+heldPlayerAura = function(id)
+	if not playerAurasHidden() then
+		return nil
+	end
+	local stacks = API.EchoStacks and API.EchoStacks(id)
+	if stacks ~= nil then
+		if stacks > 0 then
+			return { id = id, count = stacks, expires = GetTime() + 15, duration = 15 }
+		end
+		return nil
+	end
+	if API.SealUp then
+		local up, left = API.SealUp(id)
+		-- never seen your seal (it was up before the addon loaded): don't nag
+		if up ~= nil and API.SealKnown and not API.SealKnown() then
+			return { id = id, count = 1, expires = 0, duration = 0 }
+		end
+		if up ~= nil then
+			if up then
+				return { id = id, count = 1, expires = GetTime() + left, duration = 30 }
+			end
+			return nil
+		end
+	end
+	if API.HasAura then
+		local ok, up = pcall(API.HasAura, id, "player", "HELPFUL")
+		if ok and up then
+			return { id = id, count = 1, expires = 0, duration = 0 }
+		end
+	end
+	return nil
+end
+
+-- Your debuffs on the target while they're hidden (WoW Forever in combat):
+-- from your casts, as the built-in lists track them (API.HasAura).
+heldTargetAura = function(id)
+	local hidden = false
+	for _, a in ipairs(scanAuras("target", "HARMFUL")) do
+		if a.id == nil and a.name == nil then
+			hidden = true
+			break
+		end
+	end
+	if not hidden or not API.HasAura then
+		return nil
+	end
+	local ok, up, left = pcall(API.HasAura, id, "target", "HARMFUL")
+	if ok and up then
+		left = tonumber(left) or 0
+		return { id = id, count = 1, expires = (left > 0 and left < 9000) and (GetTime() + left) or 0, duration = 0 }
 	end
 	return nil
 end
@@ -878,10 +1016,104 @@ V.spellGcdHastedDuration = function()
 end
 V.spellFullCooldown = function(n)
 	local rid = resolve(n.id) or n.id
-	return num(call(GetSpellBaseCooldown, rid), 0) / 1000
+	local sec = num(call(GetSpellBaseCooldown, rid), 0) / 1000
+	if sec <= 0 and API.SpellCooldownSec then
+		-- the game didn't say (C_Spell only, or a talent-changed cooldown): the
+		-- addon's own table
+		sec = num(API.SpellCooldownSec(rid), 0)
+	end
+	return sec
 end
 
 -- auras
+-- melee swing timing (WoW Forever has no combat log: estimated from weapon speed)
+V.autoTimeToNext = function()
+	if ns.Physics and ns.Physics.LastSwingAt then
+		local last, speed = ns.Physics.LastSwingAt()
+		if last and last > 0 and speed and speed > 0 then
+			return math.max(0, last + speed - now())
+		end
+	end
+	return 1
+end
+V.autoTimeSinceLast = function()
+	if ns.Physics and ns.Physics.LastSwingAt then
+		local last = ns.Physics.LastSwingAt()
+		if last and last > 0 then
+			return math.max(0, now() - last)
+		end
+	end
+	return 1
+end
+V.spellInRange = function(n)
+	if not (API.InSpellRange and n.id) then
+		return true
+	end
+	local ok, inRange = pcall(API.InSpellRange, resolve(n.id) or n.id)
+	if ok and inRange == false then
+		return false
+	end
+	return true
+end
+V.talentIsKnown = function(n)
+	return isPlayerSpell(n.id) or (API.Known and API.Known(n.id)) or false
+end
+-- the rank isn't readable: 1 when the talent is known
+V.talentRank = function(n)
+	return V.talentIsKnown(n) and 1 or 0
+end
+V.autoSwingTime = function()
+	if ns.Physics and ns.Physics.LastSwingAt then
+		local _, speed = ns.Physics.LastSwingAt()
+		if speed and speed > 0 then
+			return speed
+		end
+	end
+	local mh = num(call(UnitAttackSpeed, "player"), 0)
+	return mh > 0 and mh or 2
+end
+-- mana per second while casting
+V.currentManaRegen = function()
+	local _, casting = call(GetManaRegen)
+	return num(casting, 0)
+end
+V.maxMana = function()
+	return num(call(UnitPowerMax, "player", 0), 0)
+end
+V.targetIsMobType = function(n)
+	if not n.mob or n.mob == "" or not API.CreatureMatch then
+		return false
+	end
+	return API.CreatureMatch({ n.mob }) and true or false
+end
+-- Warlock: WoWSims' "assigned curse" is a setting; here, any of your curses
+-- on the target counts.
+local CURSES = { "CurseofAgony", "CurseofElements", "CurseofShadow", "CurseofRecklessness",
+	"CurseofWeakness", "CurseofTongues", "CurseofDoom", "CurseofExhaustion" }
+V.warlockAssignedCurseIsActive = function()
+	local L = ns.Spell and ns.Spell.Warlock or {}
+	for _, key in ipairs(CURSES) do
+		if L[key] and findAura(L[key], "target", true) then
+			return true
+		end
+	end
+	return false
+end
+V.warlockAssignedCurseIsActiveOnAllTargets = V.warlockAssignedCurseIsActive
+-- Druid: Rake or Rip of yours on the target
+V.druidBleedIsActive = function()
+	local D = ns.Spell and ns.Spell.Druid or {}
+	for _, key in ipairs({ "Rake", "Rip" }) do
+		if D[key] and findAura(D[key], "target", true) then
+			return true
+		end
+	end
+	return false
+end
+V.auraIsActiveOnAnyTarget = function(n)
+	return findAura(n.id, "target", true) ~= nil
+end
+
 V.auraIsKnown = function(n)
 	return isPlayerSpell(n.id) or resolve(n.id) ~= nil
 end
@@ -969,12 +1201,144 @@ function Sim.Rotations()
 	return list, token, spec
 end
 
+-- ------------------------------------------------------------ Auto (Forever)
+-- WoW Forever bundles the WoWSims Forever rotations (SimData_Forever.lua), each
+-- tagged with its role and the talent points of the build it was made for,
+-- plus a starter rotation for levels 1-19. "Auto" (the default) picks the
+-- starter below level 20, then the rotation for your playstyle whose talents
+-- are closest to yours.
+Sim.AUTO = "auto"
+Sim.STARTER_LEVEL = 20
+
+local talentCache, talentAt = nil, -999
+-- Points spent in each talent tree, e.g. {0, 11, 40}.
+function Sim.TalentPoints()
+	local t = now()
+	if talentCache and t - talentAt < 5 then
+		return talentCache
+	end
+	local pts = { 0, 0, 0 }
+	local n = num(call(GetNumTalentTabs), 0)
+	for i = 1, math.min(n, 3) do
+		local r = { call(GetTalentTabInfo, i) }
+		-- Classic: name, icon, pointsSpent; later clients: id, name, desc, icon, pointsSpent
+		local spent = r[3]
+		if type(spent) ~= "number" or not readable(spent) then
+			spent = r[5]
+		end
+		pts[i] = (type(spent) == "number" and readable(spent)) and spent or 0
+	end
+	talentCache, talentAt = pts, t
+	return pts
+end
+
+function Sim.InvalidateTalents()
+	talentCache = nil
+end
+
+-- the rotation role your playstyle needs, or nil (healing: no WoWSims rotation)
+local function wantedRole(token)
+	local role = ns.db and ns.db.role or "damage"
+	if role == "heal" then
+		return nil
+	end
+	if role == "tank" then
+		return "tank"
+	end
+	if token == "HUNTER" then
+		return role == "melee" and "melee" or "range"
+	end
+	if token == "SHAMAN" then
+		return role == "melee" and "melee" or "caster"
+	end
+	return "damage"
+end
+
+local function similarity(a, b)
+	local dot, na, nb = 0, 0, 0
+	for i = 1, 3 do
+		local x, y = a[i] or 0, b[i] or 0
+		dot, na, nb = dot + x * y, na + x * x, nb + y * y
+	end
+	if na == 0 or nb == 0 then
+		return 0
+	end
+	return dot / math.sqrt(na * nb)
+end
+
+-- The rotation Auto uses right now (nil: use the built-in list).
+function Sim.AutoPick(list, token)
+	-- a rotation you made in the Workshop app comes before the bundled ones
+	for _, rot in ipairs(list or {}) do
+		if rot.workshop then
+			return rot
+		end
+	end
+	local starter, cands = nil, {}
+	local want = wantedRole(token)
+	for _, rot in ipairs(list or {}) do
+		if rot.starter then
+			starter = starter or rot
+		elseif rot.role and not rot.imported and not rot.workshop and rot.role == want then
+			cands[#cands + 1] = rot
+		end
+	end
+	if not want then
+		return nil
+	end
+	local level = num(call(UnitLevel, "player"), 60)
+	if starter and level < Sim.STARTER_LEVEL then
+		return starter
+	end
+	if #cands == 0 then
+		return starter
+	end
+	if #cands == 1 then
+		return cands[1]
+	end
+	-- a Paladin playstyle that names a build (Seal Twist, Shockadin)
+	local style = ns.db and ns.db.role
+	for _, rot in ipairs(cands) do
+		if rot.style and rot.style == style then
+			return rot
+		end
+	end
+	local mine = Sim.TalentPoints()
+	local best, bestScore = cands[1], -1
+	for _, rot in ipairs(cands) do
+		local score = rot.talents and similarity(mine, rot.talents) or 0
+		if score > bestScore + 1e-9 then
+			best, bestScore = rot, score
+		end
+	end
+	return best
+end
+
+-- True when Auto is choosing (Forever, nothing picked, or Auto picked).
+function Sim.IsAuto(token, spec)
+	if ns.GAME ~= "forever" then
+		return false
+	end
+	local pick = ns.db and ns.db.simPick and ns.db.simPick[(token or "") .. ":" .. (spec or 0)]
+	return pick == nil or pick == Sim.AUTO
+end
+
 function Sim.Current()
 	local list, token, spec = Sim.Rotations()
 	if not list or #list == 0 then
 		return nil
 	end
 	local pick = ns.db and ns.db.simPick and ns.db.simPick[token .. ":" .. spec]
+	if ns.GAME == "forever" and (pick == nil or pick == Sim.AUTO) then
+		local rot = Sim.AutoPick(list, token)
+		-- say so when Auto moves on (level 20, a respec, a new playstyle)
+		local file = rot and rot.file or "builtin"
+		if Sim.lastAuto and Sim.lastAuto ~= file and ns.Print then
+			ns.Print(ns.T("SIM_AUTO_SWITCH"):format(rot and rot.name or ns.T("SIM_PICK_AUTO_BUILTIN")))
+		end
+		Sim.lastAuto = file
+		return rot
+	end
 	if pick then
 		for _, rot in ipairs(list) do
 			if rot.file == pick then
@@ -995,6 +1359,28 @@ function Sim.Cycle()
 	if not list or #list == 0 then
 		return nil
 	end
+	ns.db.simPick = ns.db.simPick or {}
+	local key = token .. ":" .. spec
+	if ns.GAME == "forever" then
+		-- Auto, then each rotation, then back to Auto
+		local pick = ns.db.simPick[key]
+		if pick == nil or pick == Sim.AUTO then
+			ns.db.simPick[key] = list[1].file
+			return list[1], #list + 1
+		end
+		for i, rot in ipairs(list) do
+			if rot.file == pick then
+				if i == #list then
+					ns.db.simPick[key] = Sim.AUTO
+					return Sim.Current(), #list + 1, true
+				end
+				ns.db.simPick[key] = list[i + 1].file
+				return list[i + 1], #list + 1
+			end
+		end
+		ns.db.simPick[key] = Sim.AUTO
+		return Sim.Current(), #list + 1, true
+	end
 	local cur = Sim.Current() or list[1]
 	local idx = 1
 	for i, rot in ipairs(list) do
@@ -1003,8 +1389,7 @@ function Sim.Cycle()
 		end
 	end
 	local nextRot = list[(idx % #list) + 1]
-	ns.db.simPick = ns.db.simPick or {}
-	ns.db.simPick[token .. ":" .. spec] = nextRot.file
+	ns.db.simPick[key] = nextRot.file
 	return nextRot, #list
 end
 
@@ -1316,6 +1701,33 @@ function Sim.BuildQueue(rot)
 		end
 	end
 	local q, seen = {}, {}
+	-- WoW Forever Paladins: WoWSims puts the first seal up before the pull, so its
+	-- rotations never ask for one. With no seal up at all, suggest the first seal
+	-- the rotation uses.
+	if ns.GAME == "forever" and token == "PALADIN" and API.SealUp then
+		local anyUp, first = false, nil
+		for _, item in ipairs(list) do
+			if item.id and API.SealUp(item.id) ~= nil then
+				first = first or item.id
+			end
+		end
+		if first then
+			local P = ns.Spell and ns.Spell.Paladin or {}
+			for _, key in ipairs({ "SealCommand", "SealRighteousness", "SealFury", "SealJustice", "SealLight", "SealWisdom", "SealCrusader" }) do
+				if P[key] and V.auraIsActive({ id = P[key], unit = "player" }) then
+					anyUp = true
+					break
+				end
+			end
+			if not anyUp then
+				local rid = resolve(first)
+				if rid and canCast(rid) and not Sim.IsBlocked(first, rid) then
+					q[1] = rid
+					seen[rid] = true
+				end
+			end
+		end
+	end
 	for _, item in ipairs(list) do
 		if #q >= 3 then
 			break

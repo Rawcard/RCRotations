@@ -180,7 +180,11 @@ local STAND_IN = {
 	shamanFireElementalDuration = 60, protectionPaladinDamageTakenLastGlobal = 0,
 	afflictionCurrentSnapshot = 0, afflictionExhaleWindow = false, actionGroupUsed = false,
 	activeItemSwapSet = false, auraIcdIsReadyWithReactionTime = true,
+	multipleCdUsages = true, unitMovementSpeed = 0, spellExpectedDpet = 0, warlockBaneIsActiveOnAllTargets = false,
+	selectedPotion = 0, selectedConjured = 0,
 }
+-- A Warlock's "assigned curse" (a WoWSims setting): Curse of Agony in game.
+local ASSIGNED_CURSE = { "CurseOfAgony", 980 }
 local ALIASES = { auraIsActiveWithReactionTime = "auraIsActive", auraIsInactiveWithReactionTime = "auraIsInactive" }
 local CAST_ACTIONS = { castSpell = true, castFriendlySpell = true, channelSpell = true, multidot = true,
 	strictMultidot = true, multishield = true }
@@ -189,7 +193,7 @@ local DROPPED_ACTIONS = {
 	activateAura = true, activateAuraWithStacks = true, activateAllStatBuffProcAuras = true, cancelAura = true,
 	triggerIcd = true, itemSwap = true, move = true, moveDuration = true, damageAmplifier = true,
 	resetSequence = true, customRotation = true, warlockNextExhaleTarget = true,
-	catOptimalRotationAction = true, guardianHotwDpsRotation = true,
+	catOptimalRotationAction = true, guardianHotwDpsRotation = true, startAttack = true,
 }
 local OPS = { OpEq = "==", OpNe = "~=", OpLt = "<", OpLe = "<=", OpGt = ">", OpGe = ">=" }
 local MATH = { OpAdd = "+", OpSub = "-", OpMul = "*", OpDiv = "/" }
@@ -221,13 +225,17 @@ local function parseConst(val)
 	end
 	local n, unit = v:match("^(%-?[%d%.]+)%s*(%a*%%?)$")
 	n = tonumber(n)
-	if not n or (unit ~= "" and unit ~= "s" and unit ~= "ms" and unit ~= "%") then
+	if not n or (unit ~= "" and unit ~= "s" and unit ~= "ms" and unit ~= "m" and unit ~= "h" and unit ~= "%") then
 		unsupported("const:" .. v)
 	end
 	if unit == "ms" then
 		n = n / 1000
 	elseif unit == "%" then
 		n = n / 100
+	elseif unit == "m" then
+		n = n * 60
+	elseif unit == "h" then
+		n = n * 3600
 	end
 	return n
 end
@@ -298,6 +306,10 @@ convertValue = function(node, ctx, rep)
 
 	if kind == "const" then
 		return parseConst(body.val)
+	elseif kind == "warlockIsAssignedCurse" then
+		-- WoWSims' curse setting; in game the assigned curse is Curse of Agony
+		bump(rep.approximated, "warlockIsAssignedCurse")
+		return body.curseType == ASSIGNED_CURSE[1]
 	elseif kind == "variableRef" or kind == "variablePlaceholder" then
 		local name = body.name
 		if ctx.placeholders[name] ~= nil then
@@ -357,6 +369,9 @@ convertValue = function(node, ctx, rep)
 		end
 		out.id = sid
 	end
+	if body.talentId ~= nil then
+		out.id = actionId(body.talentId) or 0
+	end
 	if body.auraId ~= nil then
 		local aid = actionId(body.auraId)
 		if not aid then
@@ -381,6 +396,9 @@ convertValue = function(node, ctx, rep)
 	end
 	if kind == "isExecutePhase" then
 		out.pct = EXECUTE[body.threshold] or 0.2
+	end
+	if kind == "targetIsMobType" then
+		out.mob = tostring(body.mobType or ""):gsub("MobType", ""):lower()
 	end
 	if body.runeType ~= nil then
 		out.rune = RUNE_TYPE[body.runeType] or "blood"
@@ -447,6 +465,9 @@ convertAction = function(act, ctx, out, rep)
 		return
 	end
 	local body = type(act[kind]) == "table" and act[kind] or {}
+	if kind == "castWarlockAssignedCurse" then
+		kind, body = "castSpell", { spellId = { spellId = ASSIGNED_CURSE[2] } }
+	end
 
 	if CAST_ACTIONS[kind] then
 		local sid = actionId(body.spellId)

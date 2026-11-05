@@ -1,0 +1,154 @@
+{
+ "type": "TypeAPL",
+ "priorityList": [
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 13165
+     }
+    },
+    "condition": {
+     "auraIsInactive": {
+      "auraId": {
+       "spellId": 13165
+      }
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 13163
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 13163
+         }
+        }
+       },
+       {
+        "auraIsInactive": {
+         "auraId": {
+          "spellId": 13165
+         }
+        }
+       },
+       {
+        "not": {
+         "val": {
+          "spellIsKnown": {
+           "spellId": {
+            "spellId": 13165
+           }
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 1130
+     }
+    },
+    "condition": {
+     "not": {
+      "val": {
+       "dotIsActive": {
+        "spellId": {
+         "spellId": 1130
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 2973
+     }
+    },
+    "condition": {
+     "spellInRange": {
+      "spellId": {
+       "spellId": 2973
+      }
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 1978
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "not": {
+         "val": {
+          "dotIsActive": {
+           "spellId": {
+            "spellId": 1978
+           }
+          }
+         }
+        }
+       },
+       {
+        "not": {
+         "val": {
+          "spellInRange": {
+           "spellId": {
+            "spellId": 2973
+           }
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 3044
+     }
+    },
+    "condition": {
+     "not": {
+      "val": {
+       "spellInRange": {
+        "spellId": {
+         "spellId": 2973
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ]
+}

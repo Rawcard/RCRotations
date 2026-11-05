@@ -81,6 +81,17 @@ for _, id in pairs(book) do
 		if slot < 60 then slot = slot + 1; ACTION[slot] = id end
 	end
 end
+-- ...and every spell its bundled WoWSims Forever rotations use (in game, every
+-- rank shares a name and the addon uses the rank you have)
+local bundled = ns.SimData and ns.SimData.specs and ns.SimData.specs[CLASS_FILE]
+for _, rot in ipairs(bundled and bundled[0] or {}) do
+	for _, it in ipairs(rot.list or {}) do
+		if it.id and not KNOWN[it.id] then
+			KNOWN[it.id] = true
+			if slot < 120 then slot = slot + 1; ACTION[slot] = it.id end
+		end
+	end
+end
 if ns.API and ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
 if ns.GlowInvalidate then pcall(ns.GlowInvalidate) end
 fire("ACTIONBAR_SLOT_CHANGED", 0)
@@ -169,23 +180,55 @@ update(0.6)
 SECRET_BOOLS, COMBAT = true, true
 update(0.6)
 fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
-local p1 = PLATES_LIST[1].UnitFrame.healthBar
-assert((p1.fromBool or 0) > 0, "secret hostility: Blizzard plate bar faded with SetAlphaFromBoolean")
+local p1 = PLATES_LIST[1].UnitFrame
+assert((p1.fromBool or 0) > 0, "secret hostility: Blizzard plate faded with SetAlphaFromBoolean")
 local p3 = PLATES_LIST[3].unitFrame.Health
 assert((p3.fromBool or 0) > 0, "secret hostility: ElvUI plate bar faded with SetAlphaFromBoolean")
 SECRET_BOOLS, COMBAT = false, false
 fire("PLAYER_REGEN_ENABLED")
 update(0.6)
-assert(PLATES_LIST[1].UnitFrame.healthBar.alpha == 0, "out of combat: enemy plate bar hidden")
+assert(PLATES_LIST[1].UnitFrame.alpha == 0, "out of combat: enemy plate hidden (bar, level, health text, icons)")
+assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: the enemy name still shows")
+local eq = PLATES_LIST[3].unitFrame.QuestIcons
+local elvName = PLATES_LIST[3].rcrName
+assert(elvName, "ElvUI plate: our name")
+assert(eq.Default.pts[1] and eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
+local softF = PLATES_LIST[3].unitFrame.SoftTargetFrame
+assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvName or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, beside the name")
+local soft = PLATES_LIST[3].unitFrame.SoftTargetFrame
+local last = soft.pts[#soft.pts]
+assert(last and last[1] == "RIGHT" and (last[2] == elvName or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left beside the name")
+assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
+local qi = PLATES_LIST[1].UnitFrame.QuestIcon
+assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
+-- the game anchors it back to the bar: it comes back beside the name
+qi:SetPoint("LEFT", PLATES_LIST[1].UnitFrame.healthBar, "RIGHT", 4, 0)
+assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays beside the name when the game moves it")
+-- the game resets the plate's alpha (range, target change): it stays hidden
+PLATES_LIST[1].UnitFrame:SetAlpha(1)
+assert(PLATES_LIST[1].UnitFrame.alpha == 0, "plate stays hidden when the game sets its alpha again")
+do
+	local was, wasPrint = C_NamePlate.GetNamePlateForUnit, ns.Print
+	local lines = {}
+	ns.Print = function(t) lines[#lines + 1] = tostring(t) end
+	for _, i in ipairs({ 1, 3 }) do
+		C_NamePlate.GetNamePlateForUnit = function() return PLATES_LIST[i] end
+		step("platecheck", SlashCmdList.RCROT, "platecheck")
+	end
+	C_NamePlate.GetNamePlateForUnit, ns.Print = was, wasPrint
+	PLATECHECK = table.concat(lines, "\n")
+end
 step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
-assert(PLATES_LIST[1].UnitFrame.healthBar.alpha == 1, "option off: bar back")
+assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
+assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
+assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back (centered on their frame when the anchor couldn't be read)")
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)
 step("copy link", ns.ShowCopyLink)
 step("close menu", ns.ToggleOptions)
--- buff reminders (Forever list): out of combat only, never when buffs are hidden
+-- buff reminders (Forever list): checked out of combat, held through combat
 step("buffs", function()
 	COMBAT, AURAS_SECRET = false, false
 	AURAS.player = {}
@@ -193,12 +236,24 @@ step("buffs", function()
 	report.buffs = #m
 	BUFFS_SEEN = {}
 	for i, id in ipairs(m) do BUFFS_SEEN[i] = id end
-	COMBAT = true
-	assert(#ns.Buffs.Missing() == 0, "no buff reminders in combat on Forever")
-	COMBAT = false
+	-- in combat (buffs hidden): the reminders from before the fight stay up
+	COMBAT, AURAS_SECRET = true, true
+	local during = ns.Buffs.Missing()
+	if #during ~= #m then error("buff reminders went away in combat: " .. #m .. " before, " .. #during .. " during") end
+	if #m > 0 then
+		-- casting one clears it, even though the buff itself can't be seen
+		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-7", m[1])
+		local after = ns.Buffs.Missing()
+		if #after ~= #m - 1 then error("casting " .. m[1] .. " in combat didn't clear its reminder") end
+		for _, id in ipairs(after) do if id == m[1] then error("reminder " .. id .. " stayed after casting it") end end
+	end
+	COMBAT, AURAS_SECRET = false, false
 	AURAS.player = { { spellId = 1, name = "Buff" } }
+	-- out of combat with buffs hidden (some maps): no new reminders appear
+	local before = ns.Buffs.Missing()
 	AURAS_SECRET = true
-	assert(#ns.Buffs.Missing() == 0, "no buff reminders while buffs are hidden")
+	local hiddenNow = ns.Buffs.Missing()
+	assert(#hiddenNow == #before, "buffs hidden: the last reminders stay, nothing new appears")
 	AURAS_SECRET = false
 	-- every reminder goes away once its buff is up
 	AURAS.player = {}
@@ -217,6 +272,26 @@ step("buffs", function()
 	local function has(list, id) for _, x in ipairs(list) do if x == id then return true end end return false end
 	local S = ns.Spell
 	if CLASS_FILE == "PALADIN" then
+		-- Blessing of Kings is a talent: not learned -> never suggested, even though
+		-- the game answers a lookup by its name
+		local kings = S.Paladin.BlessingKings
+		local gsi, wasRole = C_Spell.GetSpellInfo, ns.db.role
+		KNOWN[kings] = nil
+		C_Spell.GetSpellInfo = function(id)
+			if id == "Spell" .. kings then return { name = id, spellID = kings, iconID = 1 } end
+			return gsi(id)
+		end
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.db.role = "damage"
+		AURAS.player = {}
+		local m2 = ns.Buffs.Missing()
+		C_Spell.GetSpellInfo = gsi
+		KNOWN[kings] = true
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.db.role = wasRole
+		assert(not has(m2, kings), "Blessing of Kings suggested without the talent")
+		assert(has(m2, S.Paladin.BlessingMight), "Blessing of Might suggested instead")
+		AURAS.player = { { spellId = 1, name = "Buff" } }
 		-- another paladin's Greater Blessing of Kings and any aura count
 		AURAS.player = { { spellId = 25898, name = "Spell25898" }, { spellId = S.Paladin.RetributionAura, name = "Spell" .. S.Paladin.RetributionAura } }
 		assert(#ns.Buffs.Missing() == 0, "paladin: any blessing (even a Greater one) and any aura count")
@@ -252,6 +327,265 @@ local missing = {}
 for k in pairs(MISSING) do missing[#missing + 1] = k end
 table.sort(missing)
 report.missing = table.concat(missing, " ")
+-- Auto rotation: the starter below level 20, then the WoWSims Forever build
+-- closest to your talents (for your playstyle); healing uses the built-in list
+do
+	local Sim = ns.Sim
+	local list, token = Sim.Rotations()
+	assert(list and #list >= 2, "Forever: bundled rotations for " .. CLASS_FILE)
+	assert(list[1].starter, "the starter comes first")
+	local roleWas, lvl, tabs = ns.db.role, UnitLevel, GetTalentTabInfo
+	local level, pts = 10, { 0, 0, 0 }
+	UnitLevel = function() return level end
+	GetNumTalentTabs = function() return 3 end
+	GetTalentTabInfo = function(i) return "Tree" .. i, nil, pts[i] end
+	local function pick() Sim.InvalidateTalents() return Sim.AutoPick(list, token) end
+	ns.db.simPick = nil
+	assert(Sim.IsAuto(token, 0), "Auto is the default")
+	ns.db.role = roles[1]
+	assert(pick() == list[1], "level 10: the starter")
+	-- Paladin: a seal that's already up (cast before the addon loaded) isn't asked for again
+	if CLASS_FILE == "PALADIN" then
+		local SOR = 20287 -- Seal of Righteousness rank 2: same name as rank 1
+		TARGET, COMBAT, AURAS_SECRET = true, false, false
+		AURAS.player = { { spellId = SOR, name = "Seal of Righteousness" } }
+		NOW = NOW + 1
+		local q = ns.BuildQueue()
+		assert(q[1] ~= 21084 and q[1] ~= SOR, "seal already up (out of combat): not asked for again (got " .. tostring(q[1]) .. ")")
+		COMBAT = true -- buffs hidden now
+		NOW = NOW + 1
+		q = ns.BuildQueue()
+		assert(q[1] ~= 21084 and q[1] ~= SOR, "seal already up (in combat, hidden): not asked for again (got " .. tostring(q[1]) .. ")")
+		COMBAT = false
+		AURAS.player = { { spellId = 1, name = "Buff" } }
+		NOW = NOW + 1
+		q = ns.BuildQueue()
+		assert(q[1] == 21084, "no seal: asks for Seal of Righteousness (got " .. tostring(q[1]) .. ")")
+	end
+	-- the starter suggests a spell in a fight
+	TARGET, COMBAT = true, true
+	fire("PLAYER_TARGET_CHANGED")
+	NOW = NOW + 20
+	local sq = ns.BuildQueue()
+	assert(sq[1] and sq[1] ~= 6603, "level 10 starter: suggests a spell (got " .. tostring(sq[1]) .. ")")
+	report.starter = sq[1]
+	-- a DoT you just cast isn't suggested again while debuffs are hidden
+	if CLASS_FILE == "WARLOCK" then
+		AURAS_SECRET = true
+		local first = ns.BuildQueue()[1]
+		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-dot", first)
+		NOW = NOW + 1.6
+		local again = ns.BuildQueue()[1]
+		AURAS_SECRET = false
+		assert(first and again ~= first, "hidden debuffs: " .. tostring(first) .. " suggested again right after casting it")
+	end
+	level = 60
+	local defaultRole = ({ DRUID = "hybrid", HUNTER = "range", SHAMAN = "caster" })[CLASS_FILE] or "damage"
+	local checked = 0
+	for _, rot in ipairs(list) do
+		if not rot.starter and rot.talents then
+			ns.db.role = (rot.role == "damage") and defaultRole or rot.role
+			pts = { rot.talents[1], rot.talents[2], rot.talents[3] }
+			local got = pick()
+			assert(got, "level 60 " .. rot.name .. ": something picked")
+			local same = got == rot or (got.talents and got.talents[1] == pts[1] and got.talents[2] == pts[2] and got.talents[3] == pts[3])
+			assert(same, ("level 60 with %s talents (%d/%d/%d): picked %s"):format(rot.name, pts[1], pts[2], pts[3], tostring(got.name)))
+			checked = checked + 1
+		end
+	end
+	-- healing: no WoWSims healer rotation, the built-in heal list stays
+	local hasHeal = false
+	for _, r in ipairs(roles) do if r == "heal" then hasHeal = true end end
+	if hasHeal then
+		ns.db.role = "heal"
+		assert(pick() == nil, "heal playstyle: built-in list")
+	end
+	-- Paladin playstyles name a build
+	if CLASS_FILE == "PALADIN" then
+		pts = { 0, 0, 0 }
+		ns.db.role = "twist"
+		assert(pick().style == "twist", "Seal Twist playstyle: the Unsealed Wrath build")
+		ns.db.role = "shockadin"
+		assert(pick().style == "shockadin", "Shockadin playstyle: the Holy Shock build")
+	end
+	-- picker: Auto first; /rcr apl cycles Auto -> each rotation -> Auto
+	ns.db.role = roles[1]
+	step("picker", Sim.ShowPicker, true)
+	local seenAuto = false
+	for _ = 1, #list + 1 do
+		local _, _, isAuto = Sim.Cycle()
+		if isAuto then seenAuto = true end
+	end
+	assert(seenAuto and Sim.IsAuto(token, 0), "cycling comes back to Auto")
+	UnitLevel, GetTalentTabInfo = lvl, tabs
+	Sim.InvalidateTalents()
+	ns.db.role = roleWas
+	report.auto = checked
+end
+-- several enemies in a fight: the enemy count and the auto AoE switch, also
+-- with hostility, combat state and range hidden (WoW Forever in combat)
+do
+	TARGET, COMBAT = true, true
+	ns.db.combatMode, ns.db.autoEnemies = "auto", 3
+	local cid = CheckInteractDistance
+	for _, hide in ipairs({ false, true }) do
+		SECRET_BOOLS = hide
+		CheckInteractDistance = function() return nil end -- not allowed in combat
+		NOW = NOW + 1
+		local n, n8 = ns.API.EnemyCount(), ns.API.EnemyCount(8)
+		NOW = NOW + 1
+		local mode = ns.ResolveCombatMode()
+		CheckInteractDistance = cid
+		local what = hide and "hidden values" or "readable values"
+		if n ~= 3 or n8 ~= 3 then error("3 enemies in a fight (" .. what .. "): counted " .. tostring(n) .. " / " .. tostring(n8) .. " within 8 yd") end
+		if mode ~= "aoe" then error("3 enemies (" .. what .. "): auto mode should switch to AoE, got " .. tostring(mode)) end
+	end
+	SECRET_BOOLS = false
+	ns.db.combatMode, ns.db.autoEnemies = nil, nil
+	report.aoe = "ok"
+end
+-- Paladin playstyles from WoW Forever: Seal Twist and Shockadin
+if CLASS_FILE == "PALADIN" then
+	local P = ns.Spell.Paladin
+	local have = {}
+	for _, r in ipairs(roles) do have[r] = true end
+	assert(have.twist and have.shockadin, "Paladin has the Seal Twist and Shockadin playstyles")
+	TARGET, COMBAT = true, true
+	ns.db.role = "twist"
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	NOW = NOW + 10
+	-- Unsealed Wrath rhythm: 3 swings on Command, 1 on Righteousness
+	ns.API.NoteSpellCast(P.SealCommand)
+	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: no swap before any swing")
+	assert(not ns.API.TwistReady(P.SealCommand), "twist: never 'swap' to the seal you already have")
+	NOW = NOW + 2.5 -- 1 swing (2.4 sec weapon)
+	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: 1 Command echo is not enough")
+	assert(ns.API.EchoStacks(1311703) >= 1, "Echo of Command stacks counted from swings")
+	NOW = NOW + 5 -- 3 swings
+	assert(ns.API.EchoStacks(1311703) == 3, "Echo of Command: 3 stacks after 3 swings")
+	assert(ns.API.TwistReady(P.SealRighteousness), "twist: after 3 swings on Command, swap to Righteousness")
+	ns.API.NoteSpellCast(P.SealRighteousness)
+	assert(ns.API.EchoStacks(1311703) == 0, "swapping seals spends the Command echoes")
+	assert(not ns.API.TwistReady(P.SealCommand), "twist: Righteousness needs 1 swing first")
+	NOW = NOW + 2.5
+	assert(ns.API.TwistReady(P.SealCommand), "twist: after 1 swing on Righteousness, back to Command")
+	-- auto-pick: Unsealed Wrath known -> Seal Twist
+	KNOWN[1310735] = true
+	local autoWas0 = ns.db.roleAuto
+	ns.db.roleAuto = nil
+	ns.db.role, ns.db.shockAuto, ns.API.shockCheckAt = "damage", nil, 0
+	ns.SyncAutoRole()
+	assert(ns.db.role == "twist", "damage Paladin with Unsealed Wrath switched to Seal Twist")
+	KNOWN[1310735] = nil
+	if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	ns.db.roleAuto = autoWas0
+	ns.db.role = "twist"
+	local seen = {}
+	for _ = 1, 4 do
+		local q = ns.BuildQueue()
+		if q[1] then seen[q[1]] = true end
+	end
+	NOW = NOW + 1
+	ns.db.role = "shockadin"
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	local q = ns.BuildQueue()
+	assert(q[1], "shockadin: suggests something in a fight")
+	-- Holy Shock known: a damage Paladin becomes a Shockadin once
+	local autoWas = ns.db.roleAuto
+	ns.db.roleAuto = nil
+	ns.db.role, ns.db.shockAuto, ns.API.shockCheckAt = "damage", nil, 0
+	ns.SyncAutoRole()
+	assert(ns.db.role == "shockadin", "damage Paladin with Holy Shock switched to Shockadin")
+	ns.db.role = "damage"
+	ns.API.shockCheckAt = 0
+	ns.SyncAutoRole()
+	assert(ns.db.role == "damage", "only once: picking Damage again sticks")
+	ns.db.roleAuto = autoWas
+	ns.db.role = roles[1]
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	report.paladin = "twist+shockadin"
+
+	-- a WoWSims Forever Retribution export (seal twisting with Unsealed Wrath)
+	-- imported as-is: it must run the whole rotation, not only Auto Attack
+	for id in RET_EXPORT:gmatch('"spellId":(%d+)') do KNOWN[tonumber(id)] = true end
+	if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	local okI, msgI = ns.Sim.ImportText(RET_EXPORT, "Forever Ret")
+	assert(okI, "WoWSims Forever export imports: " .. tostring(msgI))
+	local castsI = tonumber(tostring(msgI):match("(%d+) spells"))
+	assert(castsI and castsI >= 7, "WoWSims Forever export: most of it converts (" .. tostring(msgI) .. ")")
+	local usable = C_Spell.IsSpellUsable
+	C_Spell.IsSpellUsable = function(id) if id == 24239 or id == 24274 or id == 24275 then return false, false end return usable(id) end
+	TARGET, COMBAT, AURAS_SECRET = true, true, true
+	fire("PLAYER_TARGET_CHANGED")
+	NOW = NOW + 30
+	local got, order = {}, {}
+	for t = 1, 60 do
+		NOW = NOW + 0.5
+		local q = ns.BuildQueue()
+		local id = q[1]
+		if id and id ~= 6603 then
+			got[id] = (got[id] or 0) + 1
+			if t % 2 == 0 then
+				order[#order + 1] = id
+				fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-" .. t, id)
+			end
+		end
+	end
+	C_Spell.IsSpellUsable = usable
+	AURAS_SECRET = false
+	assert(order[1] == 20920, "imported rotation: starts by asking for Seal of Command (got " .. tostring(order[1]) .. ")")
+	for _, need in ipairs({ { 20271, "Judgement" }, { 10333, "Holy Strike" }, { 20293, "twist to Seal of Righteousness" }, { 20924, "Consecration" } }) do
+		assert(got[need[1]], "imported rotation suggests " .. need[2])
+	end
+	assert(not got[24239], "Hammer of Wrath only below 20% health")
+	-- the twist: Righteousness only ever after Command, Command again after it
+	local swaps = 0
+	for i = 2, #order do
+		if order[i] == 20293 then swaps = swaps + 1 end
+	end
+	assert(swaps >= 2, "imported rotation keeps twisting (" .. swaps .. " swaps to Righteousness)")
+	ns.Sim.RemoveImport("PALADIN", ns.Sim.Spec(), "import/forever_ret")
+	if ns.InvalidateTick then ns.InvalidateTick() end
+end
+-- nothing to press (a low level character): melee classes get Auto Attack
+do
+	local saved = KNOWN
+	KNOWN = {}
+	if ns.API and ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	ns.db.role = roles[1]
+	TARGET, COMBAT = true, true
+	fire("PLAYER_TARGET_CHANGED")
+	local q = ns.BuildQueue()
+	local melee = ns.CLASS_DAMAGE_ICON[CLASS_FILE] == "melee"
+	-- the melee play style of a caster/ranged class counts too
+	for _, r in ipairs(roles) do
+		if r == "melee" then ns.db.role = r; melee = true end
+	end
+	if ns.InvalidateTick then ns.InvalidateTick() end
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	q = ns.BuildQueue()
+	if melee then
+		if q[1] ~= 6603 then error("nothing to press: expected Auto Attack, got " .. tostring(q[1])) end
+		if q.soon and q.soon[6603] then error("Auto Attack should flash when not swinging yet") end
+		local was = C_Spell.IsCurrentSpell
+		C_Spell.IsCurrentSpell = function(id) return id == 6603 end
+		q = ns.BuildQueue()
+		C_Spell.IsCurrentSpell = was
+		if q[1] ~= 6603 or not (q.soon and q.soon[6603]) then error("Auto Attack must not flash while already swinging") end
+		ns.db.autoAttack = false
+		q = ns.BuildQueue()
+		ns.db.autoAttack = nil
+		if q[1] == 6603 then error("Auto Attack shown though turned off") end
+	elseif q[1] == 6603 then
+		error("Auto Attack suggested for a " .. CLASS_FILE)
+	end
+	TARGET = false
+	q = ns.BuildQueue()
+	if q[1] == 6603 then error("Auto Attack suggested with no target") end
+	report.auto = melee and "auto attack" or "-"
+	KNOWN = saved
+	if ns.API and ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+end
 report.flash = report.flash or 0
 report.buffs = report.buffs or 0
 report.list = ns.UsingBuiltInList and ns.UsingBuiltInList() and "built-in" or "other"
@@ -268,8 +602,11 @@ def run(cls, cid, no_secrets=False):
     g.CLASS_FILE = cls
     g.CLASS_ID = cid
     g.NO_SECRETS_WANTED = no_secrets
+    g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
+        print(g.PLATECHECK)
     roles = {str(k): int(v) for k, v in r.roles.items()}
     seen = g.BUFFS_SEEN
     buffs = [int(seen[i]) for i in range(1, len(seen) + 1)] if seen else []

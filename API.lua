@@ -414,29 +414,61 @@ function ns.API.EnemyCount(maxYards)
 		return enemyCountVal
 	end
 	local count = 0
+	-- WoW Forever (and Retail) can hide hostility, combat state and range from
+	-- addons in combat. Every answer is only used when it can be read; a hidden
+	-- one counts as "yes", since enemy nameplates near you in a fight are
+	-- almost always enemies in that fight. (Testing a hidden yes/no in an "if"
+	-- is an error, so each check compares only readable values.)
+	local function answer(fn, ...)
+		local ok, v = pcall(fn, ...)
+		if not ok or rawequal(v, nil) then
+			return nil
+		end
+		if not readable(v) then
+			return "hidden"
+		end
+		return v
+	end
+	local function yes(v)
+		return v == true or v == 1
+	end
 	local function hostile(unit)
-		local okEx, exists = pcall(UnitExists, unit)
-		if not okEx or not exists then
+		if not yes(answer(UnitExists, unit)) then
 			return false
 		end
-		local okDead, dead = pcall(UnitIsDead, unit)
-		if okDead and readable(dead) and dead then
+		local dead = answer(UnitIsDead, unit)
+		if yes(dead) then
 			return false
 		end
-		local okAtk, atk = pcall(UnitCanAttack, "player", unit)
-		if okAtk and readable(atk) and atk then
-			return true
+		local atk = UnitCanAttack and answer(UnitCanAttack, "player", unit)
+		if atk ~= nil and atk ~= "hidden" then
+			return yes(atk)
 		end
-		local okR, react = pcall(UnitReaction, "player", unit)
-		return okR and readable(react) and type(react) == "number" and react <= 4
+		local react = UnitReaction and answer(UnitReaction, "player", unit)
+		if type(react) == "number" then
+			return react <= 4
+		end
+		local friend = UnitIsFriend and answer(UnitIsFriend, "player", unit)
+		if friend ~= nil and friend ~= "hidden" then
+			return not yes(friend)
+		end
+		-- all hidden: still never count your own group (friendly nameplates on)
+		local raid = UnitInRaid and answer(UnitInRaid, unit)
+		if (UnitInParty and yes(answer(UnitInParty, unit))) or (raid ~= nil and raid ~= "hidden") then
+			return false
+		end
+		if UnitIsPlayer and yes(answer(UnitIsPlayer, unit)) and UnitIsPVP and not yes(answer(UnitIsPVP, "player")) then
+			return false
+		end
+		return atk == "hidden" or react == "hidden" or friend == "hidden"
 	end
 	local function inFight(unit)
-		local okC, combat = pcall(UnitAffectingCombat, unit)
-		if okC and combat then
+		local combat = answer(UnitAffectingCombat, unit)
+		if combat == "hidden" or yes(combat) then
 			return true
 		end
-		local okP, pcombat = pcall(UnitAffectingCombat, "player")
-		return not (okP and pcombat)
+		-- out of combat yourself: count everything (pulling a pack)
+		return not yes(answer(UnitAffectingCombat, "player"))
 	end
 	local function inYards(unit)
 		if not maxYards or maxYards <= 0 then
@@ -449,33 +481,16 @@ function ns.API.EnemyCount(maxYards)
 		if maxY and maxY <= maxYards then
 			return true
 		end
-		-- ~10 yd band via duel interact when yards <= 10.
-		if maxYards <= 10 then
-			local close
-			if CheckInteractDistance then
-				local ok, result = pcall(CheckInteractDistance, unit, 3)
-				if ok then
-					close = safe(result, nil)
-				end
-				if close == nil then
-					ok, result = pcall(CheckInteractDistance, unit, 2)
-					if ok then
-						close = safe(result, nil)
-					end
-				end
+		if maxYards <= 28 and CheckInteractDistance then
+			local close = answer(CheckInteractDistance, unit, maxYards <= 10 and 3 or 1)
+			if maxYards <= 10 and (close == nil or close == "hidden") then
+				close = answer(CheckInteractDistance, unit, 2)
 			end
-			return close == true or close == 1
-		end
-		if maxYards <= 28 then
-			if CheckInteractDistance then
-				local ok, result = pcall(CheckInteractDistance, unit, 1)
-				if ok then
-					result = safe(result, nil)
-					return result == true or result == 1
-				end
+			if close ~= nil and close ~= "hidden" then
+				return yes(close)
 			end
-			return true
 		end
+		-- range not available (in combat on WoW Forever and Retail): count it
 		return true
 	end
 	for i = 1, 40 do
@@ -775,14 +790,20 @@ function ns.API.Resolve(spellID)
 				resolveCache[spellID] = fromName
 				return fromName
 			end
+			-- Before the spellbook has been read, a name lookup can return a
+			-- spell the game knows but you haven't learned (a talent like
+			-- Blessing of Kings): only take it when you know it.
 			local bookId = findPlayerSpellByName(name)
-			if bookId then
+			if bookId and (spellBookIndex or playerKnows(bookId)) then
 				resolveCache[spellID] = bookId
 				return bookId
 			end
 		end
 	end
-	resolveCache[spellID] = false
+	-- "not known" is only remembered once the spellbook has been read
+	if spellBookIndex then
+		resolveCache[spellID] = false
+	end
 	return nil
 end
 
@@ -930,7 +951,7 @@ function ns.API.IsRotationAction(spellID, opt, isRacial)
 	if opt.nopet or opt.pet or opt.nocombat then
 		return true
 	end
-	if opt.hp or opt.manaMax or opt.hpMin then
+	if opt.hp or opt.manaMax or opt.hpMin or opt.twist then
 		return true
 	end
 	if opt.anybuff or opt.anydebuff then
@@ -958,11 +979,165 @@ local function markCooldown(spellID, seconds)
 	end
 end
 
+-- ------------------------------------------------------------ seal twisting
+-- WoW Forever's Unsealed Wrath (Retribution talent, 1310735): each melee hit
+-- stores a copy of your active seal (an Echo, up to 3 stacks, 15 sec); landing
+-- a hit with a different seal spends them all, each with that seal's normal
+-- chance to go off. WoWSims' Forever rotation twists like this: 3 swings on
+-- Seal of Command, swap to Seal of Righteousness for 1 swing (spending the
+-- Command echoes), swap back. The game hides your buffs in combat, so the
+-- current seal is the last one you cast (by name, any rank) and the stacks
+-- are counted from your swings since then.
+local UNSEALED_WRATH = 1310735
+local SEAL_KEYS = { "SealCommand", "SealRighteousness", "SealFury", "SealJustice", "SealLight", "SealWisdom", "SealCrusader" }
+local ECHO_OF = { -- Echo aura ID -> the seal it stores
+	[1311703] = "SealCommand", [1311701] = "SealFury", [1311704] = "SealRighteousness",
+	[1311705] = "SealJustice", [1328198] = "SealLight", [1328206] = "SealWisdom",
+}
+local sealNames -- lower-case name -> key
+local function sealSets()
+	if sealNames then
+		return sealNames
+	end
+	local P = ns.Spell and ns.Spell.Paladin or {}
+	sealNames = {}
+	for _, key in ipairs(SEAL_KEYS) do
+		local n = P[key] and ns.API.SpellName(P[key])
+		if type(n) == "string" and n ~= "" then
+			sealNames[n:lower()] = key
+		end
+	end
+	return sealNames
+end
+local sealNow, sealAt = nil, 0 -- key of the last seal cast, and when
+local sealExpire = 0 -- when it runs out
+local sealSeen = false -- the seal state is known (a cast, or a look at readable buffs)
+
+local function noteSeal(spellID)
+	local n = ns.API.SpellName(spellID)
+	if type(n) ~= "string" then
+		return
+	end
+	local key = sealSets()[n:lower()]
+	if key then
+		sealNow, sealAt, sealSeen = key, GetTime(), true
+		sealExpire = sealAt + (ns.API.sealDuration or 30)
+	end
+end
+
+-- Your buffs, when the game lets you read them (out of combat): the seal you
+-- really have, how long it has left, and how long seals last.
+function ns.API.SyncSeals(auras)
+	local seals = sealSets()
+	local found
+	for _, a in ipairs(auras or {}) do
+		local key = type(a.name) == "string" and seals[a.name:lower()]
+		if key then
+			found = a
+			if key ~= sealNow then
+				sealNow, sealAt = key, GetTime()
+			end
+			if (a.duration or 0) > 0 then
+				ns.API.sealDuration = a.duration
+			end
+			sealExpire = (a.expires or 0) > 0 and a.expires or (GetTime() + (ns.API.sealDuration or 30))
+			break
+		end
+	end
+	if not found then
+		sealNow = nil
+	end
+	sealSeen = true
+end
+
+-- false until the addon has seen your seal (cast or readable buffs)
+function ns.API.SealKnown()
+	return sealSeen
+end
+
+-- the seal still up (one past its time has run out)
+local function liveSeal()
+	if sealNow and GetTime() > sealExpire then
+		sealNow = nil
+	end
+	return sealNow
+end
+
+-- The seal you have now ("SealCommand"...), and when you cast it.
+function ns.API.CurrentSeal()
+	return liveSeal(), sealAt
+end
+
+-- Swings landed since a moment (from the swing estimate).
+local function swingsSince(t)
+	if not (ns.Physics and ns.Physics.LastSwingAt) then
+		return 0
+	end
+	local last, speed = ns.Physics.LastSwingAt()
+	if not last or last <= t then
+		return 0
+	end
+	if not speed or speed <= 0 then
+		return 1
+	end
+	return math.floor((last - t) / speed + 1e-6) + 1
+end
+
+-- Echo stacks (Unsealed Wrath) of the seal behind this Echo aura ID, or nil
+-- when the ID isn't an Echo.
+function ns.API.EchoStacks(auraID)
+	local key = ECHO_OF[auraID]
+	if not key then
+		return nil
+	end
+	if key ~= liveSeal() then
+		return 0
+	end
+	return math.min(3, swingsSince(sealAt))
+end
+
+-- Is this seal (any rank) the one you have now? Then also how long it has left.
+function ns.API.SealUp(spellID)
+	local n = ns.API.SpellName(spellID)
+	local key = type(n) == "string" and sealSets()[n:lower()]
+	if not key then
+		return nil
+	end
+	if key ~= liveSeal() then
+		return false, 0
+	end
+	return true, math.max(0, sealExpire - GetTime())
+end
+
+-- Should the twist swap to this seal now?
+function ns.API.TwistReady(spellID)
+	local n = ns.API.SpellName(spellID)
+	local want = type(n) == "string" and sealSets()[n:lower()]
+	if not want or not liveSeal() or want == sealNow then
+		return false
+	end
+	if not ns.API.InCombat() or not ns.API.Hostile() then
+		return false
+	end
+	if ns.API.TargetInMelee and not ns.API.TargetInMelee() then
+		return false
+	end
+	local swings = swingsSince(sealAt)
+	if sealNow == "SealCommand" and want == "SealRighteousness" then
+		return swings >= 3 -- three Command echoes stored
+	end
+	if sealNow == "SealRighteousness" and want == "SealCommand" then
+		return swings >= 1 -- one Righteousness echo, back to Command
+	end
+	return false
+end
+
 function ns.API.NoteSpellCast(spellID)
 	ns.API.lastCastAt = GetTime()
 	if spellID == nil or (issecretvalue and issecretvalue(spellID)) then
 		return
 	end
+	pcall(noteSeal, spellID)
 	local key = cdKey(spellID)
 	local seconds = baseCooldownSec(spellID)
 	if seconds <= 0 and cdKnown[key] and cdKnown[key] > 1.5 then
@@ -1847,6 +2022,16 @@ function ns.API.StepOk(spellID, opt, timeShift)
 			end
 		end
 	end
+	if opt.twist and not ns.API.TwistReady(spellID) then
+		return false
+	end
+	if opt.manaMin then
+		local okCur, current = pcall(UnitPower, "player", 0)
+		local okMax, maxp = pcall(UnitPowerMax, "player", 0)
+		if okCur and okMax and readable(current) and readable(maxp) and maxp > 0 and (current / maxp) * 100 < opt.manaMin then
+			return false
+		end
+	end
 	if opt.manaMax then
 		local okCur, current = pcall(UnitPower, "player", 0)
 		local okMax, maxp = pcall(UnitPowerMax, "player", 0)
@@ -2655,7 +2840,7 @@ function ns.API.TargetInMelee()
 	elseif token == "DRUID" and S and S.Druid then
 		probe = S.Druid.Claw or S.Druid.Mangle or S.Druid.Maul
 	elseif token == "PALADIN" and S and S.Paladin then
-		probe = S.Paladin.CrusaderStrike or S.Paladin.Judgement
+		probe = S.Paladin.HolyStrike or S.Paladin.Judgement
 	end
 	if probe then
 		local state = ns.API.RangeState(probe, { hostile = true })
@@ -2703,6 +2888,36 @@ function ns.SyncAutoRole()
 		return
 	end
 	local token = ns.ClassToken and ns.ClassToken()
+	if token == "PALADIN" and ns.GAME == "forever" then
+		-- A damage Paladin with Unsealed Wrath (Retribution talent) is a seal
+		-- twister; with Holy Shock (Holy talent) a Shockadin. One talent tree
+		-- can't reach both. Done once per profile, so picking Damage again sticks.
+		local now = GetTime()
+		if ns.db.role == "damage" and not ns.db.shockAuto and now >= (ns.API.shockCheckAt or 0) then
+			ns.API.shockCheckAt = now + 5
+			local P = ns.Spell and ns.Spell.Paladin
+			local want
+			if ns.API.Known(UNSEALED_WRATH) or (IsPlayerSpell and IsPlayerSpell(UNSEALED_WRATH)) then
+				want = "twist"
+			elseif P and P.HolyShock and ns.API.Known(P.HolyShock) then
+				want = "shockadin"
+			end
+			if want then
+				ns.db.shockAuto = true
+				ns.db.role = want
+				if ns.InvalidateAPLCache then
+					ns.InvalidateAPLCache()
+				end
+				if ns.UI and ns.UI.RefreshRoles then
+					ns.UI.RefreshRoles()
+				end
+				if ns.Print then
+					ns.Print(ns.T(want == "twist" and "MSG_TWIST" or "MSG_SHOCKADIN"))
+				end
+			end
+		end
+		return
+	end
 	if token ~= "HUNTER" and token ~= "SHAMAN" then
 		return
 	end

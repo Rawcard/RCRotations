@@ -259,11 +259,15 @@ setmetatable(_G, { __index = function(t, k)
 end })
 
 function InCombatLockdown() return COMBAT end
-function UnitAffectingCombat(u) return COMBAT and (u == "player" or u == "target") end
 local PLATES = { "nameplate1", "nameplate2", "nameplate3" }
 local function enemy(u)
 	if u == "target" then return TARGET end
 	for _, p in ipairs(PLATES) do if u == p then return true end end
+	return false
+end
+function UnitAffectingCombat(u)
+	if u == "player" then return COMBAT end
+	if u == "target" or (u or ""):match("^nameplate") then return SB(COMBAT and enemy(u)) end
 	return false
 end
 PET = false
@@ -271,7 +275,7 @@ function UnitExists(u) if u == "pet" then return PET end return u == "player" or
 function UnitIsUnit(a, b) return a == b end
 function UnitCanAttack(a, u) if u == "player" then return false end return SB(a == "player" and enemy(u)) end
 function UnitIsEnemy(a, u) if u == "player" then return false end return SB(a == "player" and enemy(u)) end
-function UnitIsFriend(a, u) return not enemy(u) end
+function UnitIsFriend(a, u) return SB(not enemy(u)) end
 function UnitReaction(a, b) if enemy(a) or enemy(b) then return S(2) end return 5 end
 function UnitIsPlayer(u) return u == "player" end
 function UnitPlayerControlled(u) return u == "player" end
@@ -301,9 +305,23 @@ KNOWN = {}
 function IsPlayerSpell(id) return KNOWN[id] == true end
 function IsSpellKnown(id) return KNOWN[id] == true end
 function IsSpellKnownOrOverridesKnown(id) return KNOWN[id] == true end
+-- every rank of a spell shares its name, as in the game (Paladin, from WoWSims Forever)
+local RANKS = {
+	["Seal of Command"] = { 20375, 20915, 20918, 20919, 20920 },
+	["Seal of Righteousness"] = { 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 },
+	["Seal of the Crusader"] = { 21082, 20162, 20305, 20306, 20307, 20308 },
+	["Hammer of Wrath"] = { 24275, 24274, 24239 },
+	["Holy Strike"] = { 679, 678, 1866, 680, 2495, 5569, 10332, 10333 },
+	["Consecration"] = { 26573, 20116, 20922, 20923, 20924 },
+	["Exorcism"] = { 879, 5614, 5615, 10312, 10313, 10314 },
+	["Echo of Command"] = { 1311703 }, ["Echo of Righteousness"] = { 1311704 },
+}
+local RANK_NAME = {}
+for n, ids in pairs(RANKS) do for _, id in ipairs(ids) do RANK_NAME[id] = n end end
+local function spellNameOf(id) return RANK_NAME[id] or ("Spell" .. id) end
 C_Spell = {
-	GetSpellInfo = function(id) if type(id) ~= "number" then return nil end return { name = "Spell" .. id, spellID = id, iconID = 134400, castTime = 0, minRange = 0, maxRange = 30 } end,
-	GetSpellName = function(id) return type(id) == "number" and ("Spell" .. id) or nil end,
+	GetSpellInfo = function(id) if type(id) ~= "number" then return nil end return { name = spellNameOf(id), spellID = id, iconID = 134400, castTime = 0, minRange = 0, maxRange = 30 } end,
+	GetSpellName = function(id) return type(id) == "number" and spellNameOf(id) or nil end,
 	GetSpellTexture = function() return 134400 end,
 	GetSpellCooldown = function() return { startTime = S(0), duration = S(0), isEnabled = true, modRate = 1 } end,
 	GetSpellCharges = function() return nil end,
@@ -314,6 +332,12 @@ C_Spell = {
 	GetSpellPowerCost = function() return {} end,
 	SpellHasRange = function() return true end,
 	GetSpellLink = function(id) return "|Hspell:" .. tostring(id) .. "|h[Spell]|h" end,
+	-- DoTs and debuffs (the starters' and common ones)
+	IsSpellHarmful = function(id)
+		local H = { [172] = true, [980] = true, [348] = true, [589] = true, [8921] = true, [8050] = true,
+			[1978] = true, [1130] = true, [772] = true, [1490] = true, [17862] = true, [5570] = true, [770] = true }
+		return H[id] == true
+	end,
 }
 C_SpellBook = {
 	GetNumSpellBookSkillLines = function() return 0 end,
@@ -387,8 +411,44 @@ for i, unit in ipairs(PLATES) do
 	if i == 3 then
 		p.unitFrame = { Health = bar(), Name = perm("name"), TargetIndicator = { Shadow = bar(), Spark = bar() } }
 		p.unitFrame.Health.Text = bar()
+		-- ElvUI quest icons: "!" at the right end, the quest item bag at the left end
+		local function icon(x)
+			local t = bar()
+			t.GetNumPoints = function(self) return #self.pts end
+			t.GetPoint = function(self, i) local pt = self.pts[i or 1]; if pt then return unpack(pt) end end
+			t.GetCenter = function() return x, 400 end
+			return t
+		end
+		local qi = perm("questicons")
+		qi.Default, qi.Item = icon(700), icon(300)
+		qi.Default:SetPoint("RIGHT", qi, "RIGHT", 0, 0)
+		qi.Item:SetPoint("LEFT", qi, "LEFT", 0, 0)
+		p.unitFrame.QuestIcons = qi
+		-- Forever: anchors unreadable, "ignores parent alpha" hidden
+		local soft = icon(250)
+		soft:SetPoint("BOTTOM", p.unitFrame, "TOP", 0, 0)
+		p.unitFrame.SoftTargetFrame = soft
+		for _, t in ipairs({ qi.Default, qi.Item, soft }) do
+			t.GetNumPoints = function() return NEWSECRET(1) end
+			t.GetPoint = function() error("anchors are hidden") end
+			t.IsIgnoringParentAlpha = function() return NEWSECRET(true) end
+		end
+		qi.Default.GetParent = function() return qi end
+		qi.Item.GetParent = function() return qi end
+		p.unitFrame.GetChildren = function() return qi, soft end
 	else
-		p.UnitFrame = { healthBar = bar(), name = perm("name"), unit = unit }
+		-- Blizzard plate: a frame with its own bar, level and health text
+		p.UnitFrame = bar()
+		p.UnitFrame.healthBar, p.UnitFrame.name, p.UnitFrame.unit = bar(), perm("name"), unit
+		p.UnitFrame.LevelText, p.UnitFrame.HealthText = bar(), bar()
+		-- a quest objective icon: ignores the plate's alpha, sits at the bar's right end
+		local q = bar()
+		q.IsIgnoringParentAlpha = function() return true end
+		q.GetNumPoints = function(self) return #self.pts end
+		q.GetPoint = function(self, i) local pt = self.pts[i or 1]; if pt then return unpack(pt) end end
+		q:SetPoint("LEFT", p.UnitFrame.healthBar, "RIGHT", 4, 0)
+		p.UnitFrame.QuestIcon = q
+		p.UnitFrame.GetChildren = function() return p.UnitFrame.healthBar, q end
 	end
 	plateList[i] = p
 end

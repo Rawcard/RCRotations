@@ -1,0 +1,133 @@
+{
+ "type": "TypeAPL",
+ "priorityList": [
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 6673
+     }
+    },
+    "condition": {
+     "auraIsInactive": {
+      "auraId": {
+       "spellId": 6673
+      }
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 5308
+     }
+    },
+    "condition": {
+     "isExecutePhase": {
+      "threshold": "E20"
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 772
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "not": {
+         "val": {
+          "dotIsActive": {
+           "spellId": {
+            "spellId": 772
+           }
+          }
+         }
+        }
+       },
+       {
+        "not": {
+         "val": {
+          "isExecutePhase": {
+           "threshold": "E20"
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 6343
+     }
+    },
+    "condition": {
+     "and": {
+      "vals": [
+       {
+        "cmp": {
+         "op": "OpGe",
+         "lhs": {
+          "numberTargets": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "3"
+          }
+         }
+        }
+       },
+       {
+        "cmp": {
+         "op": "OpGe",
+         "lhs": {
+          "currentRage": {}
+         },
+         "rhs": {
+          "const": {
+           "val": "20"
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  {
+   "action": {
+    "castSpell": {
+     "spellId": {
+      "spellId": 78
+     }
+    },
+    "condition": {
+     "cmp": {
+      "op": "OpGe",
+      "lhs": {
+       "currentRage": {}
+      },
+      "rhs": {
+       "const": {
+        "val": "30"
+       }
+      }
+     }
+    }
+   }
+  }
+ ]
+}

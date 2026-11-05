@@ -2,6 +2,23 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.4",
+		items = {
+			"WoW Forever: proper rotations for every class, built in. RCRotations now includes the WoWSims Forever rotations (31 of them: Retribution with Unsealed Wrath, Shockadin, Protection, Affliction, Demonology, Destruction, SM/Ruin, Arcane, Fire, Frost, Frostfire, Beast Mastery, Marksmanship, Survival, Arms, Fury, Protection, Balance, Feral Cat and Bear, Rogue, Shadow, Smite, Elemental, Enhancement...), updated automatically as WoWSims updates them.",
+			"WoW Forever: Auto picks the rotation for you (the default). Below level 20 it uses a simple starter rotation for your class; from 20 on, the rotation for your playstyle whose talent build is closest to yours. Respec, level up or change playstyle and it follows (chat says so). Healing playstyles keep the built-in heal lists.",
+			"WoW Forever Paladins: a seal you already have isn't asked for again. The addon now reads your seal (and how long seals last) whenever your buffs are visible, so one cast before a login or /reload counts, and it no longer assumes you have no seal when it can't tell.",
+			"Spells you haven't learned (talents like Blessing of Kings) are no longer suggested. Right after login the addon could count a spell as known just because the game recognised its name.",
+			"Choose a rotation yourself any time with /rcr apl: Auto is first, then every rotation for your class. A rotation you made in the Workshop app is used ahead of the built-in ones.",
+			"WoW Forever Paladins: two new playstyles, picked with the playstyle button (or /rcr role). - Seal Twist, for Retribution with Unsealed Wrath: each swing stores an Echo of your seal (up to 3), and a hit with a different seal spends them. Same as the WoWSims Forever rotation: 3 swings on Seal of Command, swap to Seal of Righteousness for 1 swing, swap back, with Judgement, Hammer of Wrath, Holy Strike, Consecration and Exorcism around it. - Shockadin, for Holy Shock builds: Seal of Righteousness, Divine Favor into Holy Shock, Light's Vigil on the enemy (your next Holy Shock skips its cooldown), Judgement, Consecration, Holy Strike. - A damage Paladin with Unsealed Wrath is switched to Seal Twist once, with Holy Shock to Shockadin; pick Damage again and it stays.",
+			"WoW Forever: rotations imported from WoWSims' Forever sim work. They used to show only Auto Attack: swing timing, \"spell in range\" and \"talent known\" weren't understood, so most lines were dropped. Your seal and Unsealed Wrath echoes are followed in combat (where the game hides your buffs), the first seal is suggested when you have none, and Hammer of Wrath (below 20%) and Exorcism (Undead and Demons) only show when they can be used.",
+			"WoW Forever Paladin spell fixes: Holy Strike, Seal of Righteousness, Seal of Fury and Holy Shock use Forever's spell IDs, and Crusader Strike (not in Forever) is gone from the lists.",
+			"When there's nothing to press (low levels, or everything on cooldown), melee characters now see Auto Attack instead of the empty skull. It flashes on your bar until you start swinging, then stays on the HUD without flashing, so you don't click Attack again and stop your swings. This covers Paladins, Warriors, Rogues, tanks, Enhancement Shamans, melee Hunters, and Druids in Cat or Bear Form.",
+			"WoW Forever: multi-target spells work in fights again. Forever doesn't let addons check how close enemies are during combat, so spells that need several enemies within a few yards (Consecration, Whirlwind, Swipe, your own \"enemies within X yards\" rules...) counted none and never showed. The enemy count now uses your enemy nameplates in the fight when the distance can't be checked, and it also works when Forever hides whether a unit is hostile or in combat. Enemy nameplates have to be turned on, but they can be invisible (shrunk to nothing or hidden): the addon only needs them to exist, not to be seen.",
+			"Enemy names only (/rcr plates) works on WoW Forever's new nameplates. They showed the whole plate (health bar, level, health number, icons). Now only the enemy's name shows, above the character, and it stays that way when the game updates the plate. Quest and loot icons sit right beside the name instead of far out at the ends of the hidden bar (Blizzard and ElvUI nameplates).",
+			"WoW Forever: missing buff reminders above the main icon stay up in combat. Forever hides your buffs from addons during a fight, so they used to vanish. Now the ones missing when the fight started stay, and each goes away as soon as you cast it.",
+		},
+	},
+	{
 		version = "1.5.2",
 		items = {
 			"Wrath Titan Reforged (client 3.80) is listed as supported, so CurseForge offers RCRotations to Titan Reforged players. It works there like on Wrath Classic: import a rotation from wowsims.com or make one in the Workshop app.",
@@ -24,17 +41,6 @@ ns.CHANGELOG = {
 			"WoW Forever: the menu, picker, import and What's new windows no longer measure wrapped text. The original Forever Rotation found that this can freeze the Forever client.",
 			"WoW Forever: missing buff reminders, with a Forever buff list for every class: Mark of the Wild and Thorns (bear), Fortitude, Inner Fire, Divine Spirit and Shadowform, Arcane Intellect and an armor, a paladin blessing and aura (any of yours or another paladin's counts, Greater ones too) and Righteous Fury (tank), hunter aspect, Trueshot Aura and pet, shaman shield and weapon imbue, rogue poisons, warlock armor and demon (the one you summoned last), Battle Shout. Group buffs (Gift of the Wild, Prayer of Fortitude, Arcane Brilliance) count, and in a group your Mark, Fortitude, Intellect and Spirit are checked on everyone near you. Reminders show out of combat only: Forever hides buffs from addons in combat, and the bar stays empty whenever it can't read them.",
 			"The addon's owner is now listed as Raw Card.",
-		},
-	},
-	{
-		version = "1.5.0",
-		items = {
-			"Missing buff reminders and name-only nameplates.",
-			"Missing buffs show as a red-edged bar just above the main HUD icon, as wide as the icon and split between the missing buffs, and their buttons on your action bars flash bright red. A reminder goes away as soon as you have the buff, or the same kind of buff from someone else (Mark of the Wild, Blessing of Kings and Legacy of the Emperor all count as the stats buff, Battle Shout and Trueshot Aura count as Horn of Winter...). On MoP the game's own raid buff tracking decides what's covered. Hover an icon for its name.",
-			"Every MoP class: raid buffs you provide, plus Death Knight presence, Druid Moonkin Form (in combat), Hunter aspect and pet, Mage armor, Monk stance, Paladin seal and Righteous Fury, Priest Inner Fire and Shadowform, Rogue poisons, Shaman shield and weapon imbues, Warlock pet (not with Grimoire of Sacrifice) and Warrior shouts.",
-			"Seal, presence, Horn of Winter and Inner Fire moved out of the rotation into these reminders.",
-			"Turn them off with /rcr buffs or Options > General > HUD.",
-			"Name-only enemy nameplates: RCRotations counts enemies for AoE through enemy nameplates, so with nameplates off it always thinks there's one target. The new option (Options > Extra, or /rcr plates) turns enemy nameplates on and hides their health bars: you still see enemy names and cast bars. Works with Blizzard's nameplates and with ElvUI's (there the name stays centered, and the health %, level, target glow and highlight hide with the bar). Your old setting comes back when you turn it off. If nameplates are off, you get a one-time tip about it.",
 		},
 	},
 }

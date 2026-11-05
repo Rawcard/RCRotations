@@ -1,5 +1,5 @@
-The rotation data in SimData_*.lua is generated from WoWSims (https://github.com/wowsims/mop)
-and is used under the following license.
+The rotation data in SimData_*.lua is generated from WoWSims (https://github.com/wowsims/mop
+and https://github.com/wowsims/forever), both under the following license.
 
 MIT License
 

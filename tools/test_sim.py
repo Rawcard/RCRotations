@@ -846,6 +846,9 @@ try:
     for f in ("RCRotations.toc", "RCRotations_Camelot.toc", "VERSION.txt"):
         shutil.copy(os.path.join(ROOT, f), os.path.join(tmp, "repo", f))
     shutil.copy(os.path.join(ROOT, "tools", "sync_release.py"), os.path.join(tmp, "repo", "tools"))
+    # with the changelog writer too, as in the real job: the version printed
+    # must be the version only
+    shutil.copy(os.path.join(ROOT, "tools", "changelog_lua.py"), os.path.join(tmp, "repo", "tools"))
     cur = re.search(r"## Version: (\d+)\.(\d+)\.(\d+)", read("RCRotations.toc")).groups()
     out = subprocess.run([sys.executable, "-I", os.path.join(tmp, "repo", "tools", "sync_release.py"), "bump", "abcdef1234567"],
                          capture_output=True, text=True).stdout.strip()

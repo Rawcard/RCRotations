@@ -65,8 +65,12 @@ def bump(sims_sha):
     vfile.write_text(entry + rest.lstrip("\n"), encoding="utf-8")
     try:  # keep the in-game changelog in step
         sys.path.insert(0, str(ROOT / "tools"))
+        import contextlib
         import changelog_lua
-        changelog_lua.main()
+        # its "wrote Changelog.lua" goes to the log, not into the version the
+        # workflow reads from stdout
+        with contextlib.redirect_stdout(sys.stderr):
+            changelog_lua.main()
     except ImportError:
         pass
     print(version)

@@ -375,16 +375,78 @@ end
 -- from the Workshop app) come first; on WoW Forever, with none of those, the
 -- built-in Forever Rotation list is used. Otherwise the HUD stays empty and the
 -- picker offers an import.
+-- Nothing to press (low levels, everything on cooldown): melee classes get
+-- Auto Attack on a hostile target instead of the empty skull. It only flashes
+-- when you aren't swinging yet and the target is in melee range; while you're
+-- already attacking it shows without flashing (clicking Attack again would
+-- stop the swings).
+local AUTO_ATTACK = 6603
+local function swinging()
+	local fn = (C_Spell and C_Spell.IsCurrentSpell) or IsCurrentSpell
+	if not fn then
+		return false
+	end
+	local ok, on = pcall(fn, AUTO_ATTACK)
+	if not ok then
+		return false
+	end
+	-- hidden in combat: assume swinging, so it never flashes Attack off
+	if issecretvalue and issecretvalue(on) then
+		return true
+	end
+	return on == true or on == 1
+end
+
+local function meleeNow()
+	local token = ns.ClassToken and ns.ClassToken()
+	if not token then
+		return false
+	end
+	if ns.CLASS_DAMAGE_ICON and ns.CLASS_DAMAGE_ICON[token] == "melee" then
+		return true
+	end
+	local role = ns.db and ns.db.role
+	if role == "tank" or role == "melee" then
+		return true
+	end
+	-- druid in Cat or Bear Form
+	if token == "DRUID" and GetShapeshiftFormID then
+		local ok, melee = pcall(function()
+			local form = GetShapeshiftFormID()
+			return form == 1 or form == 5 or form == 8
+		end)
+		return ok and melee == true
+	end
+	return false
+end
+
+local function withAutoAttack(q)
+	if type(q) ~= "table" or q[1] or (ns.db and ns.db.autoAttack == false) then
+		return q
+	end
+	if not meleeNow() or not (API.Hostile and API.Hostile()) then
+		return q
+	end
+	q[1] = AUTO_ATTACK
+	local inMelee = API.TargetInMelee and API.TargetInMelee()
+	if swinging() or not inMelee then
+		q.soon = q.soon or {}
+		q.soon[AUTO_ATTACK] = true
+	end
+	return q
+end
+ns.WithAutoAttack = withAutoAttack
+
 function ns.BuildQueue()
 	ns.queueHeal = {}
 	if ns.Sim and ns.Sim.Active and ns.Sim.Active() then
 		local ok, simQueue = pcall(ns.Sim.BuildQueue)
 		if ok and simQueue then
-			return simQueue
+			return withAutoAttack(simQueue)
 		end
 	end
 	if ns.UsingBuiltInList and ns.UsingBuiltInList() then
-		return legacyQueue()
+		return withAutoAttack(legacyQueue())
 	end
 	return {}
 end

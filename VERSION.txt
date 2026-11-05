@@ -1,4 +1,12 @@
-1.5.2
+1.5.3
+
+# 1.5.3
+
+- When there's nothing to press (low levels, or everything on cooldown), melee characters now
+  see Auto Attack instead of the empty skull. It flashes on your bar until you start swinging,
+  then stays on the HUD without flashing, so you don't click Attack again and stop your swings.
+  This covers Paladins, Warriors, Rogues, tanks, Enhancement Shamans, melee Hunters, and Druids
+  in Cat or Bear Form.
 
 # 1.5.2
 

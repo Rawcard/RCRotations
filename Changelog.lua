@@ -2,6 +2,12 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.3",
+		items = {
+			"When there's nothing to press (low levels, or everything on cooldown), melee characters now see Auto Attack instead of the empty skull. It flashes on your bar until you start swinging, then stays on the HUD without flashing, so you don't click Attack again and stop your swings. This covers Paladins, Warriors, Rogues, tanks, Enhancement Shamans, melee Hunters, and Druids in Cat or Bear Form.",
+		},
+	},
+	{
 		version = "1.5.2",
 		items = {
 			"Wrath Titan Reforged (client 3.80) is listed as supported, so CurseForge offers RCRotations to Titan Reforged players. It works there like on Wrath Classic: import a rotation from wowsims.com or make one in the Workshop app.",
@@ -24,17 +30,6 @@ ns.CHANGELOG = {
 			"WoW Forever: the menu, picker, import and What's new windows no longer measure wrapped text. The original Forever Rotation found that this can freeze the Forever client.",
 			"WoW Forever: missing buff reminders, with a Forever buff list for every class: Mark of the Wild and Thorns (bear), Fortitude, Inner Fire, Divine Spirit and Shadowform, Arcane Intellect and an armor, a paladin blessing and aura (any of yours or another paladin's counts, Greater ones too) and Righteous Fury (tank), hunter aspect, Trueshot Aura and pet, shaman shield and weapon imbue, rogue poisons, warlock armor and demon (the one you summoned last), Battle Shout. Group buffs (Gift of the Wild, Prayer of Fortitude, Arcane Brilliance) count, and in a group your Mark, Fortitude, Intellect and Spirit are checked on everyone near you. Reminders show out of combat only: Forever hides buffs from addons in combat, and the bar stays empty whenever it can't read them.",
 			"The addon's owner is now listed as Raw Card.",
-		},
-	},
-	{
-		version = "1.5.0",
-		items = {
-			"Missing buff reminders and name-only nameplates.",
-			"Missing buffs show as a red-edged bar just above the main HUD icon, as wide as the icon and split between the missing buffs, and their buttons on your action bars flash bright red. A reminder goes away as soon as you have the buff, or the same kind of buff from someone else (Mark of the Wild, Blessing of Kings and Legacy of the Emperor all count as the stats buff, Battle Shout and Trueshot Aura count as Horn of Winter...). On MoP the game's own raid buff tracking decides what's covered. Hover an icon for its name.",
-			"Every MoP class: raid buffs you provide, plus Death Knight presence, Druid Moonkin Form (in combat), Hunter aspect and pet, Mage armor, Monk stance, Paladin seal and Righteous Fury, Priest Inner Fire and Shadowform, Rogue poisons, Shaman shield and weapon imbues, Warlock pet (not with Grimoire of Sacrifice) and Warrior shouts.",
-			"Seal, presence, Horn of Winter and Inner Fire moved out of the rotation into these reminders.",
-			"Turn them off with /rcr buffs or Options > General > HUD.",
-			"Name-only enemy nameplates: RCRotations counts enemies for AoE through enemy nameplates, so with nameplates off it always thinks there's one target. The new option (Options > Extra, or /rcr plates) turns enemy nameplates on and hides their health bars: you still see enemy names and cast bars. Works with Blizzard's nameplates and with ElvUI's (there the name stays centered, and the health %, level, target glow and highlight hide with the bar). Your old setting comes back when you turn it off. If nameplates are off, you get a one-time tip about it.",
 		},
 	},
 }

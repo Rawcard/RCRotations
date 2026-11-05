@@ -252,6 +252,45 @@ local missing = {}
 for k in pairs(MISSING) do missing[#missing + 1] = k end
 table.sort(missing)
 report.missing = table.concat(missing, " ")
+-- nothing to press (a low level character): melee classes get Auto Attack
+do
+	local saved = KNOWN
+	KNOWN = {}
+	if ns.API and ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	ns.db.role = roles[1]
+	TARGET, COMBAT = true, true
+	fire("PLAYER_TARGET_CHANGED")
+	local q = ns.BuildQueue()
+	local melee = ns.CLASS_DAMAGE_ICON[CLASS_FILE] == "melee"
+	-- the melee play style of a caster/ranged class counts too
+	for _, r in ipairs(roles) do
+		if r == "melee" then ns.db.role = r; melee = true end
+	end
+	if ns.InvalidateTick then ns.InvalidateTick() end
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	q = ns.BuildQueue()
+	if melee then
+		if q[1] ~= 6603 then error("nothing to press: expected Auto Attack, got " .. tostring(q[1])) end
+		if q.soon and q.soon[6603] then error("Auto Attack should flash when not swinging yet") end
+		local was = C_Spell.IsCurrentSpell
+		C_Spell.IsCurrentSpell = function(id) return id == 6603 end
+		q = ns.BuildQueue()
+		C_Spell.IsCurrentSpell = was
+		if q[1] ~= 6603 or not (q.soon and q.soon[6603]) then error("Auto Attack must not flash while already swinging") end
+		ns.db.autoAttack = false
+		q = ns.BuildQueue()
+		ns.db.autoAttack = nil
+		if q[1] == 6603 then error("Auto Attack shown though turned off") end
+	elseif q[1] == 6603 then
+		error("Auto Attack suggested for a " .. CLASS_FILE)
+	end
+	TARGET = false
+	q = ns.BuildQueue()
+	if q[1] == 6603 then error("Auto Attack suggested with no target") end
+	report.auto = melee and "auto attack" or "-"
+	KNOWN = saved
+	if ns.API and ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+end
 report.flash = report.flash or 0
 report.buffs = report.buffs or 0
 report.list = ns.UsingBuiltInList and ns.UsingBuiltInList() and "built-in" or "other"

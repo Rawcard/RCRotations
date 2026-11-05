@@ -191,6 +191,17 @@ assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays beside th
 -- the game resets the plate's alpha (range, target change): it stays hidden
 PLATES_LIST[1].UnitFrame:SetAlpha(1)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "plate stays hidden when the game sets its alpha again")
+do
+	local was, wasPrint = C_NamePlate.GetNamePlateForUnit, ns.Print
+	local lines = {}
+	ns.Print = function(t) lines[#lines + 1] = tostring(t) end
+	for _, i in ipairs({ 1, 3 }) do
+		C_NamePlate.GetNamePlateForUnit = function() return PLATES_LIST[i] end
+		step("platecheck", SlashCmdList.RCROT, "platecheck")
+	end
+	C_NamePlate.GetNamePlateForUnit, ns.Print = was, wasPrint
+	PLATECHECK = table.concat(lines, "\n")
+end
 step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
@@ -359,6 +370,8 @@ def run(cls, cid, no_secrets=False):
     g.NO_SECRETS_WANTED = no_secrets
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
+        print(g.PLATECHECK)
     roles = {str(k): int(v) for k, v in r.roles.items()}
     seen = g.BUFFS_SEEN
     buffs = [int(seen[i]) for i in range(1, len(seen) + 1)] if seen else []

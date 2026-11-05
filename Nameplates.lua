@@ -394,7 +394,10 @@ local function ownName(plate, uf, hide, unit)
 	mine:Show()
 	-- ours shows exactly when theirs is hidden
 	fade(mine, hide, 1, 0)
-	pcall(tuckIcons, plate, uf, mine, true)
+	local okT, errT = pcall(tuckIcons, plate, uf, mine, true)
+	if not okT then
+		Plates.lastError = tostring(errT)
+	end
 end
 
 -- Blizzard may set the plate's alpha again (range, target changes): put ours back.
@@ -514,6 +517,74 @@ function Plates.Apply()
 		end
 		ns.db.plateBackup = nil
 	end
+end
+
+-- /rcr platecheck: what the addon sees on your target's nameplate (for fixing
+-- nameplate layouts it doesn't know yet)
+function Plates.Check()
+	local say = ns.Print or print
+	local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, "target")
+	if not ok or type(plate) ~= "table" then
+		say("platecheck: target an enemy that has a nameplate first")
+		return
+	end
+	local function nameOf(f)
+		if type(f) ~= "table" then
+			return tostring(f)
+		end
+		local okN, n = pcall(f.GetName, f)
+		if okN and n then
+			return n
+		end
+		local okD, d = pcall(f.GetDebugName, f)
+		return okD and d or "?"
+	end
+	local function where(r)
+		local okP, p1, rel, p2, x, y = pcall(r.GetPoint, r, 1)
+		if not okP or not p1 then
+			return "no anchor"
+		end
+		return ("%s %s %s %s %s"):format(tostring(p1), nameOf(rel), tostring(p2), tostring(x), tostring(y))
+	end
+	local uf = plate.unitFrame
+	local blizz = plate.UnitFrame
+	local ver = "?"
+	if C_AddOns and C_AddOns.GetAddOnMetadata then
+		local okV, v = pcall(C_AddOns.GetAddOnMetadata, addonName, "Version")
+		if okV and v then
+			ver = v
+		end
+	end
+	say(("platecheck (RCRotations %s): option %s, plate %s, addon frame %s, our name %s, icons tucked %d"):format(
+		ver, on() and "ON" or "off", nameOf(plate), type(uf) == "table" and uf ~= blizz and nameOf(uf) or "none (Blizzard)",
+		plate.rcrName and (plate.rcrName:IsShown() and "shown" or "hidden") or "none", plate.rcrIcons and #plate.rcrIcons or 0))
+	local frame = (type(uf) == "table" and uf ~= blizz) and uf or blizz
+	local q = type(frame) == "table" and frame.QuestIcons
+	if type(q) == "table" then
+		say("QuestIcons: " .. where(q))
+		for _, k in ipairs({ "Default", "Item", "Loot", "Skull", "Chat" }) do
+			local r = q[k]
+			if type(r) == "table" then
+				local okS, shown = pcall(r.IsShown, r)
+				say(("  %s: %s, side %s, tucked %s, at %s"):format(k, okS and (shown and "shown" or "hidden") or "?",
+					tostring(r.rcrSide), tostring(r.rcrTucked), where(r)))
+			end
+		end
+	else
+		say("no QuestIcons on this plate")
+	end
+	if type(frame) == "table" then
+		local okK, kids = pcall(function() return { frame:GetChildren() } end)
+		local names = {}
+		for _, k in ipairs(okK and kids or {}) do
+			local okS, shown = pcall(k.IsShown, k)
+			if okS and shown then
+				names[#names + 1] = nameOf(k)
+			end
+		end
+		say("shown parts: " .. table.concat(names, ", "))
+	end
+	say("last error: " .. tostring(Plates.lastError or "none"))
 end
 
 function Plates.Set(value)

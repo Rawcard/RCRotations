@@ -1131,6 +1131,10 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Tick then
 			ns.Tick()
 		end
+	elseif msg == "platecheck" then
+		if ns.Plates and ns.Plates.Check then
+			ns.Plates.Check()
+		end
 	elseif msg == "plates" or msg == "nameplates" then
 		if ns.Plates then
 			ns.Plates.Set(ns.db.hidePlates ~= true)

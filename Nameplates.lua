@@ -525,8 +525,26 @@ function Plates.Check()
 	local say = ns.Print or print
 	local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, "target")
 	if not ok or type(plate) ~= "table" then
-		say("platecheck: target an enemy that has a nameplate first")
-		return
+		plate = nil
+		-- no plate for the target: use a nearby one, preferring one with quest icons
+		local okL, plates = pcall(C_NamePlate.GetNamePlates)
+		local first
+		for _, p in ipairs(okL and type(plates) == "table" and plates or {}) do
+			first = first or p
+			local f = (type(p.unitFrame) == "table" and p.unitFrame) or p.UnitFrame
+			local q = type(f) == "table" and f.QuestIcons
+			local okS, shown = pcall(function() return q and q:IsShown() end)
+			if okS and shown then
+				plate = p
+				break
+			end
+		end
+		plate = plate or first
+		say(("platecheck: no plate for your target, checking a nearby one (%d nameplates around)"):format(okL and type(plates) == "table" and #plates or 0))
+		if not plate then
+			say("platecheck: no nameplates around at all. Stand near some enemies and try again.")
+			return
+		end
 	end
 	local function nameOf(f)
 		if type(f) ~= "table" then

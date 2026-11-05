@@ -318,6 +318,50 @@ do
 	ns.db.combatMode, ns.db.autoEnemies = nil, nil
 	report.aoe = "ok"
 end
+-- Paladin playstyles from WoW Forever: Seal Twist and Shockadin
+if CLASS_FILE == "PALADIN" then
+	local P = ns.Spell.Paladin
+	local have = {}
+	for _, r in ipairs(roles) do have[r] = true end
+	assert(have.twist and have.shockadin, "Paladin has the Seal Twist and Shockadin playstyles")
+	TARGET, COMBAT = true, true
+	ns.db.role = "twist"
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	NOW = NOW + 10
+	ns.API.NoteSpellCast(P.SealRighteousness)
+	assert(not ns.API.TwistReady(P.SealCommand), "twist: no swap before a swing has used the last Echo")
+	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: never 'swap' to the seal you already have")
+	NOW = NOW + 3 -- a swing (2.4 sec weapon)
+	assert(ns.API.TwistReady(P.SealCommand), "twist: after a swing, swap Righteousness -> Command")
+	ns.API.NoteSpellCast(P.SealCommand)
+	assert(not ns.API.TwistReady(P.SealRighteousness), "twist: one swap per swing")
+	NOW = NOW + 3
+	assert(ns.API.TwistReady(P.SealRighteousness), "twist: next swing, swap back to Righteousness")
+	local seen = {}
+	for _ = 1, 4 do
+		local q = ns.BuildQueue()
+		if q[1] then seen[q[1]] = true end
+	end
+	NOW = NOW + 1
+	ns.db.role = "shockadin"
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	local q = ns.BuildQueue()
+	assert(q[1], "shockadin: suggests something in a fight")
+	-- Holy Shock known: a damage Paladin becomes a Shockadin once
+	local autoWas = ns.db.roleAuto
+	ns.db.roleAuto = nil
+	ns.db.role, ns.db.shockAuto, ns.API.shockCheckAt = "damage", nil, 0
+	ns.SyncAutoRole()
+	assert(ns.db.role == "shockadin", "damage Paladin with Holy Shock switched to Shockadin")
+	ns.db.role = "damage"
+	ns.API.shockCheckAt = 0
+	ns.SyncAutoRole()
+	assert(ns.db.role == "damage", "only once: picking Damage again sticks")
+	ns.db.roleAuto = autoWas
+	ns.db.role = roles[1]
+	if ns.InvalidateAPLCache then ns.InvalidateAPLCache() end
+	report.paladin = "twist+shockadin"
+end
 -- nothing to press (a low level character): melee classes get Auto Attack
 do
 	local saved = KNOWN

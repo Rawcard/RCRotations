@@ -945,7 +945,7 @@ function ns.API.IsRotationAction(spellID, opt, isRacial)
 	if opt.nopet or opt.pet or opt.nocombat then
 		return true
 	end
-	if opt.hp or opt.manaMax or opt.hpMin then
+	if opt.hp or opt.manaMax or opt.hpMin or opt.twist then
 		return true
 	end
 	if opt.anybuff or opt.anydebuff then
@@ -973,11 +973,84 @@ local function markCooldown(spellID, seconds)
 	end
 end
 
+-- ------------------------------------------------------------ seal twisting
+-- WoW Forever's Twist of Light (Retribution 31-point talent): replacing Seal of
+-- Command, Righteousness, Fury or Justice leaves an Echo, and your next melee
+-- swing gets that seal's effect on top of the new one. So the twist is: swap to
+-- the other seal once per swing. The game hides your buffs in combat, so the
+-- current seal is the last one you cast (tracked here by name, any rank).
+local sealNames, echoNames
+local function sealSets()
+	if sealNames then
+		return sealNames, echoNames
+	end
+	local P = ns.Spell and ns.Spell.Paladin or {}
+	sealNames, echoNames = {}, {}
+	for key, id in pairs(P) do
+		if type(key) == "string" and key:find("^Seal") and type(id) == "number" then
+			local n = ns.API.SpellName(id)
+			if type(n) == "string" and n ~= "" then
+				sealNames[n:lower()] = true
+				if key == "SealCommand" or key == "SealRighteousness" or key == "SealFury" or key == "SealJustice" then
+					echoNames[n:lower()] = true
+				end
+			end
+		end
+	end
+	return sealNames, echoNames
+end
+local sealNow, sealAt = nil, 0
+
+local function noteSeal(spellID)
+	local n = ns.API.SpellName(spellID)
+	if type(n) ~= "string" then
+		return
+	end
+	local seals = sealSets()
+	if seals[n:lower()] then
+		sealNow, sealAt = n:lower(), GetTime()
+	end
+end
+
+function ns.API.CurrentSeal()
+	return sealNow, sealAt
+end
+
+-- Should the twist swap to this seal now?
+function ns.API.TwistReady(spellID)
+	local seals, echoes = sealSets()
+	local want = ns.API.SpellName(spellID)
+	if type(want) ~= "string" or not seals[want:lower()] then
+		return false
+	end
+	want = want:lower()
+	-- the seal you have now must leave an Echo, and be a different seal
+	if not sealNow or sealNow == want or not echoes[sealNow] then
+		return false
+	end
+	if not ns.API.InCombat() or not ns.API.Hostile() then
+		return false
+	end
+	if ns.API.TargetInMelee and not ns.API.TargetInMelee() then
+		return false
+	end
+	-- one swap per swing: the last Echo has to be used up first
+	local swingAt, speed = 0, 0
+	if ns.Physics and ns.Physics.LastSwingAt then
+		swingAt, speed = ns.Physics.LastSwingAt()
+	end
+	if swingAt > 0 then
+		return swingAt > sealAt
+	end
+	return (GetTime() - sealAt) >= ((speed and speed > 0) and speed or 2.5)
+end
+
 function ns.API.NoteSpellCast(spellID)
 	ns.API.lastCastAt = GetTime()
 	if spellID == nil or (issecretvalue and issecretvalue(spellID)) then
 		return
 	end
+	pcall(noteSeal, spellID)
 	local key = cdKey(spellID)
 	local seconds = baseCooldownSec(spellID)
 	if seconds <= 0 and cdKnown[key] and cdKnown[key] > 1.5 then
@@ -1862,6 +1935,16 @@ function ns.API.StepOk(spellID, opt, timeShift)
 			end
 		end
 	end
+	if opt.twist and not ns.API.TwistReady(spellID) then
+		return false
+	end
+	if opt.manaMin then
+		local okCur, current = pcall(UnitPower, "player", 0)
+		local okMax, maxp = pcall(UnitPowerMax, "player", 0)
+		if okCur and okMax and readable(current) and readable(maxp) and maxp > 0 and (current / maxp) * 100 < opt.manaMin then
+			return false
+		end
+	end
 	if opt.manaMax then
 		local okCur, current = pcall(UnitPower, "player", 0)
 		local okMax, maxp = pcall(UnitPowerMax, "player", 0)
@@ -2718,6 +2801,30 @@ function ns.SyncAutoRole()
 		return
 	end
 	local token = ns.ClassToken and ns.ClassToken()
+	if token == "PALADIN" and ns.GAME == "forever" then
+		-- Holy Shock (21 Holy points) and Twist of Light (31 Retribution) can't
+		-- both be taken, so a damage Paladin who knows Holy Shock is a Shockadin.
+		-- Once per profile, so picking Damage again afterwards sticks.
+		local now = GetTime()
+		if ns.db.role == "damage" and not ns.db.shockAuto and now >= (ns.API.shockCheckAt or 0) then
+			ns.API.shockCheckAt = now + 5
+			local P = ns.Spell and ns.Spell.Paladin
+			if P and P.HolyShock and ns.API.Known(P.HolyShock) then
+				ns.db.shockAuto = true
+				ns.db.role = "shockadin"
+				if ns.InvalidateAPLCache then
+					ns.InvalidateAPLCache()
+				end
+				if ns.UI and ns.UI.RefreshRoles then
+					ns.UI.RefreshRoles()
+				end
+				if ns.Print then
+					ns.Print(ns.T("MSG_SHOCKADIN"))
+				end
+			end
+		end
+		return
+	end
 	if token ~= "HUNTER" and token ~= "SHAMAN" then
 		return
 	end

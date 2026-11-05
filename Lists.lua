@@ -133,6 +133,43 @@ if ns.GAME == "forever" then
 				step("SwiftJudgement", P.SwiftJudgement, { needanybuff = palaSeals, hostile = true }),
 			},
 		},
+		-- Two WoW Forever Paladin builds as their own playstyles:
+		-- Seal Twist (Retribution with the 31-point Twist of Light): keep a seal up,
+		-- then swap between Seal of Command and Seal of Righteousness once per
+		-- swing; the replaced seal's Echo adds its effect to your next swing.
+		-- Shockadin (Holy with Holy Shock, 10 sec cooldown in Forever): Seal of
+		-- Righteousness, Divine Favor into Holy Shock, Light's Vigil on the enemy
+		-- (the next Holy Shock skips its cooldown and refunds mana), Judgement,
+		-- Consecration, Holy Strike. Same order as the Forever Rotation sim.
+		PALADIN_TWIST = {
+			step("SealCommand", P.SealCommand, { nobuff = true, anybuff = palaSeals }),
+			step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
+			step("Judgement", P.Judgement, { needanybuff = palaSeals, hostile = true }),
+			step("HammerofWrath", P.HammerofWrath, { hp = 20, unit = "target", hostile = true }),
+			step("TwistCommand", P.SealCommand, { twist = true, manaMin = 20, hostile = true }),
+			step("TwistRighteousness", P.SealRighteousness, { twist = true, manaMin = 20, hostile = true }),
+			step("HolyStrike", P.HolyStrike, { hostile = true }),
+			step("SwiftJudgement", P.SwiftJudgement, { needanybuff = palaSeals, hostile = true }),
+			step("CrusaderStrike", P.CrusaderStrike, { hostile = true }),
+			step("Consecration", P.Consecration, { enemiesMin = 2, enemiesYards = 10, manaMin = 30, hostile = true }),
+			step("Exorcism", P.Exorcism, { usable = true, creature = undeadDemon, hostile = true }),
+			step("FlashofLight", P.FlashofLight, { hp = 50, heal = true }),
+			step("HolyLight", P.HolyLight, { hp = 40, heal = true }),
+		},
+		PALADIN_SHOCK = {
+			step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
+			step("DivineFavor", P.DivineFavor, { combat = true, hostile = true }),
+			step("HammerofWrath", P.HammerofWrath, { hp = 20, unit = "target", hostile = true }),
+			step("HolyShock", P.HolyShock, { hostile = true }),
+			step("LightsVigil", P.LightsVigil, { hostile = true }),
+			step("Judgement", P.Judgement, { needanybuff = palaSeals, hostile = true }),
+			step("Consecration", P.Consecration, { manaMin = 20, hostile = true }),
+			step("HolyStrike", P.HolyStrike, { hostile = true }),
+			step("SwiftJudgement", P.SwiftJudgement, { needanybuff = palaSeals, hostile = true }),
+			step("Exorcism", P.Exorcism, { usable = true, creature = undeadDemon, hostile = true }),
+			step("FlashofLight", P.FlashofLight, { hp = 60, heal = true }),
+			step("HolyLight", P.HolyLight, { hp = 50, heal = true }),
+		},
 		WARRIOR = {
 			damage = {
 				step("Charge", W.Charge, { nocombat = true, hostile = true }),
@@ -329,6 +366,12 @@ if ns.GAME == "forever" then
 			},
 		},
 	}
+
+	-- the two extra Paladin playstyles (Forever only)
+	ns.APLDefaults.PALADIN.twist = ns.APLDefaults.PALADIN_TWIST
+	ns.APLDefaults.PALADIN.shockadin = ns.APLDefaults.PALADIN_SHOCK
+	ns.APLDefaults.PALADIN_TWIST, ns.APLDefaults.PALADIN_SHOCK = nil, nil
+	ns.CLASS_ROLES.PALADIN = { "damage", "twist", "shockadin", "tank", "heal" }
 
 	ns.APLModes = {
 		DRUID = {

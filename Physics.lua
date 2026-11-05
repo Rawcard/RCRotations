@@ -410,6 +410,12 @@ local function energyTickRemain()
 	return ENERGY_TICK - (elapsed % ENERGY_TICK)
 end
 
+-- When the last main-hand swing landed (estimated), for seal twisting.
+function ns.Physics.LastSwingAt()
+	ensureLive()
+	return mhAt or 0, mhSpeed or 0
+end
+
 function ns.Physics.SwingWindow()
 	local left = handRemain(mhAt, mhSpeed)
 	if left == nil then

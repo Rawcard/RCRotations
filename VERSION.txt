@@ -2,6 +2,15 @@
 
 # 1.5.3
 
+- WoW Forever Paladins: two new playstyles, picked with the playstyle button (or /rcr role).
+  - Seal Twist, for Retribution with Twist of Light: keeps a seal up, then swaps between Seal
+    of Command and Seal of Righteousness once per swing, so every swing gets both seals
+    (the replaced seal's Echo). It waits until your last swing has used the Echo, and stops
+    twisting below 20% mana. Judgement, Hammer of Wrath, Holy Strike and the rest fit around it.
+  - Shockadin, for Holy Shock builds: Seal of Righteousness, Divine Favor into Holy Shock,
+    Light's Vigil on the enemy (your next Holy Shock skips its cooldown), Judgement,
+    Consecration, Holy Strike. A damage Paladin who knows Holy Shock is switched to Shockadin
+    once; pick Damage again and it stays.
 - When there's nothing to press (low levels, or everything on cooldown), melee characters now
   see Auto Attack instead of the empty skull. It flashes on your bar until you start swinging,
   then stays on the HUD without flashing, so you don't click Attack again and stop your swings.

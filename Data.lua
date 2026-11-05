@@ -436,6 +436,7 @@ ns.Spell = {
 		VoiceOfTruth = 1310897,
 		TemplarsBulwark = 1311015,
 		SwiftJudgement = 1310994,
+		DivineFavor = 20216,
 	},
 	Warrior = {
 		HeroicStrike = 78,

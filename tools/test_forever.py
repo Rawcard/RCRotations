@@ -277,16 +277,19 @@ step("buffs", function()
 		local kings = S.Paladin.BlessingKings
 		local gsi, wasRole = C_Spell.GetSpellInfo, ns.db.role
 		KNOWN[kings] = nil
+		FUTURE[kings] = true -- greyed out in the spellbook
 		C_Spell.GetSpellInfo = function(id)
-			if id == "Spell" .. kings then return { name = id, spellID = kings, iconID = 1 } end
+			if id == "Blessing of Kings" then return { name = id, spellID = kings, iconID = 1 } end
 			return gsi(id)
 		end
 		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.API.RebuildSpellBookIndex(true) -- the spellbook has been read
 		ns.db.role = "damage"
 		AURAS.player = {}
 		local m2 = ns.Buffs.Missing()
 		C_Spell.GetSpellInfo = gsi
-		KNOWN[kings] = true
+		KNOWN[kings], FUTURE[kings] = true, nil
+		ns.API.RebuildSpellBookIndex(true)
 		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
 		ns.db.role = wasRole
 		assert(not has(m2, kings), "Blessing of Kings suggested without the talent")

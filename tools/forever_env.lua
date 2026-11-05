@@ -315,6 +315,7 @@ local RANKS = {
 	["Consecration"] = { 26573, 20116, 20922, 20923, 20924 },
 	["Exorcism"] = { 879, 5614, 5615, 10312, 10313, 10314 },
 	["Echo of Command"] = { 1311703 }, ["Echo of Righteousness"] = { 1311704 },
+	["Blessing of Kings"] = { 20217 }, ["Blessing of Might"] = { 19740, 19834, 19835, 19836, 19837, 19838, 25291 },
 }
 local RANK_NAME = {}
 for n, ids in pairs(RANKS) do for _, id in ipairs(ids) do RANK_NAME[id] = n end end
@@ -339,10 +340,31 @@ C_Spell = {
 		return H[id] == true
 	end,
 }
+-- The spellbook: what you know, plus greyed-out spells you haven't learned yet
+-- (FUTURE: talents you didn't take, ranks you're too low for), as the modern
+-- spellbook lists them (itemType 2 = FutureSpell).
+FUTURE = {}
+local function book()
+	local items = {}
+	for id in pairs(KNOWN) do items[#items + 1] = { id = id, t = 1 } end
+	for id in pairs(FUTURE) do if not KNOWN[id] then items[#items + 1] = { id = id, t = 2 } end end
+	table.sort(items, function(a, b) return a.id < b.id end)
+	return items
+end
 C_SpellBook = {
-	GetNumSpellBookSkillLines = function() return 0 end,
+	GetNumSpellBookSkillLines = function() return 1 end,
+	GetSpellBookSkillLineInfo = function(i) if i == 1 then return { itemIndexOffset = 0, numSpellBookItems = #book() } end end,
+	GetSpellBookItemInfo = function(i)
+		local it = book()[i]
+		if not it then return nil end
+		return { name = C_Spell.GetSpellName(it.id), spellID = it.id, itemType = it.t, isPassive = false, isOffSpec = false }
+	end,
 	IsSpellInSpellBook = function(id) return KNOWN[id] == true end,
-	FindSpellBookSlotForSpell = function(id) return KNOWN[id] and 1 or nil end,
+	FindSpellBookSlotForSpell = function(id, hidden, flyouts, future)
+		for i, it in ipairs(book()) do
+			if it.id == id and (it.t == 1 or future) then return i, 0 end
+		end
+	end,
 }
 AURAS = {
 	player = { { spellId = 1, name = "Buff" } },

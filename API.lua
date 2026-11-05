@@ -91,6 +91,20 @@ local function bookBanks()
 	return banks
 end
 
+-- A spellbook entry you don't have: a future spell (not learned yet), or one
+-- for another specialization.
+local function notLearnedItem(info)
+	local t = safe(info.itemType, nil)
+	local future = Enum and Enum.SpellBookItemType and Enum.SpellBookItemType.FutureSpell or 2
+	if t ~= nil and t == future then
+		return true
+	end
+	if safe(info.isOffSpec, false) == true then
+		return true
+	end
+	return false
+end
+
 local function readBookItem(index, bank)
 	if index == nil or bank == nil then
 		return nil, nil
@@ -98,6 +112,11 @@ local function readBookItem(index, bank)
 	if C_SpellBook and C_SpellBook.GetSpellBookItemInfo then
 		local ok, info = pcall(C_SpellBook.GetSpellBookItemInfo, index, bank)
 		if ok and type(info) == "table" then
+			-- the spellbook also lists spells you haven't learned (greyed out:
+			-- a talent you didn't take, a rank you're too low for); skip them
+			if notLearnedItem(info) then
+				return nil, nil
+			end
 			return safe(info.name, nil), safe(info.spellID, nil)
 		end
 	end
@@ -680,9 +699,17 @@ local function playerKnows(id)
 			end
 		end
 		if C_SpellBook.FindSpellBookSlotForSpell then
-			local ok, slot = pcall(C_SpellBook.FindSpellBookSlotForSpell, id)
+			-- (spellID, includeHidden, includeFlyouts, includeFutureSpells, includeOffSpec)
+			local ok, slot, bank = pcall(C_SpellBook.FindSpellBookSlotForSpell, id, false, true, false, false)
 			if ok and slot then
-				return true
+				local info
+				if C_SpellBook.GetSpellBookItemInfo then
+					local okI, got = pcall(C_SpellBook.GetSpellBookItemInfo, slot, bank or (Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player) or 0)
+					info = okI and type(got) == "table" and got or nil
+				end
+				if not (info and notLearnedItem(info)) then
+					return true
+				end
 			end
 		end
 	end

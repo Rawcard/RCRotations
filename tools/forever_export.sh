@@ -6,9 +6,12 @@
 set -euo pipefail
 SRC=$(cd "$1" && pwd)
 OUT=$(mkdir -p "$2" && cd "$2" && pwd)
-CLI="$OUT/../wowsimcli"
+CLI="${WOWSIMCLI:-$OUT/../wowsimcli}"
 if [ ! -x "$CLI" ]; then
-	(cd "$SRC" && go build -o "$CLI" ./cmd/wowsimcli)
+	# needs protoc and protoc-gen-go on the PATH (see .github/workflows)
+	(cd "$SRC" && protoc -I=./proto \
+		--go_opt=Mgoogle/protobuf/descriptor.proto=google.golang.org/protobuf/types/descriptorpb \
+		--go_out=./sim/core ./proto/*.proto && go build --tags=with_db -o "$CLI" ./cmd/wowsimcli)
 fi
 rm -rf "$OUT"/*
 cd "$SRC/ui/specs"

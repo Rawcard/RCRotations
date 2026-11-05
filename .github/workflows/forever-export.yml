@@ -13,6 +13,14 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: "1.25"
+      - name: Install protoc
+        run: |
+          curl -fsSL --retry 5 -o "$RUNNER_TEMP/protoc.zip" https://github.com/protocolbuffers/protobuf/releases/download/v36.2/protoc-36.2-linux-x86_64.zip
+          python3 -m zipfile -e "$RUNNER_TEMP/protoc.zip" "$RUNNER_TEMP/protoc"
+          chmod +x "$RUNNER_TEMP/protoc/bin/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
       - name: Get WoWSims Forever
         run: git clone --depth 1 https://github.com/wowsims/forever wowsims-forever
       - name: Export

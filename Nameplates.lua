@@ -194,19 +194,29 @@ local function iconCandidates(plate, uf)
 	walk(plate, 2)
 	-- ElvUI's quest icons (uf.QuestIcons: Default "!", Item, Loot, Skull, Chat)
 	-- are laid out from the plate's edges; they go beside the name too
+	-- and the game's loot / interact marker (SoftTargetFrame). Their side is
+	-- fixed: items and loot on the left, the quest "!" and the rest on the right.
 	local forced = {}
-	local q = type(uf.QuestIcons) == "table" and uf.QuestIcons or nil
-	if q then
-		for _, k in ipairs({ "Default", "Item", "Loot", "Skull", "Chat" }) do
-			local r = q[k]
-			if type(r) == "table" and r.SetPoint then
-				forced[r] = true
-				if not seen[r] then
-					seen[r] = true
-					out[#out + 1] = r
-				end
+	local function force(r, side)
+		if type(r) == "table" and r.SetPoint then
+			forced[r] = side
+			if not seen[r] then
+				seen[r] = true
+				out[#out + 1] = r
 			end
 		end
+	end
+	local q = type(uf.QuestIcons) == "table" and uf.QuestIcons or nil
+	if q then
+		force(q.Item, "left")
+		force(q.Loot, "left")
+		force(q.Default, "right")
+		force(q.Skull, "right")
+		force(q.Chat, "right")
+	end
+	force(uf.SoftTargetFrame, "left")
+	if type(plate.UnitFrame) == "table" and plate.UnitFrame ~= uf then
+		force(plate.UnitFrame.SoftTargetFrame, "left")
 	end
 	return out, forced
 end
@@ -216,7 +226,11 @@ local function ignoresParentAlpha(r)
 		return false
 	end
 	local ok, yes = pcall(r.IsIgnoringParentAlpha, r)
-	return ok and yes == true
+	-- can be hidden from addons on WoW Forever: comparing it is an error
+	if not ok or secret(yes) then
+		return false
+	end
+	return yes == true
 end
 
 -- which side of the plate an icon belongs on, from where the game put it
@@ -261,7 +275,7 @@ local function layoutIcons(plate, mine)
 			end
 			r.rcrTucking = nil
 			local okS, shown = pcall(r.IsShown, r)
-			if not okS or shown ~= false then
+			if not okS or secret(shown) or shown ~= false then
 				prev[side] = r
 			end
 		end
@@ -274,14 +288,21 @@ local function tuckIcons(plate, uf, mine, hide)
 		list = list or {}
 		local candidates, forced = iconCandidates(plate, uf)
 		for _, r in ipairs(candidates) do
-			if not r.rcrSide and (forced[r] or ignoresParentAlpha(r)) and r.ClearAllPoints and r.SetPoint and r.GetPoint then
+			if not r.rcrSide and (forced[r] or ignoresParentAlpha(r)) and r.ClearAllPoints and r.SetPoint then
+				-- where the game put it, to put it back later (may be unreadable)
 				local points = {}
 				local okN, n = pcall(r.GetNumPoints, r)
-				for i = 1, (okN and tonumber(n)) or 0 do
-					points[i] = { r:GetPoint(i) }
+				if okN and not secret(n) and type(n) == "number" then
+					for i = 1, n do
+						local okP, a, b, c, d, e = pcall(r.GetPoint, r, i)
+						if okP and not (secret(a) or secret(b) or secret(c) or secret(d) or secret(e)) then
+							points[#points + 1] = { a, b, c, d, e }
+						end
+					end
 				end
 				r.rcrPoints = points
-				r.rcrSide = iconSide(plate, r, points, forced[r])
+				r.rcrHome = r.GetParent and r:GetParent() or nil
+				r.rcrSide = forced[r] or iconSide(plate, r, points)
 				list[#list + 1] = r
 				-- the game moves them back now and then: tuck them in again
 				if hooksecurefunc then
@@ -320,8 +341,14 @@ local function tuckIcons(plate, uf, mine, hide)
 				r.rcrTucked = nil
 				r.rcrTucking = true
 				pcall(r.ClearAllPoints, r)
-				for _, p in ipairs(r.rcrPoints or {}) do
+				local points = r.rcrPoints or {}
+				for _, p in ipairs(points) do
 					pcall(r.SetPoint, r, unpack(p))
+				end
+				if #points == 0 and r.rcrHome then
+					-- couldn't read where it was: center it on its own frame;
+					-- the plate addon lays it out again on its next update
+					pcall(r.SetPoint, r, "CENTER", r.rcrHome, "CENTER", 0, 0)
 				end
 				r.rcrTucking = nil
 			end
@@ -559,8 +586,11 @@ function Plates.Check()
 	end
 	local function where(r)
 		local okP, p1, rel, p2, x, y = pcall(r.GetPoint, r, 1)
-		if not okP or not p1 then
+		if not okP or rawequal(p1, nil) then
 			return "no anchor"
+		end
+		if secret(p1) or secret(rel) or secret(x) then
+			return "hidden"
 		end
 		return ("%s %s %s %s %s"):format(tostring(p1), nameOf(rel), tostring(p2), tostring(x), tostring(y))
 	end

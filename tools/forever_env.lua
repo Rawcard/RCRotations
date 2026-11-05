@@ -404,6 +404,18 @@ for i, unit in ipairs(PLATES) do
 		qi.Default:SetPoint("RIGHT", qi, "RIGHT", 0, 0)
 		qi.Item:SetPoint("LEFT", qi, "LEFT", 0, 0)
 		p.unitFrame.QuestIcons = qi
+		-- Forever: anchors unreadable, "ignores parent alpha" hidden
+		local soft = icon(250)
+		soft:SetPoint("BOTTOM", p.unitFrame, "TOP", 0, 0)
+		p.unitFrame.SoftTargetFrame = soft
+		for _, t in ipairs({ qi.Default, qi.Item, soft }) do
+			t.GetNumPoints = function() return NEWSECRET(1) end
+			t.GetPoint = function() error("anchors are hidden") end
+			t.IsIgnoringParentAlpha = function() return NEWSECRET(true) end
+		end
+		qi.Default.GetParent = function() return qi end
+		qi.Item.GetParent = function() return qi end
+		p.unitFrame.GetChildren = function() return qi, soft end
 	else
 		-- Blizzard plate: a frame with its own bar, level and health text
 		p.UnitFrame = bar()

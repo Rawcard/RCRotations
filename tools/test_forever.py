@@ -181,8 +181,13 @@ assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: 
 local eq = PLATES_LIST[3].unitFrame.QuestIcons
 local elvName = PLATES_LIST[3].rcrName
 assert(elvName, "ElvUI plate: our name")
-assert(eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
-assert(eq.Item.pts[1][2] == elvName and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, beside the name")
+assert(eq.Default.pts[1] and eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
+local softF = PLATES_LIST[3].unitFrame.SoftTargetFrame
+assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvName or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, beside the name")
+local soft = PLATES_LIST[3].unitFrame.SoftTargetFrame
+local last = soft.pts[#soft.pts]
+assert(last and last[1] == "RIGHT" and (last[2] == elvName or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left beside the name")
+assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
 assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
 -- the game anchors it back to the bar: it comes back beside the name
@@ -206,7 +211,7 @@ step("plates off", SlashCmdList.RCROT, "plates")
 update(0.6)
 assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
 assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
-assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back")
+assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back (centered on their frame when the anchor couldn't be read)")
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)

@@ -11,6 +11,9 @@
   starter rotation for your class; from 20 on, the rotation for your playstyle whose talent
   build is closest to yours. Respec, level up or change playstyle and it follows (chat says so).
   Healing playstyles keep the built-in heal lists.
+- WoW Forever Paladins: a seal you already have isn't asked for again. The addon now reads your
+  seal (and how long seals last) whenever your buffs are visible, so one cast before a login or
+  /reload counts, and it no longer assumes you have no seal when it can't tell.
 - Choose a rotation yourself any time with /rcr apl: Auto is first, then every rotation for
   your class. A rotation you made in the Workshop app is used ahead of the built-in ones.
 - WoW Forever Paladins: two new playstyles, picked with the playstyle button (or /rcr role).

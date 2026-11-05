@@ -333,6 +333,19 @@ local function scanAuras(unit, filter)
 		end
 	end
 	pass.auras[key] = list
+	-- your buffs are readable: keep the seal tracking in step with them
+	if unit == "player" and filter == "HELPFUL" and API.SyncSeals then
+		local hidden = false
+		for _, a in ipairs(list) do
+			if a.id == nil and a.name == nil then
+				hidden = true
+				break
+			end
+		end
+		if not hidden then
+			API.SyncSeals(list)
+		end
+	end
 	return list
 end
 
@@ -397,6 +410,10 @@ heldPlayerAura = function(id)
 	end
 	if API.SealUp then
 		local up, left = API.SealUp(id)
+		-- never seen your seal (it was up before the addon loaded): don't nag
+		if up ~= nil and API.SealKnown and not API.SealKnown() then
+			return { id = id, count = 1, expires = 0, duration = 0 }
+		end
 		if up ~= nil then
 			if up then
 				return { id = id, count = 1, expires = GetTime() + left, duration = 30 }

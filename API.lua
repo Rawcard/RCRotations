@@ -1004,6 +1004,8 @@ local function sealSets()
 	return sealNames
 end
 local sealNow, sealAt = nil, 0 -- key of the last seal cast, and when
+local sealExpire = 0 -- when it runs out
+local sealSeen = false -- the seal state is known (a cast, or a look at readable buffs)
 
 local function noteSeal(spellID)
 	local n = ns.API.SpellName(spellID)
@@ -1012,14 +1014,44 @@ local function noteSeal(spellID)
 	end
 	local key = sealSets()[n:lower()]
 	if key then
-		sealNow, sealAt = key, GetTime()
+		sealNow, sealAt, sealSeen = key, GetTime(), true
+		sealExpire = sealAt + (ns.API.sealDuration or 30)
 	end
 end
 
-local SEAL_SECONDS = 30
--- the seal still up (a seal you cast over 30 sec ago has run out)
+-- Your buffs, when the game lets you read them (out of combat): the seal you
+-- really have, how long it has left, and how long seals last.
+function ns.API.SyncSeals(auras)
+	local seals = sealSets()
+	local found
+	for _, a in ipairs(auras or {}) do
+		local key = type(a.name) == "string" and seals[a.name:lower()]
+		if key then
+			found = a
+			if key ~= sealNow then
+				sealNow, sealAt = key, GetTime()
+			end
+			if (a.duration or 0) > 0 then
+				ns.API.sealDuration = a.duration
+			end
+			sealExpire = (a.expires or 0) > 0 and a.expires or (GetTime() + (ns.API.sealDuration or 30))
+			break
+		end
+	end
+	if not found then
+		sealNow = nil
+	end
+	sealSeen = true
+end
+
+-- false until the addon has seen your seal (cast or readable buffs)
+function ns.API.SealKnown()
+	return sealSeen
+end
+
+-- the seal still up (one past its time has run out)
 local function liveSeal()
-	if sealNow and GetTime() > sealAt + SEAL_SECONDS then
+	if sealNow and GetTime() > sealExpire then
 		sealNow = nil
 	end
 	return sealNow
@@ -1068,7 +1100,7 @@ function ns.API.SealUp(spellID)
 	if key ~= liveSeal() then
 		return false, 0
 	end
-	return true, math.max(0, sealAt + SEAL_SECONDS - GetTime())
+	return true, math.max(0, sealExpire - GetTime())
 end
 
 -- Should the twist swap to this seal now?

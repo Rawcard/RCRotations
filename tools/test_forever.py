@@ -324,6 +324,24 @@ do
 	assert(Sim.IsAuto(token, 0), "Auto is the default")
 	ns.db.role = roles[1]
 	assert(pick() == list[1], "level 10: the starter")
+	-- Paladin: a seal that's already up (cast before the addon loaded) isn't asked for again
+	if CLASS_FILE == "PALADIN" then
+		local SOR = 20287 -- Seal of Righteousness rank 2: same name as rank 1
+		TARGET, COMBAT, AURAS_SECRET = true, false, false
+		AURAS.player = { { spellId = SOR, name = "Seal of Righteousness" } }
+		NOW = NOW + 1
+		local q = ns.BuildQueue()
+		assert(q[1] ~= 21084 and q[1] ~= SOR, "seal already up (out of combat): not asked for again (got " .. tostring(q[1]) .. ")")
+		COMBAT = true -- buffs hidden now
+		NOW = NOW + 1
+		q = ns.BuildQueue()
+		assert(q[1] ~= 21084 and q[1] ~= SOR, "seal already up (in combat, hidden): not asked for again (got " .. tostring(q[1]) .. ")")
+		COMBAT = false
+		AURAS.player = { { spellId = 1, name = "Buff" } }
+		NOW = NOW + 1
+		q = ns.BuildQueue()
+		assert(q[1] == 21084, "no seal: asks for Seal of Righteousness (got " .. tostring(q[1]) .. ")")
+	end
 	-- the starter suggests a spell in a fight
 	TARGET, COMBAT = true, true
 	fire("PLAYER_TARGET_CHANGED")

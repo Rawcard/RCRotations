@@ -178,10 +178,49 @@ Buffs.FOREVER = FOREVER
 local SUMMONS = { [FL.SummonImp or 0] = true, [FL.SummonVoidwalker or 0] = true, [FL.SummonSuccubus or 0] = true,
 	[FL.SummonFelhunter or 0] = true, [FL.SummonIncubus or 0] = true, [FL.SummonFelguard or 0] = true }
 -- remember the last demon a warlock summoned (Forever)
+-- WoW Forever hides your buffs in combat, so the reminders shown when the fight
+-- started stay up (held) until combat ends; one goes away when you cast it.
+local held, heldWho, heldIds = {}, {}, {}
+
 function Buffs.NoteCast(spellID)
 	if spellID and SUMMONS[spellID] and ns.db then
 		ns.db.lastDemon = spellID
 	end
+	if spellID and #held > 0 then
+		for i = #held, 1, -1 do
+			local ids = heldIds[held[i]]
+			if held[i] == spellID or (ids and ids[spellID]) then
+				heldIds[held[i]] = nil
+				table.remove(held, i)
+			end
+		end
+	end
+end
+
+-- every spell that satisfies this reminder (casting any of them clears it)
+local function entryIds(entry, pick)
+	local ids = {}
+	local function add(id)
+		if type(id) == "number" then
+			ids[id] = true
+			local r = ns.API and ns.API.Resolve and ns.API.Resolve(id)
+			if type(r) == "number" then
+				ids[r] = true
+			end
+		end
+	end
+	add(entry.spell)
+	add(pick)
+	for _, id in ipairs(entry.alt or {}) do
+		add(id)
+	end
+	for _, id in ipairs(entry.any or {}) do
+		add(id)
+	end
+	for _, c in ipairs(entry.choose or {}) do
+		add(type(c) == "table" and c.spell or c)
+	end
+	return ids
 end
 
 local GRIMOIRE_OF_SACRIFICE = 108503
@@ -548,15 +587,6 @@ local function active()
 	if ns.GAME ~= "mists" and ns.GAME ~= "forever" then
 		return false
 	end
-	if ns.GAME == "forever" then
-		-- Forever hides buffs from addons in combat (and on some maps)
-		if call(InCombatLockdown) or call(UnitAffectingCombat, "player") then
-			return false
-		end
-		if not aurasReadable("player") then
-			return false
-		end
-	end
 	if ns.db and ns.db.showBuffs == false then
 		return false
 	end
@@ -574,6 +604,16 @@ function Buffs.Missing()
 	trayCache = nil
 	if not active() then
 		return {}
+	end
+	-- Forever hides buffs in combat (and on some maps): keep what was missing
+	-- when we could last tell, minus what you've cast since
+	if ns.GAME == "forever" and (call(InCombatLockdown) or call(UnitAffectingCombat, "player") or not aurasReadable("player")) then
+		local out = {}
+		for i, id in ipairs(held) do
+			out[i] = id
+		end
+		Buffs.who = heldWho
+		return out
 	end
 	local token = ns.ClassToken and ns.ClassToken()
 	ns.CLASSTOKEN = token
@@ -593,7 +633,7 @@ function Buffs.Missing()
 			groupCache[k] = nil
 		end
 	end
-	local out, seen, who = {}, {}, {}
+	local out, seen, who, ids = {}, {}, {}, {}
 	for _, entry in ipairs(list) do
 		if #out >= 4 then
 			break
@@ -616,9 +656,16 @@ function Buffs.Missing()
 				out[#out + 1] = id
 				who[id] = name
 				seen[key] = true
+				ids[id] = entryIds(entry, pick)
 			end
 		end
 	end
 	Buffs.who = who
+	if ns.GAME == "forever" then
+		held, heldWho, heldIds = {}, who, ids
+		for i, id in ipairs(out) do
+			held[i] = id
+		end
+	end
 	return out
 end

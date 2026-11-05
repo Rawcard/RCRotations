@@ -189,7 +189,7 @@ step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)
 step("copy link", ns.ShowCopyLink)
 step("close menu", ns.ToggleOptions)
--- buff reminders (Forever list): out of combat only, never when buffs are hidden
+-- buff reminders (Forever list): checked out of combat, held through combat
 step("buffs", function()
 	COMBAT, AURAS_SECRET = false, false
 	AURAS.player = {}
@@ -197,12 +197,24 @@ step("buffs", function()
 	report.buffs = #m
 	BUFFS_SEEN = {}
 	for i, id in ipairs(m) do BUFFS_SEEN[i] = id end
-	COMBAT = true
-	assert(#ns.Buffs.Missing() == 0, "no buff reminders in combat on Forever")
-	COMBAT = false
+	-- in combat (buffs hidden): the reminders from before the fight stay up
+	COMBAT, AURAS_SECRET = true, true
+	local during = ns.Buffs.Missing()
+	if #during ~= #m then error("buff reminders went away in combat: " .. #m .. " before, " .. #during .. " during") end
+	if #m > 0 then
+		-- casting one clears it, even though the buff itself can't be seen
+		fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-7", m[1])
+		local after = ns.Buffs.Missing()
+		if #after ~= #m - 1 then error("casting " .. m[1] .. " in combat didn't clear its reminder") end
+		for _, id in ipairs(after) do if id == m[1] then error("reminder " .. id .. " stayed after casting it") end end
+	end
+	COMBAT, AURAS_SECRET = false, false
 	AURAS.player = { { spellId = 1, name = "Buff" } }
+	-- out of combat with buffs hidden (some maps): no new reminders appear
+	local before = ns.Buffs.Missing()
 	AURAS_SECRET = true
-	assert(#ns.Buffs.Missing() == 0, "no buff reminders while buffs are hidden")
+	local hiddenNow = ns.Buffs.Missing()
+	assert(#hiddenNow == #before, "buffs hidden: the last reminders stay, nothing new appears")
 	AURAS_SECRET = false
 	-- every reminder goes away once its buff is up
 	AURAS.player = {}

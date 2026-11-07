@@ -609,6 +609,33 @@ do
 				end
 			end
 		end
+		-- in combat the creature type is a secret: Exorcism (undead/demon only)
+		-- uses the type read before the fight, and never errors
+		local wasCT = UnitCreatureType
+		UnitCreatureType = function() if COMBAT then return secret("Undead") end return "Undead" end
+		COMBAT = false
+		fire("PLAYER_TARGET_CHANGED")
+		ns.BuildQueue()
+		COMBAT = true
+		ns.Sim.errors = {}
+		local exo = false
+		for t = 1, 40 do
+			NOW = NOW + 0.5
+			local id = ns.BuildQueue()[1]
+			if id == 879 then exo = true end
+			if id and id ~= 6603 and t % 2 == 0 then fire("UNIT_SPELLCAST_SUCCEEDED", "player", "CastU" .. t, id) end
+		end
+		assert(#ns.Sim.errors == 0, "secret creature type: " .. tostring(ns.Sim.errors[1]))
+		assert(exo, "Exorcism on an undead target in combat")
+		UnitCreatureType = function() if COMBAT then return secret("Beast") end return "Beast" end
+		COMBAT = false
+		fire("PLAYER_TARGET_CHANGED")
+		COMBAT = true
+		for t = 1, 20 do
+			NOW = NOW + 0.5
+			assert(ns.BuildQueue()[1] ~= 879, "no Exorcism on a beast")
+		end
+		UnitCreatureType = wasCT
 		-- every way Forever hides things in combat: never an error, never empty
 		for _, mode in ipairs({ "plain", "hidden", "none", "secretbools" }) do
 			AURAS_SECRET, AURAS_NONE = mode == "hidden", mode == "none"

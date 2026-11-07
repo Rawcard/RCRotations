@@ -1825,6 +1825,10 @@ function Sim.Explain(rot)
 		end)
 		out[#out + 1] = ok and line or ("%d. error: %s"):format(i, tostring(line))
 	end
+	local okS, nextSwing = pcall(V.autoTimeToNext, {})
+	local okM, mana = pcall(V.currentManaPercent, { unit = "player" })
+	out[#out + 1] = ("next swing in %s, mana %s"):format(okS and ("%.1fs"):format(nextSwing) or "?",
+		okM and type(mana) == "number" and ("%d%%"):format(mana * 100) or "?")
 	local seal, at = API.CurrentSeal and API.CurrentSeal()
 	out[#out + 1] = ("seal tracked: %s%s"):format(tostring(seal or "none"), at and seal and (" (%.0fs ago)"):format(GetTime() - at) or "")
 	return out

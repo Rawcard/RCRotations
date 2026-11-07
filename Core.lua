@@ -892,6 +892,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 			if not okCreate then
 				ns.Print(errCreate)
 			end
+			if ns.Range and ns.Range.Attach then
+				pcall(ns.Range.Attach)
+			end
 			if ns.CreateMinimap then
 				local okMini, errMini = pcall(ns.CreateMinimap)
 				if not okMini then
@@ -1134,6 +1137,10 @@ SlashCmdList.RCROT = function(msg)
 	elseif msg:match("^spellcheck") then
 		if ns.API.SpellCheck then
 			ns.API.SpellCheck((msg:gsub("^spellcheck%s*", "")))
+		end
+	elseif msg == "range" or msg == "rangecheck" then
+		if ns.Range and ns.Range.Check then
+			ns.Range.Check()
 		end
 	elseif msg == "platecheck" then
 		if ns.Plates and ns.Plates.Check then

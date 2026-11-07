@@ -760,6 +760,8 @@ local function ensureOptions()
 	frame.optBuffs = addSwitch(hudCard, "showBuffs", ns.T("OPT_BUFFS"))
 	frame.optModes = addSwitch(hudCard, "showModes", ns.T("OPT_MODES"))
 	frame.optModes:Hide() -- mode buttons only drove the removed built-in lists
+	hudCard._y = hudCard._y + 26 -- the hidden row gives its spot to the next one
+	frame.optYards = addSwitch(hudCard, "showYards", ns.T("OPT_YARDS"))
 
 	local winCard = makeCard(general, "OPT_CARD_WINDOWS", 338, -4, 318, 172)
 	frame.optDef = addSwitch(winCard, "showDefense", ns.T("OPT_DEFENSE"))
@@ -1609,6 +1611,9 @@ function ns.RefreshOptions()
 		end
 		if ns.OptionsRefreshLock then
 			ns.OptionsRefreshLock()
+		end
+		if frame.optYards then
+			frame.optYards:SetChecked(ns.db.showYards ~= false)
 		end
 		if frame.optBuffs then
 			frame.optBuffs:SetChecked(ns.db.showBuffs ~= false)

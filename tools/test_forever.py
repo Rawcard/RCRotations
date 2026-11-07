@@ -239,6 +239,48 @@ assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
 assert(CVARS.nameplateMaxDistance == "41", "option off: your own nameplate distance back")
 assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
 assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back (centered on their frame when the anchor couldn't be read)")
+-- range detector: yards to the target from in-range answers
+step("range", function()
+	local wasInfo, wasRange, wasHarm, wasCID = C_Spell.GetSpellInfo, C_Spell.IsSpellInRange, C_Spell.IsSpellHarmful, CheckInteractDistance
+	local RANGES = { 5, 20, 30, 40 }
+	local function rangeOf(id) return RANGES[id % 4 + 1] end
+	C_Spell.GetSpellInfo = function(id)
+		local i = wasInfo(id)
+		if i then i.maxRange = rangeOf(id) end
+		return i
+	end
+	C_Spell.IsSpellHarmful = function() return true end
+	C_Spell.IsSpellInRange = function(id) return YARDS <= rangeOf(id) end
+	CheckInteractDistance = function(_, i) return YARDS <= (i == 3 and 9 or i == 2 and 10 or 28) end
+	ns.Range.Invalidate()
+	for _, y in ipairs({ 3, 12, 22, 35, 70 }) do
+		YARDS = y
+		local lo, hi = ns.Range.Band("target")
+		assert(lo, "range: no band at " .. y .. " yd")
+		assert(lo <= y and (not hi or y <= hi), ("range: %d yd shown as %s"):format(y, tostring(ns.Range.Text(lo, hi))))
+		RANGE_SEEN = (RANGE_SEEN or "") .. y .. "=" .. ns.Range.Text(lo, hi) .. " "
+	end
+	-- in combat the game may hide the answers: no error, no made-up number
+	C_Spell.IsSpellInRange = function() return secret(true) end
+	CheckInteractDistance = function() return secret(true) end
+	ns.Range.Invalidate()
+	local lo = ns.Range.Band("target")
+	assert(lo == nil, "range: hidden answers give no band")
+	ns.Range.Refresh()
+	assert(not ns.Range.label or not ns.Range.label.shown, "range: label hidden when unknown")
+	C_Spell.IsSpellInRange = function(id) return YARDS <= rangeOf(id) end
+	CheckInteractDistance = function(_, i) return YARDS <= (i == 3 and 9 or i == 2 and 10 or 28) end
+	YARDS = 22
+	ns.Range.Invalidate()
+	ns.Range.Refresh()
+	assert(ns.Range.label and ns.Range.label.shown, "range: label shows on the main icon")
+	local was = ns.Print
+	ns.Print = function() end
+	SlashCmdList.RCROT("range")
+	ns.Print = was
+	C_Spell.GetSpellInfo, C_Spell.IsSpellInRange, C_Spell.IsSpellHarmful, CheckInteractDistance = wasInfo, wasRange, wasHarm, wasCID
+	ns.Range.Invalidate()
+end)
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)
@@ -649,6 +691,8 @@ def run(cls, cid, no_secrets=False):
     g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    if cls == "WARRIOR":
+        print("  range:", g.RANGE_SEEN)
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
         print(g.PLATECHECK)
     if cls == "PALADIN" and os.environ.get("SHOW_PLATECHECK"):

@@ -1,4 +1,12 @@
-1.5.8
+1.5.9
+
+# 1.5.9
+
+- Range detector: the main HUD icon shows how far your target is, top left ("20-28 yd", or
+  "melee"). WoW doesn't tell addons the exact distance to an enemy, so it's a range worked out
+  from which of your spells can reach. Green means your next spell reaches, red means you're too
+  far for it. Turn it off in Options > General > HUD ("Yards to target"). /rcr range lists what
+  the game answered.
 
 # 1.5.8
 

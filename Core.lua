@@ -870,6 +870,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 		return
 	end
 	if event == "LEARNED_SPELL_IN_TAB" or event == "LEARNED_SPELL_IN_SKILL_LINE" or event == "PLAYER_TALENT_UPDATE" or event == "PLAYER_LEVEL_UP" then
+		if (event == "LEARNED_SPELL_IN_TAB" or event == "LEARNED_SPELL_IN_SKILL_LINE") and ns.API and ns.API.NoteLearnedSpell then
+			pcall(ns.API.NoteLearnedSpell, unit)
+		end
 		scheduleSpellFlush()
 		return
 	end

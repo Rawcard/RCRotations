@@ -546,6 +546,45 @@ do
 		if isAuto then seenAuto = true end
 	end
 	assert(seenAuto and Sim.IsAuto(token, 0), "cycling comes back to Auto")
+	-- level 20 Retribution Paladin learns Consecration mid-session: the twist
+	-- rotation names rank 5 (20924), so rank 1 has to be found without a /reload
+	if CLASS_FILE == "PALADIN" then
+		level, pts = 20, { 0, 0, 11 }
+		ns.db.role = "damage"
+		local savedKnown = KNOWN
+		KNOWN = { [21084] = true, [20271] = true, [679] = true, [879] = true, [19740] = true, [635] = true }
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.API.RebuildSpellBookIndex(true)
+		Sim.InvalidateTalents()
+		local got20 = pick()
+		TARGET, COMBAT = true, true
+		fire("PLAYER_TARGET_CHANGED")
+		NOW = NOW + 30
+		ns.BuildQueue()
+		assert(ns.API.Resolve(20924) == nil, "Consecration not known yet")
+		KNOWN[26573] = true -- ding: Consecration rank 1
+		fire("LEARNED_SPELL_IN_SKILL_LINE", 26573, 1, false)
+		NOW = NOW + 1
+		local seen = {}
+		for t = 1, 80 do
+			NOW = NOW + 0.5
+			local id = ns.BuildQueue()[1]
+			if id then
+				seen[id] = (seen[id] or 0) + 1
+				if id ~= 6603 and t % 2 == 0 then
+					fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast20-" .. t, id)
+				end
+			end
+		end
+		local parts = {}
+		for id, n in pairs(seen) do parts[#parts + 1] = id .. "x" .. n end
+		table.sort(parts)
+		PAL20 = tostring(got20 and got20.name) .. ": " .. table.concat(parts, " ")
+		assert(seen[26573], "level 20: Consecration suggested after learning it (" .. PAL20 .. ")")
+		assert(seen[679], "level 20: Holy Strike suggested (" .. PAL20 .. ")")
+		KNOWN = savedKnown
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	end
 	UnitLevel, GetTalentTabInfo = lvl, tabs
 	Sim.InvalidateTalents()
 	ns.db.role = roleWas
@@ -734,6 +773,8 @@ def run(cls, cid, no_secrets=False):
     g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    if cls == "PALADIN":
+        print("  level 20:", g.PAL20)
     if cls == "WARRIOR":
         print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS)
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):

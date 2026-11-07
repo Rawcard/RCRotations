@@ -212,6 +212,12 @@ local function indexBookName(index, bookName, bookId)
 	end
 end
 
+function ns.API.IndexSpellName(key, spellID)
+	if spellBookIndex then
+		spellBookIndex[key] = spellID
+	end
+end
+
 function ns.API.InvalidateSpellBookIndex()
 	spellBookGen = spellBookGen + 1
 	spellBookIndex = nil
@@ -661,6 +667,28 @@ function ns.API.WipeAuraScan(unit)
 	for key in pairs(auraScans) do
 		if strsub(key, 1, #prefix) == prefix then
 			auraScans[key] = nil
+		end
+	end
+end
+
+-- A spell you just learned (a level-up, a trainer, a talent): add it to the
+-- name index by itself. The index is otherwise only built at login (walking
+-- the whole book on every learn froze Forever on quest turn-ins), so without
+-- this a rotation that names another rank (Consecration rank 5 when you have
+-- rank 1) didn't find the spell until a /reload.
+function ns.API.NoteLearnedSpell(spellID)
+	spellID = safe(spellID, nil)
+	if type(spellID) ~= "number" then
+		return
+	end
+	local name = ns.API.SpellName(spellID)
+	local key = type(name) == "string" and normSpellName(name)
+	if key then
+		ns.API.IndexSpellName(key, spellID)
+	end
+	for id, resolved in pairs(resolveCache) do
+		if not resolved then
+			resolveCache[id] = nil
 		end
 	end
 end

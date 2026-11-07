@@ -16,6 +16,7 @@
 - Fixed (WoW Forever): the rotation stopped in combat. Forever hides a mob's creature type in
   combat, and the "undead and demons only" check for Exorcism errored on it. The type seen
   before the fight is used now.
+- Spells cast from a macro (/startattack + /cast Judgement) flash on their button again.
 - A rotation line that errors no longer empties the whole HUD (it's skipped, Auto Attack still
   shows), and /rcr why lists each rotation line with what stopped it, plus any errors.
 - Forever Paladin: with no seal up, the first seal the rotation uses that you actually know is

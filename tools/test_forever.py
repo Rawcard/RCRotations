@@ -654,6 +654,15 @@ do
 			SECRET_BOOLS = wasSB
 		end
 		AURAS_SECRET, AURAS_NONE = false, false
+		-- Judgement on a /startattack macro still flashes
+		local jSlot
+		for slot, id in pairs(ACTION) do if id == 20271 then jSlot = slot end end
+		if not jSlot then jSlot = 70; ACTION[jSlot] = 20271 end
+		MACRO_SLOT[jSlot] = true
+		ns.GlowFetch(true, true)
+		local btns = ns.GlowDebug(20271)
+		MACRO_SLOT[jSlot] = nil
+		assert(#btns > 0, "Judgement in a macro: button found")
 		SlashCmdList.RCROT("why")
 		WHY20 = table.concat(ns.Sim.Explain(), "\n")
 		assert(WHY20:find("castable") and WHY20:find("seal tracked"), "/rcr why explains each line")

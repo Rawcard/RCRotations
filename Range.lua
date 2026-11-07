@@ -321,7 +321,7 @@ end
 -- Returns lo, hi in yards (hi nil = further than anything we can test),
 -- or nil when nothing could be read. trace (optional table) collects the
 -- answers for /rcr range.
-function R.Band(unit, trace)
+function R.Band(unit, trace, hasPlate)
 	unit = unit or "target"
 	if not UnitExists or flag(call(UnitExists, unit)) ~= true then
 		return nil
@@ -408,7 +408,10 @@ function R.Band(unit, trace)
 	-- The game only makes a nameplate for a unit within the nameplate
 	-- distance (60 yards on Forever), and that works in combat too.
 	local plateMax = R.PlateReach(unit)
-	if plateMax then
+	if not plateMax and hasPlate then
+		plateMax = cvar("nameplateMaxDistance")
+	end
+	if plateMax and plateMax > 0 then
 		inside(plateMax, "has a nameplate")
 	end
 	if not read then
@@ -439,6 +442,172 @@ function R.Text(lo, hi)
 	return ("%d-%d yd"):format(lo, hi)
 end
 
+-- distance from nameplate size ----------------------------------------------
+-- Past your spell range there's nothing left to ask, but the game itself
+-- shrinks nameplates with distance: full size up to nameplateMaxScaleDistance,
+-- smallest at nameplateMinScaleDistance, in a straight line between. With those
+-- set to 10 and 60 yards, a plate's size tells how far away it is. The addon
+-- learns a plate's full size the first time a mob with a plate is in melee
+-- range, and only trusts the method once it has seen a far plate get smaller.
+
+local SCALE_CVARS = {
+	nameplateMaxScale = "1",
+	nameplateMinScale = "0.7",
+	nameplateMaxScaleDistance = "10",
+	nameplateMinScaleDistance = "60",
+	nameplateSelectedScale = "1",
+	nameplateLargerScale = "1",
+}
+
+local function setCVar(name, value)
+	if C_CVar and C_CVar.SetCVar then
+		return call(C_CVar.SetCVar, name, value)
+	elseif SetCVar then
+		return call(SetCVar, name, value)
+	end
+end
+
+local function rawCVar(name)
+	local v = (C_CVar and C_CVar.GetCVar and call(C_CVar.GetCVar, name)) or (GetCVar and call(GetCVar, name))
+	if issecretvalue and issecretvalue(v) then
+		return nil
+	end
+	return v
+end
+
+local appliedOn
+function R.ApplyCVars()
+	if not ns.db or restricted() then
+		return
+	end
+	local want = ns.db.showYards ~= false
+	if appliedOn == want then
+		return
+	end
+	appliedOn = want
+	if want then
+		ns.db.rangeCvarBackup = ns.db.rangeCvarBackup or {}
+		for name, value in pairs(SCALE_CVARS) do
+			if ns.db.rangeCvarBackup[name] == nil then
+				ns.db.rangeCvarBackup[name] = rawCVar(name) or false
+			end
+			setCVar(name, value)
+		end
+	elseif ns.db.rangeCvarBackup then
+		for name, value in pairs(ns.db.rangeCvarBackup) do
+			if value then
+				setCVar(name, value)
+			end
+		end
+		ns.db.rangeCvarBackup = nil
+	end
+end
+
+local function pixels(frame)
+	if type(frame) ~= "table" or not frame.GetHeight or not frame.GetEffectiveScale then
+		return nil
+	end
+	local okH, h = pcall(frame.GetHeight, frame)
+	local okS, sc = pcall(frame.GetEffectiveScale, frame)
+	h, sc = okH and num(h) or nil, okS and num(sc) or nil
+	if not h or not sc or h <= 0 or sc <= 0 then
+		return nil
+	end
+	return h * sc
+end
+
+function R.PlateFor(unit)
+	if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+		return nil
+	end
+	local plate = call(C_NamePlate.GetNamePlateForUnit, unit)
+	if type(plate) == "table" then
+		return plate
+	end
+	local plates = C_NamePlate.GetNamePlates and call(C_NamePlate.GetNamePlates)
+	for _, p in ipairs(type(plates) == "table" and plates or {}) do
+		local u = type(p) == "table" and (p.namePlateUnitToken or (type(p.UnitFrame) == "table" and p.UnitFrame.unit))
+		if type(u) == "string" and not (issecretvalue and issecretvalue(u)) and flag(call(UnitIsUnit, u, unit)) == true then
+			return p
+		end
+	end
+	return nil
+end
+
+-- yards from the plate's size, or nil when it can't be told (yet)
+function R.ScaleYards(plate, lo, hi, trace)
+	if not ns.db then
+		return nil
+	end
+	local maxS, minS = cvar("nameplateMaxScale"), cvar("nameplateMinScale")
+	local nearD, farD = cvar("nameplateMaxScaleDistance"), cvar("nameplateMinScaleDistance")
+	if not (maxS and minS and nearD and farD) or maxS - minS < 0.05 or farD - nearD < 5 then
+		if trace then
+			trace[#trace + 1] = "  plate size: the game's plate scale settings don't allow it"
+		end
+		return nil
+	end
+	local cal = ns.db.rangeCal
+	local sig = maxS .. "/" .. minS
+	if type(cal) ~= "table" or cal.sig ~= sig then
+		cal = { sig = sig, full = {}, works = {} }
+		ns.db.rangeCal = cal
+	end
+	local best
+	for _, key in ipairs({ "uf", "plate" }) do
+		local frame = key == "plate" and plate or plate.UnitFrame
+		local px = pixels(frame)
+		if px then
+			if hi and hi <= nearD then
+				cal.full[key] = px -- full size: learn it
+			elseif cal.full[key] and lo and lo >= nearD + 10 and px < cal.full[key] * 0.95 then
+				cal.works[key] = true -- a far plate is smaller: the method works here
+			end
+			if trace then
+				trace[#trace + 1] = ("  plate size (%s): %.1f px, full %s, %s"):format(key, px,
+					cal.full[key] and ("%.1f"):format(cal.full[key]) or "not learned yet",
+					cal.works[key] and "working" or "not confirmed yet")
+			end
+			if not best and cal.works[key] and cal.full[key] then
+				local scale = maxS * px / cal.full[key]
+				local frac = (maxS - scale) / (maxS - minS)
+				if frac < 0 then
+					frac = 0
+				elseif frac > 1 then
+					frac = 1
+				end
+				best = nearD + frac * (farD - nearD)
+			end
+		end
+	end
+	if not best then
+		return nil
+	end
+	if best <= nearD then
+		best = nil -- full size: closer than nearD, the spells say more
+	end
+	if best then
+		if lo and best < lo then
+			best = lo
+		end
+		if hi and best > hi then
+			best = hi
+		end
+	end
+	return best
+end
+
+-- lo, hi from the checks; est = yards from the plate size when it can tell
+function R.Measure(unit, trace, plate)
+	plate = plate or R.PlateFor(unit)
+	local lo, hi = R.Band(unit, trace, plate ~= nil)
+	if not lo then
+		return nil
+	end
+	local est = plate and R.ScaleYards(plate, lo, hi, trace)
+	return lo, hi, est
+end
+
 -- display -----------------------------------------------------------------
 
 -- the furthest any of your attack spells reaches (melee only: 5)
@@ -467,8 +636,11 @@ function R.Color(lo, hi)
 	return WHITE
 end
 
-local function paintText(fs, lo, hi)
-	local text = R.Text(lo, hi)
+local function paintText(fs, lo, hi, est)
+	if est then
+		lo, hi = est, est
+	end
+	local text = est and ("~%d yd"):format(math.floor(est + 0.5)) or R.Text(lo, hi)
 	if not text or (hi == 0 and lo == 0) then
 		fs:Hide()
 		return
@@ -490,7 +662,7 @@ function R.Refresh()
 		label:Hide()
 		return
 	end
-	paintText(label, R.Band("target"))
+	paintText(label, R.Measure("target"))
 end
 
 function R.Attach()
@@ -585,7 +757,7 @@ function R.RefreshPlates()
 			if hostile then
 				local fs = plateText(plate)
 				placeYards(plate, fs)
-				local ok = pcall(paintText, fs, R.Band(unit))
+				local ok = pcall(paintText, fs, R.Measure(unit, nil, plate))
 				if not ok then
 					fs:Hide()
 				end
@@ -599,12 +771,12 @@ end
 -- /rcr range: what the game answered, so a wrong band can be traced.
 function R.Check()
 	local trace = {}
-	local lo, hi = R.Band("target", trace)
+	local lo, hi, est = R.Measure("target", trace)
 	if lo == nil then
 		ns.Print("range: target something first (or the game gave no answers)")
 		return
 	end
-	ns.Print("range: " .. (R.Text(lo, hi) or "?"))
+	ns.Print("range: " .. (R.Text(lo, hi) or "?") .. (est and ("  (plate size: ~%d yd)"):format(est) or ""))
 	for _, line in ipairs(trace) do
 		print(line)
 	end
@@ -623,6 +795,7 @@ ev:SetScript("OnUpdate", function(_, elapsed)
 		return
 	end
 	plateSince = 0
+	pcall(R.ApplyCVars)
 	pcall(R.RefreshPlates)
 end)
 ev:SetScript("OnEvent", function(_, event)

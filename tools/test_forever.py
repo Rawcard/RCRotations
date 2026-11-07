@@ -271,6 +271,39 @@ step("range", function()
 	assert(fs and fs.shown, "range: yards above the enemy nameplate")
 	assert(fs.pts[#fs.pts][2] == PLATES_LIST[1].rcrName or not (PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown), "range: yards sit just above the enemy name")
 	PLATE_YARDS = fs.text
+	-- past spell range: the plate's size (the game shrinks far plates)
+	do
+		ns.Range.ApplyCVars()
+		assert(CVARS.nameplateMinScaleDistance == "60" and CVARS.nameplateMinScale == "0.7", "range: plate scale settings applied")
+		local p = PLATES_LIST[1]
+		local wasMax = CVARS.nameplateMaxDistance
+		CVARS.nameplateMaxDistance = "60"
+		local wasPlate = C_NamePlate.GetNamePlateForUnit
+		C_NamePlate.GetNamePlateForUnit = function() return p end
+		local function sizeAt(y)
+			local f = math.max(0, math.min(1, (y - 10) / 50))
+			return 20 * (1 - 0.3 * f)
+		end
+		p.GetHeight = function() return sizeAt(YARDS) end
+		YARDS = 3
+		local lo, hi, est = ns.Range.Measure("target")
+		assert(est == nil, "range: in melee the spells answer, not the plate")
+		YARDS = 45
+		lo, hi, est = ns.Range.Measure("target")
+		assert(lo == 40 and hi == 60, "range: 45 yd with a nameplate: 40-60 (" .. tostring(ns.Range.Text(lo, hi)) .. ")")
+		for _, y in ipairs({ 45, 52, 58 }) do
+			YARDS = y
+			lo, hi, est = ns.Range.Measure("target")
+			assert(est and math.abs(est - y) < 1, ("range: %d yd from the plate size, got %s"):format(y, tostring(est)))
+		end
+		ns.Range.RefreshPlates()
+		PLATE_EST = p.rcrYards and p.rcrYards.text
+		assert(PLATE_EST == "~58 yd", "range: plate shows ~58 yd, got " .. tostring(PLATE_EST))
+		p.GetHeight = nil
+		C_NamePlate.GetNamePlateForUnit = wasPlate
+		CVARS.nameplateMaxDistance = wasMax
+		ns.db.rangeCal = nil
+	end
 	-- range-check items add checkpoints: a tighter range out of combat, none in combat
 	local wasItem = C_Item
 	C_Item = { IsItemInRange = function(id)
@@ -776,7 +809,7 @@ def run(cls, cid, no_secrets=False):
     if cls == "PALADIN":
         print("  level 20:", g.PAL20)
     if cls == "WARRIOR":
-        print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS)
+        print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS, "| plate size:", g.PLATE_EST)
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
         print(g.PLATECHECK)
     if cls == "PALADIN" and os.environ.get("SHOW_PLATECHECK"):

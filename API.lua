@@ -212,6 +212,12 @@ local function indexBookName(index, bookName, bookId)
 	end
 end
 
+function ns.API.IndexSpellName(key, spellID)
+	if spellBookIndex then
+		spellBookIndex[key] = spellID
+	end
+end
+
 function ns.API.InvalidateSpellBookIndex()
 	spellBookGen = spellBookGen + 1
 	spellBookIndex = nil
@@ -661,6 +667,28 @@ function ns.API.WipeAuraScan(unit)
 	for key in pairs(auraScans) do
 		if strsub(key, 1, #prefix) == prefix then
 			auraScans[key] = nil
+		end
+	end
+end
+
+-- A spell you just learned (a level-up, a trainer, a talent): add it to the
+-- name index by itself. The index is otherwise only built at login (walking
+-- the whole book on every learn froze Forever on quest turn-ins), so without
+-- this a rotation that names another rank (Consecration rank 5 when you have
+-- rank 1) didn't find the spell until a /reload.
+function ns.API.NoteLearnedSpell(spellID)
+	spellID = safe(spellID, nil)
+	if type(spellID) ~= "number" then
+		return
+	end
+	local name = ns.API.SpellName(spellID)
+	local key = type(name) == "string" and normSpellName(name)
+	if key then
+		ns.API.IndexSpellName(key, spellID)
+	end
+	for id, resolved in pairs(resolveCache) do
+		if not resolved then
+			resolveCache[id] = nil
 		end
 	end
 end
@@ -2832,15 +2860,26 @@ local function creatureCanon(ctype)
 	return CREATURE_CANON[key] or key
 end
 
+-- In combat Forever hides the creature type (a secret value: comparing it is
+-- an error). The type read before that (out of combat, or when you targeted
+-- it) is kept until you change target.
+local targetCanonKept
+local keepFrame = CreateFrame("Frame")
+keepFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+keepFrame:SetScript("OnEvent", function()
+	targetCanonKept = nil
+end)
+
 local function targetCreatureCanon()
 	if not unitExists("target") then
 		return nil
 	end
 	local ok, ctype = pcall(UnitCreatureType, "target")
-	if not ok or type(ctype) ~= "string" or ctype == "" then
-		return nil
+	if not ok or not readable(ctype) or type(ctype) ~= "string" or ctype == "" then
+		return targetCanonKept
 	end
-	return creatureCanon(ctype)
+	targetCanonKept = creatureCanon(ctype)
+	return targetCanonKept
 end
 
 local function creatureListHas(list, canon)
@@ -2886,14 +2925,14 @@ function ns.API.IsRaidmob()
 		return false
 	end
 	local okC, classification = pcall(UnitClassification, "target")
-	if okC and type(classification) == "string" then
+	if okC and readable(classification) and type(classification) == "string" then
 		if classification == "worldboss" or classification == "rareelite" or classification == "elite" then
 			return true
 		end
 	end
 	local okT, tlvl = pcall(UnitLevel, "target")
 	local okP, plvl = pcall(UnitLevel, "player")
-	if okT and okP and type(tlvl) == "number" and type(plvl) == "number" then
+	if okT and okP and readable(tlvl) and readable(plvl) and type(tlvl) == "number" and type(plvl) == "number" then
 		if tlvl < 0 or tlvl > plvl + 2 then
 			return true
 		end

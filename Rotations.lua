@@ -444,6 +444,12 @@ function ns.BuildQueue()
 		if ok and simQueue then
 			return withAutoAttack(simQueue)
 		end
+		if not ok then
+			if ns.Sim.NoteError then
+				ns.Sim.NoteError(simQueue)
+			end
+			return withAutoAttack({})
+		end
 	end
 	if ns.UsingBuiltInList and ns.UsingBuiltInList() then
 		return withAutoAttack(legacyQueue())

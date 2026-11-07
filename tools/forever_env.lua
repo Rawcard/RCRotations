@@ -417,7 +417,11 @@ TIMERS = {}
 -- action bar: buttons 1-12 hold the class's spells, so flashes have targets
 ACTION = {}
 function HasAction(slot) return ACTION[slot] ~= nil end
-function GetActionInfo(slot) if ACTION[slot] then return "spell", ACTION[slot] end end
+MACRO_SLOT = {} -- a macro showing a spell: modern clients report "macro", spellID, "spell"
+function GetActionInfo(slot)
+	if MACRO_SLOT[slot] and ACTION[slot] then return "macro", ACTION[slot], "spell" end
+	if ACTION[slot] then return "spell", ACTION[slot] end
+end
 function GetActionTexture(slot) return ACTION[slot] and 134400 or nil end
 BUTTONS = {}
 local slotN = 0

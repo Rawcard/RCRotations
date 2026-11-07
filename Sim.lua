@@ -524,12 +524,31 @@ end
 local POWER = { mana = 0, rage = 1, focus = 2, energy = 3, combo = 4, runic = 6, shards = 7, eclipse = 8,
 	holy = 9, chi = 12, orbs = 13, embers = 14, fury = 15 }
 
-local function power(kind)
-	return num(call(UnitPower, "player", POWER[kind]), 0)
-end
+-- In combat Forever hides your power (mana, rage...) as a secret value. The
+-- last value it showed is used then: reading the hidden one as 0 made every
+-- "mana at least 10%" line (Consecration) fail all fight long.
+local lastPower, lastPowerMax = {}, {}
 
 local function powerMax(kind)
-	return num(call(UnitPowerMax, "player", POWER[kind]), 0)
+	local v = call(UnitPowerMax, "player", POWER[kind])
+	if v ~= nil and readable(v) and tonumber(v) then
+		lastPowerMax[kind] = tonumber(v)
+		return lastPowerMax[kind]
+	end
+	return lastPowerMax[kind] or 0
+end
+
+local function power(kind)
+	local v = call(UnitPower, "player", POWER[kind])
+	if v ~= nil and readable(v) and tonumber(v) then
+		lastPower[kind] = tonumber(v)
+		return lastPower[kind]
+	end
+	if lastPower[kind] then
+		return lastPower[kind]
+	end
+	-- never seen: mana counts as full, rage / energy as empty
+	return kind == "mana" and powerMax(kind) or 0
 end
 
 local function regen()
@@ -667,6 +686,12 @@ V["not"] = function(n)
 	return not truthy(ev(n.v[1]))
 end
 V.cmp = function(n)
+	-- Seal twist rotations hold Consecration / Exorcism for the gap right after a
+	-- swing ("next swing more than 1.5s away") so the twist isn't delayed. Before
+	-- you have Unsealed Wrath there is no twist, so that wait is dropped.
+	if pass.noTwistGap and n.op == ">" and type(n.v[1]) == "table" and n.v[1].k == "autoTimeToNext" then
+		return true
+	end
 	local a, b = ev(n.v[1]), ev(n.v[2])
 	if type(a) == "boolean" or type(b) == "boolean" then
 		a, b = truthy(a), truthy(b)
@@ -1644,8 +1669,13 @@ function Sim.ListFor(rot, token, spec)
 end
 
 -- ------------------------------------------------------------------ queue
-function Sim.BeginPass()
+local UNSEALED_WRATH = 1310735
+function Sim.BeginPass(rot)
 	pass = { now = GetTime() }
+	if rot and rot.style == "twist" then
+		local known = (API.Known and API.Known(UNSEALED_WRATH)) or (IsPlayerSpell and call(IsPlayerSpell, UNSEALED_WRATH))
+		pass.noTwistGap = not (known == true)
+	end
 end
 
 -- Spells on the stance bar (seals, presences, stances, forms): the spell ID of
@@ -1705,7 +1735,7 @@ function Sim.BuildQueue(rot)
 	if not rot then
 		return nil
 	end
-	Sim.BeginPass()
+	Sim.BeginPass(rot)
 	local _, token, spec = Sim.Rotations()
 	local list, rules = Sim.ListFor(rot, token, spec)
 	tuningBlock = {}
@@ -1719,10 +1749,13 @@ function Sim.BuildQueue(rot)
 	-- rotations never ask for one. With no seal up at all, suggest the first seal
 	-- the rotation uses.
 	if ns.GAME == "forever" and token == "PALADIN" and API.SealUp then
+		local okSeal, errSeal = pcall(function()
 		local anyUp, first = false, nil
 		for _, item in ipairs(list) do
-			if item.id and API.SealUp(item.id) ~= nil then
-				first = first or item.id
+			-- the first seal the rotation uses that you have (Seal of Command
+			-- is a talent: at level 20 it's Righteousness)
+			if not first and item.id and API.SealUp(item.id) ~= nil and resolve(item.id) then
+				first = item.id
 			end
 		end
 		if first then
@@ -1741,14 +1774,18 @@ function Sim.BuildQueue(rot)
 				end
 			end
 		end
-	end
-	for _, item in ipairs(list) do
-		if #q >= 3 then
-			break
+		end)
+		if not okSeal then
+			Sim.NoteError(errSeal, 0, { id = "seal" })
 		end
+	end
+	-- One line that errors (an API Forever answers oddly) must not empty the
+	-- whole queue: it's skipped, and /rcr why shows the error.
+	local stop = false
+	local function evalItem(item)
 		if item.hold then
 			if test(item.c) and #q == 0 then
-				break
+				stop = true
 			end
 		elseif item.cancel then
 			-- "Cancel" lines (end Metamorphosis): only while its aura is up;
@@ -1768,10 +1805,79 @@ function Sim.BuildQueue(rot)
 			end
 		end
 	end
+	for i, item in ipairs(list) do
+		if #q >= 3 or stop then
+			break
+		end
+		local ok, err = pcall(evalItem, item)
+		if not ok then
+			Sim.NoteError(err, i, item)
+		end
+	end
 	if #q < 3 and not (ns.db and ns.db.simLookahead == false) then
-		Sim.FillComingUp(list, q, seen)
+		local ok, err = pcall(Sim.FillComingUp, list, q, seen)
+		if not ok then
+			Sim.NoteError(err)
+		end
 	end
 	return q
+end
+
+-- /rcr why: each rotation line and what stopped it
+function Sim.Explain(rot)
+	rot = rot or Sim.Current()
+	if not rot then
+		return {}
+	end
+	Sim.BeginPass(rot)
+	local _, token, spec = Sim.Rotations()
+	local list = Sim.ListFor(rot, token, spec)
+	local out = {}
+	for i, item in ipairs(list or {}) do
+		if i > 14 then
+			break
+		end
+		local ok, line = pcall(function()
+			if item.hold then
+				return ("%d. wait-line: %s"):format(i, test(item.c) and "WAITING" or "no")
+			end
+			local rid = item.id and resolve(item.id)
+			local name = API.SpellName and API.SpellName(rid or item.id) or "?"
+			if not rid then
+				return ("%d. %s (%s): not known"):format(i, tostring(name), tostring(item.id))
+			end
+			local bits = {}
+			bits[#bits + 1] = canCast(rid) and "castable" or "NOT castable"
+			bits[#bits + 1] = ("cd %.1f"):format(cooldownRemain(rid))
+			bits[#bits + 1] = onBar(rid) and "on bar" or "NOT ON BAR"
+			bits[#bits + 1] = test(item.c) and "condition ok" or "condition no"
+			return ("%d. %s (%s): %s"):format(i, tostring(name), tostring(rid), table.concat(bits, ", "))
+		end)
+		out[#out + 1] = ok and line or ("%d. error: %s"):format(i, tostring(line))
+	end
+	local okS, nextSwing = pcall(V.autoTimeToNext, {})
+	local okM, mana = pcall(V.currentManaPercent, { unit = "player" })
+	out[#out + 1] = ("next swing in %s, mana %s"):format(okS and ("%.1fs"):format(nextSwing) or "?",
+		okM and type(mana) == "number" and ("%d%%"):format(mana * 100) or "?")
+	local seal, at = API.CurrentSeal and API.CurrentSeal()
+	out[#out + 1] = ("seal tracked: %s%s"):format(tostring(seal or "none"), at and seal and (" (%.0fs ago)"):format(GetTime() - at) or "")
+	return out
+end
+
+-- the last few rotation errors, for /rcr why
+Sim.errors = {}
+function Sim.NoteError(err, line, item)
+	local text = tostring(err)
+	if line then
+		text = ("line %d (%s): %s"):format(line, tostring(item and (item.id or (item.hold and "wait"))), text)
+	end
+	for _, e in ipairs(Sim.errors) do
+		if e == text then
+			return
+		end
+	end
+	table.insert(Sim.errors, 1, text)
+	Sim.errors[6] = nil
 end
 
 -- "Coming up": when fewer than three spells are castable right now, fill the

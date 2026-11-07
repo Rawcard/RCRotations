@@ -239,6 +239,124 @@ assert(PLATES_LIST[1].UnitFrame.alpha == 1, "option off: plate back")
 assert(CVARS.nameplateMaxDistance == "41", "option off: your own nameplate distance back")
 assert(#qi.pts == 1 and qi.pts[1][2] == PLATES_LIST[1].UnitFrame.healthBar, "option off: quest icon back where the game put it")
 assert(eq.Default.pts[1][2] == eq and eq.Item.pts[1][2] == eq, "option off: ElvUI quest icons back (centered on their frame when the anchor couldn't be read)")
+-- range detector: yards to the target from in-range answers
+step("range", function()
+	local wasInfo, wasRange, wasHarm, wasCID = C_Spell.GetSpellInfo, C_Spell.IsSpellInRange, C_Spell.IsSpellHarmful, CheckInteractDistance
+	local RANGES = { 5, 20, 30, 40 }
+	local function rangeOf(id) return RANGES[id % 4 + 1] end
+	C_Spell.GetSpellInfo = function(id)
+		local i = wasInfo(id)
+		if i then i.maxRange = rangeOf(id) end
+		return i
+	end
+	C_Spell.IsSpellHarmful = function() return true end
+	C_Spell.IsSpellInRange = function(id) return YARDS <= rangeOf(id) end
+	CheckInteractDistance = function(_, i) return YARDS <= (i == 3 and 9 or i == 2 and 10 or 28) end
+	ns.Range.Invalidate()
+	for _, y in ipairs({ 3, 12, 22, 35, 70 }) do
+		YARDS = y
+		local lo, hi = ns.Range.Band("target")
+		assert(lo, "range: no band at " .. y .. " yd")
+		assert(lo <= y and (not hi or y <= hi), ("range: %d yd shown as %s"):format(y, tostring(ns.Range.Text(lo, hi))))
+		RANGE_SEEN = (RANGE_SEEN or "") .. y .. "=" .. ns.Range.Text(lo, hi) .. " "
+		local c = ns.Range.Color(lo, hi)
+		local want = y <= 5 and "green" or y <= 40 and "yellow" or "red"
+		local got = c[1] < 0.5 and "green" or c[2] > 0.5 and c[2] < 0.9 and "yellow" or c[2] < 0.5 and "red" or "white"
+		assert(got == want, ("range: %d yd colored %s, wanted %s"):format(y, got, want))
+	end
+	-- yards above the enemy names
+	YARDS = 22
+	ns.Range.RefreshPlates()
+	local fs = PLATES_LIST[1].rcrYards
+	assert(fs and fs.shown, "range: yards above the enemy nameplate")
+	assert(fs.pts[#fs.pts][2] == PLATES_LIST[1].rcrName or not (PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown), "range: yards sit just above the enemy name")
+	PLATE_YARDS = fs.text
+	-- past spell range: the plate's size (the game shrinks far plates)
+	do
+		ns.Range.ApplyCVars()
+		assert(CVARS.nameplateMinScaleDistance == "60" and CVARS.nameplateMinScale == "0.7", "range: plate scale settings applied")
+		local p = PLATES_LIST[1]
+		local wasMax = CVARS.nameplateMaxDistance
+		CVARS.nameplateMaxDistance = "60"
+		local wasPlate = C_NamePlate.GetNamePlateForUnit
+		C_NamePlate.GetNamePlateForUnit = function() return p end
+		local function sizeAt(y)
+			local f = math.max(0, math.min(1, (y - 10) / 50))
+			return 20 * (1 - 0.3 * f)
+		end
+		p.GetHeight = function() return sizeAt(YARDS) end
+		YARDS = 3
+		local lo, hi, est = ns.Range.Measure("target")
+		assert(est == nil, "range: in melee the spells answer, not the plate")
+		YARDS = 45
+		lo, hi, est = ns.Range.Measure("target")
+		assert(lo == 40 and hi == 60, "range: 45 yd with a nameplate: 40-60 (" .. tostring(ns.Range.Text(lo, hi)) .. ")")
+		for _, y in ipairs({ 45, 52, 58 }) do
+			YARDS = y
+			lo, hi, est = ns.Range.Measure("target")
+			assert(est and math.abs(est - y) < 1, ("range: %d yd from the plate size, got %s"):format(y, tostring(est)))
+		end
+		ns.Range.RefreshPlates()
+		PLATE_EST = p.rcrYards and p.rcrYards.text
+		assert(PLATE_EST == "~58 yd", "range: plate shows ~58 yd, got " .. tostring(PLATE_EST))
+		p.GetHeight = nil
+		C_NamePlate.GetNamePlateForUnit = wasPlate
+		CVARS.nameplateMaxDistance = wasMax
+		ns.db.rangeCal = nil
+	end
+	-- range-check items add checkpoints: a tighter range out of combat, none in combat
+	local wasItem = C_Item
+	C_Item = { IsItemInRange = function(id)
+		for _, it in ipairs(ns.Range.HARM_ITEMS) do if it[1] == id then return YARDS <= it[2] end end
+	end }
+	YARDS = 22
+	local lo, hi = ns.Range.Band("target")
+	assert(lo == 20 and hi == 25, "range: items narrow 22 yd to 20-25, got " .. tostring(ns.Range.Text(lo, hi)))
+	YARDS = 3.5
+	lo, hi = ns.Range.Band("target")
+	assert(lo == 3 and hi == 4, "range: items narrow 3.5 yd to 3-4, got " .. tostring(ns.Range.Text(lo, hi)))
+	ITEM_YARDS = ns.Range.Text(lo, hi)
+	COMBAT = true
+	C_Item.IsItemInRange = function() error("item range check in combat") end
+	YARDS = 22
+	lo, hi = ns.Range.Band("target")
+	assert(lo == 20 and hi == 28 or lo == 20 and hi == 30, "range: in combat, spells only: " .. tostring(ns.Range.Text(lo, hi)))
+	COMBAT = false
+	C_Item = wasItem
+	-- a target with a nameplate is within the nameplate distance, even in combat
+	do
+		local wasPlate, wasMax = C_NamePlate.GetNamePlateForUnit, CVARS.nameplateMaxDistance
+		CVARS.nameplateMaxDistance = "60"
+		C_NamePlate.GetNamePlateForUnit = function() return PLATES_LIST[1] end
+		YARDS = 50
+		local lo, hi = ns.Range.Band("target")
+		assert(lo == 40 and hi == 60, "range: nameplate caps it at 60, got " .. tostring(ns.Range.Text(lo, hi)))
+		C_NamePlate.GetNamePlateForUnit = function() return nil end
+		lo, hi = ns.Range.Band("target")
+		assert(lo == 40 and hi == nil, "range: no nameplate, no cap")
+		C_NamePlate.GetNamePlateForUnit, CVARS.nameplateMaxDistance = wasPlate, wasMax
+	end
+	-- in combat the game may hide the answers: no error, no made-up number
+	C_Spell.IsSpellInRange = function() return secret(true) end
+	CheckInteractDistance = function() return secret(true) end
+	ns.Range.Invalidate()
+	local lo = ns.Range.Band("target")
+	assert(lo == nil, "range: hidden answers give no band")
+	ns.Range.Refresh()
+	assert(not ns.Range.label or not ns.Range.label.shown, "range: label hidden when unknown")
+	C_Spell.IsSpellInRange = function(id) return YARDS <= rangeOf(id) end
+	CheckInteractDistance = function(_, i) return YARDS <= (i == 3 and 9 or i == 2 and 10 or 28) end
+	YARDS = 22
+	ns.Range.Invalidate()
+	ns.Range.Refresh()
+	assert(ns.Range.label and ns.Range.label.shown, "range: label shows on the main icon")
+	local was = ns.Print
+	ns.Print = function() end
+	SlashCmdList.RCROT("range")
+	ns.Print = was
+	C_Spell.GetSpellInfo, C_Spell.IsSpellInRange, C_Spell.IsSpellHarmful, CheckInteractDistance = wasInfo, wasRange, wasHarm, wasCID
+	ns.Range.Invalidate()
+end)
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)
@@ -461,6 +579,117 @@ do
 		if isAuto then seenAuto = true end
 	end
 	assert(seenAuto and Sim.IsAuto(token, 0), "cycling comes back to Auto")
+	-- level 20 Retribution Paladin learns Consecration mid-session: the twist
+	-- rotation names rank 5 (20924), so rank 1 has to be found without a /reload
+	if CLASS_FILE == "PALADIN" then
+		level, pts = 20, { 0, 0, 11 }
+		ns.db.role = "damage"
+		local savedKnown = KNOWN
+		KNOWN = { [21084] = true, [20271] = true, [679] = true, [879] = true, [19740] = true, [635] = true }
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+		ns.API.RebuildSpellBookIndex(true)
+		Sim.InvalidateTalents()
+		local got20 = pick()
+		-- Forever hides your mana in combat: what was seen before the pull counts
+		local wasPower = UnitPower
+		UnitPower = function() if COMBAT then return secret(60) end return 60 end
+		TARGET, COMBAT = true, false
+		ns.BuildQueue()
+		COMBAT = true
+		fire("PLAYER_TARGET_CHANGED")
+		NOW = NOW + 30
+		ns.BuildQueue()
+		assert(ns.API.Resolve(20924) == nil, "Consecration not known yet")
+		KNOWN[26573] = true -- ding: Consecration rank 1
+		fire("LEARNED_SPELL_IN_SKILL_LINE", 26573, 1, false)
+		NOW = NOW + 1
+		local seen = {}
+		for t = 1, 80 do
+			NOW = NOW + 0.5
+			local id = ns.BuildQueue()[1]
+			if id then
+				seen[id] = (seen[id] or 0) + 1
+				if id ~= 6603 and t % 2 == 0 then
+					fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast20-" .. t, id)
+				end
+			end
+		end
+		-- in combat the creature type is a secret: Exorcism (undead/demon only)
+		-- uses the type read before the fight, and never errors
+		local wasCT = UnitCreatureType
+		UnitCreatureType = function() if COMBAT then return secret("Undead") end return "Undead" end
+		COMBAT = false
+		fire("PLAYER_TARGET_CHANGED")
+		ns.BuildQueue()
+		COMBAT = true
+		ns.Sim.errors = {}
+		local exo = false
+		for t = 1, 40 do
+			NOW = NOW + 0.5
+			local id = ns.BuildQueue()[1]
+			if id == 879 then exo = true end
+			if id and id ~= 6603 and t % 2 == 0 then fire("UNIT_SPELLCAST_SUCCEEDED", "player", "CastU" .. t, id) end
+		end
+		assert(#ns.Sim.errors == 0, "secret creature type: " .. tostring(ns.Sim.errors[1]))
+		assert(exo, "Exorcism on an undead target in combat")
+		UnitCreatureType = function() if COMBAT then return secret("Beast") end return "Beast" end
+		COMBAT = false
+		fire("PLAYER_TARGET_CHANGED")
+		COMBAT = true
+		for t = 1, 20 do
+			NOW = NOW + 0.5
+			assert(ns.BuildQueue()[1] ~= 879, "no Exorcism on a beast")
+		end
+		UnitCreatureType = wasCT
+		-- every way Forever hides things in combat: never an error, never empty
+		for _, mode in ipairs({ "plain", "hidden", "none", "secretbools" }) do
+			AURAS_SECRET, AURAS_NONE = mode == "hidden", mode == "none"
+			local wasSB = SECRET_BOOLS
+			if mode == "secretbools" then SECRET_BOOLS = true end
+			ns.Sim.errors = {}
+			for t = 1, 30 do
+				NOW = NOW + 0.5
+				local q = ns.BuildQueue()
+				assert(q[1], "level 20 (" .. mode .. "): empty queue")
+				if q[1] ~= 6603 and t % 2 == 0 then
+					fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast20" .. mode .. t, q[1])
+				end
+			end
+			assert(#ns.Sim.errors == 0, "level 20 (" .. mode .. "): rotation error " .. tostring(ns.Sim.errors[1]))
+			SECRET_BOOLS = wasSB
+		end
+		AURAS_SECRET, AURAS_NONE = false, false
+		-- no Unsealed Wrath yet: no waiting for the gap after a swing
+		local gap = { k = "cmp", op = ">", v = { { k = "autoTimeToNext" }, 99 } }
+		ns.Sim.BeginPass(got20)
+		assert(ns.Sim.Test(gap), "before Unsealed Wrath: swing-gap wait dropped")
+		KNOWN[1310735] = true
+		ns.Sim.BeginPass(got20)
+		assert(not ns.Sim.Test(gap), "with Unsealed Wrath: swing-gap wait kept")
+		KNOWN[1310735] = nil
+		-- Judgement on a /startattack macro still flashes
+		local jSlot
+		for slot, id in pairs(ACTION) do if id == 20271 then jSlot = slot end end
+		if not jSlot then jSlot = 70; ACTION[jSlot] = 20271 end
+		MACRO_SLOT[jSlot] = true
+		ns.GlowFetch(true, true)
+		local btns = ns.GlowDebug(20271)
+		MACRO_SLOT[jSlot] = nil
+		assert(#btns > 0, "Judgement in a macro: button found")
+		SlashCmdList.RCROT("why")
+		WHY20 = table.concat(ns.Sim.Explain(), "\n")
+		assert(WHY20:find("castable") and WHY20:find("seal tracked"), "/rcr why explains each line")
+		assert(WHY20:find("mana 60%%"), "mana hidden in combat: last seen value (" .. WHY20 .. ")")
+		UnitPower = wasPower
+		local parts = {}
+		for id, n in pairs(seen) do parts[#parts + 1] = id .. "x" .. n end
+		table.sort(parts)
+		PAL20 = tostring(got20 and got20.name) .. ": " .. table.concat(parts, " ")
+		assert(seen[26573], "level 20: Consecration suggested after learning it (" .. PAL20 .. ")")
+		assert(seen[679], "level 20: Holy Strike suggested (" .. PAL20 .. ")")
+		KNOWN = savedKnown
+		if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+	end
 	UnitLevel, GetTalentTabInfo = lvl, tabs
 	Sim.InvalidateTalents()
 	ns.db.role = roleWas
@@ -649,6 +878,11 @@ def run(cls, cid, no_secrets=False):
     g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    if cls == "PALADIN":
+        print("  level 20:", g.PAL20)
+        print(g.WHY20)
+    if cls == "WARRIOR":
+        print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS, "| plate size:", g.PLATE_EST)
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
         print(g.PLATECHECK)
     if cls == "PALADIN" and os.environ.get("SHOW_PLATECHECK"):

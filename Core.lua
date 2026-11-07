@@ -870,6 +870,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 		return
 	end
 	if event == "LEARNED_SPELL_IN_TAB" or event == "LEARNED_SPELL_IN_SKILL_LINE" or event == "PLAYER_TALENT_UPDATE" or event == "PLAYER_LEVEL_UP" then
+		if (event == "LEARNED_SPELL_IN_TAB" or event == "LEARNED_SPELL_IN_SKILL_LINE") and ns.API and ns.API.NoteLearnedSpell then
+			pcall(ns.API.NoteLearnedSpell, unit)
+		end
 		scheduleSpellFlush()
 		return
 	end
@@ -891,6 +894,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 			local okCreate, errCreate = pcall(ns.UI.Create)
 			if not okCreate then
 				ns.Print(errCreate)
+			end
+			if ns.Range and ns.Range.Attach then
+				pcall(ns.Range.Attach)
 			end
 			if ns.CreateMinimap then
 				local okMini, errMini = pcall(ns.CreateMinimap)
@@ -1103,9 +1109,30 @@ SlashCmdList.RCROT = function(msg)
 		if #queue == 0 then
 			ns.Print("no suggestion right now")
 		end
+		if rot and ns.Sim.Explain then
+			for _, line in ipairs(ns.Sim.Explain(rot)) do
+				print("  " .. line)
+			end
+			if ns.db.autoAttack == false then
+				print("  Auto Attack filler is turned off in options")
+			end
+		end
+		for _, e in ipairs(ns.Sim and ns.Sim.errors or {}) do
+			ns.Print("|cffff5555rotation error|r " .. e)
+		end
 		for i, id in ipairs(queue) do
 			local name = ns.API and ns.API.SpellName and ns.API.SpellName(id) or "?"
-			local buttons = ns.GlowDebug and ns.GlowDebug(id) or {}
+			local all = ns.GlowDebug and ns.GlowDebug(id) or {}
+			-- only the buttons you can see (hidden gamepad / Blizzard copies are noise)
+			local buttons = {}
+			for _, b in ipairs(all) do
+				if not tostring(b):find("hidden$") then
+					buttons[#buttons + 1] = b
+				end
+			end
+			if #buttons == 0 and #all > 0 then
+				buttons = { all[1] .. (#all > 1 and (" (+%d hidden)"):format(#all - 1) or "") }
+			end
 			ns.Print(("%d. %s (%s) -> %s"):format(i, tostring(name), tostring(id), #buttons > 0 and table.concat(buttons, ", ") or "NO BUTTON FOUND"))
 		end
 	elseif msg == "import" then
@@ -1135,6 +1162,10 @@ SlashCmdList.RCROT = function(msg)
 		if ns.API.SpellCheck then
 			ns.API.SpellCheck((msg:gsub("^spellcheck%s*", "")))
 		end
+	elseif msg == "range" or msg == "rangecheck" then
+		if ns.Range and ns.Range.Check then
+			ns.Range.Check()
+		end
 	elseif msg == "platecheck" then
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
@@ -1154,6 +1185,10 @@ SlashCmdList.RCROT = function(msg)
 		if ns.ShowCopyLink then
 			ns.ShowCopyLink(ns.WORKSHOP_URL)
 		end
+	elseif msg == "version" or msg == "ver" then
+		local v = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")
+			or (GetAddOnMetadata and GetAddOnMetadata(addonName, "Version"))
+		ns.Print("version " .. tostring(v))
 	elseif msg == "news" or msg == "changelog" then
 		if ns.ShowWhatsNew then
 			ns.ShowWhatsNew()

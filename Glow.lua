@@ -614,10 +614,14 @@ local function addStandard(button)
 		if slot and HasAction then
 			local okHas, has = pcall(HasAction, slot)
 			if okHas and has then
-				local okInfo, t, actionID, _, spellFromAction = pcall(GetActionInfo, slot)
+				local okInfo, t, actionID, subType, spellFromAction = pcall(GetActionInfo, slot)
 				if okInfo and isToken(t, "spell") then
 					actionType = "spell"
 					id = plainID(spellFromAction) or plainID(actionID)
+				elseif okInfo and isToken(t, "macro") and isToken(subType, "spell") and plainID(actionID) then
+					-- modern clients: a macro showing a spell (/startattack +
+					-- /cast Judgement) reports that spell's ID directly
+					actionType, id = "spell", plainID(actionID)
 				elseif okInfo and isToken(t, "macro") then
 					actionType, id = "macro", actionID
 				end
@@ -669,6 +673,9 @@ local function addStandard(button)
 								if spellId then
 									addButton(spellId, button, slot)
 								end
+							elseif token ~= "" and not token:find("^/") then
+								-- the game wouldn't look the name up: match by name
+								addSpellName(token, button)
 							end
 						end
 					end

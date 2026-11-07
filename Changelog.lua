@@ -8,6 +8,7 @@ ns.CHANGELOG = {
 			"Past your spell range it reads the distance off the nameplate's size (\"~47 yd\"): the game shrinks nameplates with distance, so the addon sets them to shrink evenly from 10 to 60 yards. It learns a nameplate's full size the first time you fight something in melee range.",
 			"Colors: green = in melee range, yellow = within reach of your spells, red = further than any of your spells reach.",
 			"Fixed (WoW Forever): the rotation stopped in combat. Forever hides a mob's creature type in combat, and the \"undead and demons only\" check for Exorcism errored on it. The type seen before the fight is used now.",
+			"Fixed (WoW Forever): mana read as 0 in combat (the game hides it), so lines that need mana (Consecration, Exorcism) were never suggested in a fight. The last mana value seen is used.",
 			"Spells cast from a macro (/startattack + /cast Judgement) flash on their button again.",
 			"A rotation line that errors no longer empties the whole HUD (it's skipped, Auto Attack still shows), and /rcr why lists each rotation line with what stopped it, plus any errors.",
 			"Forever Paladin: with no seal up, the first seal the rotation uses that you actually know is suggested (Seal of Righteousness before you have the Seal of Command talent).",

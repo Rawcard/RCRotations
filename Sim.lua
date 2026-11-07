@@ -524,12 +524,31 @@ end
 local POWER = { mana = 0, rage = 1, focus = 2, energy = 3, combo = 4, runic = 6, shards = 7, eclipse = 8,
 	holy = 9, chi = 12, orbs = 13, embers = 14, fury = 15 }
 
-local function power(kind)
-	return num(call(UnitPower, "player", POWER[kind]), 0)
-end
+-- In combat Forever hides your power (mana, rage...) as a secret value. The
+-- last value it showed is used then: reading the hidden one as 0 made every
+-- "mana at least 10%" line (Consecration) fail all fight long.
+local lastPower, lastPowerMax = {}, {}
 
 local function powerMax(kind)
-	return num(call(UnitPowerMax, "player", POWER[kind]), 0)
+	local v = call(UnitPowerMax, "player", POWER[kind])
+	if v ~= nil and readable(v) and tonumber(v) then
+		lastPowerMax[kind] = tonumber(v)
+		return lastPowerMax[kind]
+	end
+	return lastPowerMax[kind] or 0
+end
+
+local function power(kind)
+	local v = call(UnitPower, "player", POWER[kind])
+	if v ~= nil and readable(v) and tonumber(v) then
+		lastPower[kind] = tonumber(v)
+		return lastPower[kind]
+	end
+	if lastPower[kind] then
+		return lastPower[kind]
+	end
+	-- never seen: mana counts as full, rage / energy as empty
+	return kind == "mana" and powerMax(kind) or 0
 end
 
 local function regen()

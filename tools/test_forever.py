@@ -590,7 +590,12 @@ do
 		ns.API.RebuildSpellBookIndex(true)
 		Sim.InvalidateTalents()
 		local got20 = pick()
-		TARGET, COMBAT = true, true
+		-- Forever hides your mana in combat: what was seen before the pull counts
+		local wasPower = UnitPower
+		UnitPower = function() if COMBAT then return secret(60) end return 60 end
+		TARGET, COMBAT = true, false
+		ns.BuildQueue()
+		COMBAT = true
 		fire("PLAYER_TARGET_CHANGED")
 		NOW = NOW + 30
 		ns.BuildQueue()
@@ -666,6 +671,8 @@ do
 		SlashCmdList.RCROT("why")
 		WHY20 = table.concat(ns.Sim.Explain(), "\n")
 		assert(WHY20:find("castable") and WHY20:find("seal tracked"), "/rcr why explains each line")
+		assert(WHY20:find("mana 60%%"), "mana hidden in combat: last seen value (" .. WHY20 .. ")")
+		UnitPower = wasPower
 		local parts = {}
 		for id, n in pairs(seen) do parts[#parts + 1] = id .. "x" .. n end
 		table.sort(parts)

@@ -9,6 +9,8 @@ ns.CHANGELOG = {
 			"Colors: green = in melee range, yellow = within reach of your spells, red = further than any of your spells reach.",
 			"Fixed (WoW Forever): the rotation stopped in combat. Forever hides a mob's creature type in combat, and the \"undead and demons only\" check for Exorcism errored on it. The type seen before the fight is used now.",
 			"Fixed (WoW Forever): mana read as 0 in combat (the game hides it), so lines that need mana (Consecration, Exorcism) were never suggested in a fight. The last mana value seen is used.",
+			"WoW Forever Seal Twist rotation: until you learn Unsealed Wrath there's no twist to protect, so Consecration and Exorcism no longer wait for the gap right after a swing.",
+			"/rcr why lists only the bar buttons you can see.",
 			"Spells cast from a macro (/startattack + /cast Judgement) flash on their button again.",
 			"A rotation line that errors no longer empties the whole HUD (it's skipped, Auto Attack still shows), and /rcr why lists each rotation line with what stopped it, plus any errors.",
 			"Forever Paladin: with no seal up, the first seal the rotation uses that you actually know is suggested (Seal of Righteousness before you have the Seal of Command talent).",

@@ -659,6 +659,14 @@ do
 			SECRET_BOOLS = wasSB
 		end
 		AURAS_SECRET, AURAS_NONE = false, false
+		-- no Unsealed Wrath yet: no waiting for the gap after a swing
+		local gap = { k = "cmp", op = ">", v = { { k = "autoTimeToNext" }, 99 } }
+		ns.Sim.BeginPass(got20)
+		assert(ns.Sim.Test(gap), "before Unsealed Wrath: swing-gap wait dropped")
+		KNOWN[1310735] = true
+		ns.Sim.BeginPass(got20)
+		assert(not ns.Sim.Test(gap), "with Unsealed Wrath: swing-gap wait kept")
+		KNOWN[1310735] = nil
 		-- Judgement on a /startattack macro still flashes
 		local jSlot
 		for slot, id in pairs(ACTION) do if id == 20271 then jSlot = slot end end

@@ -1122,7 +1122,17 @@ SlashCmdList.RCROT = function(msg)
 		end
 		for i, id in ipairs(queue) do
 			local name = ns.API and ns.API.SpellName and ns.API.SpellName(id) or "?"
-			local buttons = ns.GlowDebug and ns.GlowDebug(id) or {}
+			local all = ns.GlowDebug and ns.GlowDebug(id) or {}
+			-- only the buttons you can see (hidden gamepad / Blizzard copies are noise)
+			local buttons = {}
+			for _, b in ipairs(all) do
+				if not tostring(b):find("hidden$") then
+					buttons[#buttons + 1] = b
+				end
+			end
+			if #buttons == 0 and #all > 0 then
+				buttons = { all[1] .. (#all > 1 and (" (+%d hidden)"):format(#all - 1) or "") }
+			end
 			ns.Print(("%d. %s (%s) -> %s"):format(i, tostring(name), tostring(id), #buttons > 0 and table.concat(buttons, ", ") or "NO BUTTON FOUND"))
 		end
 	elseif msg == "import" then

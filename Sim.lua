@@ -686,6 +686,12 @@ V["not"] = function(n)
 	return not truthy(ev(n.v[1]))
 end
 V.cmp = function(n)
+	-- Seal twist rotations hold Consecration / Exorcism for the gap right after a
+	-- swing ("next swing more than 1.5s away") so the twist isn't delayed. Before
+	-- you have Unsealed Wrath there is no twist, so that wait is dropped.
+	if pass.noTwistGap and n.op == ">" and type(n.v[1]) == "table" and n.v[1].k == "autoTimeToNext" then
+		return true
+	end
 	local a, b = ev(n.v[1]), ev(n.v[2])
 	if type(a) == "boolean" or type(b) == "boolean" then
 		a, b = truthy(a), truthy(b)
@@ -1663,8 +1669,13 @@ function Sim.ListFor(rot, token, spec)
 end
 
 -- ------------------------------------------------------------------ queue
-function Sim.BeginPass()
+local UNSEALED_WRATH = 1310735
+function Sim.BeginPass(rot)
 	pass = { now = GetTime() }
+	if rot and rot.style == "twist" then
+		local known = (API.Known and API.Known(UNSEALED_WRATH)) or (IsPlayerSpell and call(IsPlayerSpell, UNSEALED_WRATH))
+		pass.noTwistGap = not (known == true)
+	end
 end
 
 -- Spells on the stance bar (seals, presences, stances, forms): the spell ID of
@@ -1724,7 +1735,7 @@ function Sim.BuildQueue(rot)
 	if not rot then
 		return nil
 	end
-	Sim.BeginPass()
+	Sim.BeginPass(rot)
 	local _, token, spec = Sim.Rotations()
 	local list, rules = Sim.ListFor(rot, token, spec)
 	tuningBlock = {}
@@ -1818,7 +1829,7 @@ function Sim.Explain(rot)
 	if not rot then
 		return {}
 	end
-	Sim.BeginPass()
+	Sim.BeginPass(rot)
 	local _, token, spec = Sim.Rotations()
 	local list = Sim.ListFor(rot, token, spec)
 	local out = {}

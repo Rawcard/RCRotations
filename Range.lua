@@ -297,6 +297,27 @@ local function canAttack(unit)
 	return flag(call(UnitIsFriend, "player", unit)) ~= true
 end
 
+local function cvar(name)
+	local v = (C_CVar and C_CVar.GetCVar and call(C_CVar.GetCVar, name)) or (GetCVar and call(GetCVar, name))
+	return num(v)
+end
+
+-- Yards the unit is at most, judging by it having a nameplate (nil = can't tell).
+function R.PlateReach(unit)
+	if not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+		return nil
+	end
+	local maxD = cvar("nameplateMaxDistance")
+	if not maxD or maxD <= 0 then
+		return nil
+	end
+	local plate = call(C_NamePlate.GetNamePlateForUnit, unit)
+	if type(plate) ~= "table" then
+		return nil
+	end
+	return maxD
+end
+
 -- Returns lo, hi in yards (hi nil = further than anything we can test),
 -- or nil when nothing could be read. trace (optional table) collects the
 -- answers for /rcr range.
@@ -383,6 +404,12 @@ function R.Band(unit, trace)
 		inside(28, "inspect distance")
 	elseif inspect == false then
 		outside(28, "inspect distance")
+	end
+	-- The game only makes a nameplate for a unit within the nameplate
+	-- distance (60 yards on Forever), and that works in combat too.
+	local plateMax = R.PlateReach(unit)
+	if plateMax then
+		inside(plateMax, "has a nameplate")
 	end
 	if not read then
 		return nil

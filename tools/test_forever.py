@@ -290,6 +290,19 @@ step("range", function()
 	assert(lo == 20 and hi == 28 or lo == 20 and hi == 30, "range: in combat, spells only: " .. tostring(ns.Range.Text(lo, hi)))
 	COMBAT = false
 	C_Item = wasItem
+	-- a target with a nameplate is within the nameplate distance, even in combat
+	do
+		local wasPlate, wasMax = C_NamePlate.GetNamePlateForUnit, CVARS.nameplateMaxDistance
+		CVARS.nameplateMaxDistance = "60"
+		C_NamePlate.GetNamePlateForUnit = function() return PLATES_LIST[1] end
+		YARDS = 50
+		local lo, hi = ns.Range.Band("target")
+		assert(lo == 40 and hi == 60, "range: nameplate caps it at 60, got " .. tostring(ns.Range.Text(lo, hi)))
+		C_NamePlate.GetNamePlateForUnit = function() return nil end
+		lo, hi = ns.Range.Band("target")
+		assert(lo == 40 and hi == nil, "range: no nameplate, no cap")
+		C_NamePlate.GetNamePlateForUnit, CVARS.nameplateMaxDistance = wasPlate, wasMax
+	end
 	-- in combat the game may hide the answers: no error, no made-up number
 	C_Spell.IsSpellInRange = function() return secret(true) end
 	CheckInteractDistance = function() return secret(true) end

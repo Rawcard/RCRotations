@@ -1109,6 +1109,17 @@ SlashCmdList.RCROT = function(msg)
 		if #queue == 0 then
 			ns.Print("no suggestion right now")
 		end
+		if rot and ns.Sim.Explain then
+			for _, line in ipairs(ns.Sim.Explain(rot)) do
+				print("  " .. line)
+			end
+			if ns.db.autoAttack == false then
+				print("  Auto Attack filler is turned off in options")
+			end
+		end
+		for _, e in ipairs(ns.Sim and ns.Sim.errors or {}) do
+			ns.Print("|cffff5555rotation error|r " .. e)
+		end
 		for i, id in ipairs(queue) do
 			local name = ns.API and ns.API.SpellName and ns.API.SpellName(id) or "?"
 			local buttons = ns.GlowDebug and ns.GlowDebug(id) or {}

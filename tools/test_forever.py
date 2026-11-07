@@ -609,6 +609,27 @@ do
 				end
 			end
 		end
+		-- every way Forever hides things in combat: never an error, never empty
+		for _, mode in ipairs({ "plain", "hidden", "none", "secretbools" }) do
+			AURAS_SECRET, AURAS_NONE = mode == "hidden", mode == "none"
+			local wasSB = SECRET_BOOLS
+			if mode == "secretbools" then SECRET_BOOLS = true end
+			ns.Sim.errors = {}
+			for t = 1, 30 do
+				NOW = NOW + 0.5
+				local q = ns.BuildQueue()
+				assert(q[1], "level 20 (" .. mode .. "): empty queue")
+				if q[1] ~= 6603 and t % 2 == 0 then
+					fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast20" .. mode .. t, q[1])
+				end
+			end
+			assert(#ns.Sim.errors == 0, "level 20 (" .. mode .. "): rotation error " .. tostring(ns.Sim.errors[1]))
+			SECRET_BOOLS = wasSB
+		end
+		AURAS_SECRET, AURAS_NONE = false, false
+		SlashCmdList.RCROT("why")
+		WHY20 = table.concat(ns.Sim.Explain(), "\n")
+		assert(WHY20:find("castable") and WHY20:find("seal tracked"), "/rcr why explains each line")
 		local parts = {}
 		for id, n in pairs(seen) do parts[#parts + 1] = id .. "x" .. n end
 		table.sort(parts)
@@ -808,6 +829,7 @@ def run(cls, cid, no_secrets=False):
     r = g.REPORT
     if cls == "PALADIN":
         print("  level 20:", g.PAL20)
+        print(g.WHY20)
     if cls == "WARRIOR":
         print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS, "| plate size:", g.PLATE_EST)
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):

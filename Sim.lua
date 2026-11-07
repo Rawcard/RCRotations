@@ -1719,10 +1719,13 @@ function Sim.BuildQueue(rot)
 	-- rotations never ask for one. With no seal up at all, suggest the first seal
 	-- the rotation uses.
 	if ns.GAME == "forever" and token == "PALADIN" and API.SealUp then
+		local okSeal, errSeal = pcall(function()
 		local anyUp, first = false, nil
 		for _, item in ipairs(list) do
-			if item.id and API.SealUp(item.id) ~= nil then
-				first = first or item.id
+			-- the first seal the rotation uses that you have (Seal of Command
+			-- is a talent: at level 20 it's Righteousness)
+			if not first and item.id and API.SealUp(item.id) ~= nil and resolve(item.id) then
+				first = item.id
 			end
 		end
 		if first then
@@ -1741,14 +1744,18 @@ function Sim.BuildQueue(rot)
 				end
 			end
 		end
-	end
-	for _, item in ipairs(list) do
-		if #q >= 3 then
-			break
+		end)
+		if not okSeal then
+			Sim.NoteError(errSeal, 0, { id = "seal" })
 		end
+	end
+	-- One line that errors (an API Forever answers oddly) must not empty the
+	-- whole queue: it's skipped, and /rcr why shows the error.
+	local stop = false
+	local function evalItem(item)
 		if item.hold then
 			if test(item.c) and #q == 0 then
-				break
+				stop = true
 			end
 		elseif item.cancel then
 			-- "Cancel" lines (end Metamorphosis): only while its aura is up;
@@ -1768,10 +1775,75 @@ function Sim.BuildQueue(rot)
 			end
 		end
 	end
+	for i, item in ipairs(list) do
+		if #q >= 3 or stop then
+			break
+		end
+		local ok, err = pcall(evalItem, item)
+		if not ok then
+			Sim.NoteError(err, i, item)
+		end
+	end
 	if #q < 3 and not (ns.db and ns.db.simLookahead == false) then
-		Sim.FillComingUp(list, q, seen)
+		local ok, err = pcall(Sim.FillComingUp, list, q, seen)
+		if not ok then
+			Sim.NoteError(err)
+		end
 	end
 	return q
+end
+
+-- /rcr why: each rotation line and what stopped it
+function Sim.Explain(rot)
+	rot = rot or Sim.Current()
+	if not rot then
+		return {}
+	end
+	Sim.BeginPass()
+	local _, token, spec = Sim.Rotations()
+	local list = Sim.ListFor(rot, token, spec)
+	local out = {}
+	for i, item in ipairs(list or {}) do
+		if i > 14 then
+			break
+		end
+		local ok, line = pcall(function()
+			if item.hold then
+				return ("%d. wait-line: %s"):format(i, test(item.c) and "WAITING" or "no")
+			end
+			local rid = item.id and resolve(item.id)
+			local name = API.SpellName and API.SpellName(rid or item.id) or "?"
+			if not rid then
+				return ("%d. %s (%s): not known"):format(i, tostring(name), tostring(item.id))
+			end
+			local bits = {}
+			bits[#bits + 1] = canCast(rid) and "castable" or "NOT castable"
+			bits[#bits + 1] = ("cd %.1f"):format(cooldownRemain(rid))
+			bits[#bits + 1] = onBar(rid) and "on bar" or "NOT ON BAR"
+			bits[#bits + 1] = test(item.c) and "condition ok" or "condition no"
+			return ("%d. %s (%s): %s"):format(i, tostring(name), tostring(rid), table.concat(bits, ", "))
+		end)
+		out[#out + 1] = ok and line or ("%d. error: %s"):format(i, tostring(line))
+	end
+	local seal, at = API.CurrentSeal and API.CurrentSeal()
+	out[#out + 1] = ("seal tracked: %s%s"):format(tostring(seal or "none"), at and seal and (" (%.0fs ago)"):format(GetTime() - at) or "")
+	return out
+end
+
+-- the last few rotation errors, for /rcr why
+Sim.errors = {}
+function Sim.NoteError(err, line, item)
+	local text = tostring(err)
+	if line then
+		text = ("line %d (%s): %s"):format(line, tostring(item and (item.id or (item.hold and "wait"))), text)
+	end
+	for _, e in ipairs(Sim.errors) do
+		if e == text then
+			return
+		end
+	end
+	table.insert(Sim.errors, 1, text)
+	Sim.errors[6] = nil
 end
 
 -- "Coming up": when fewer than three spells are castable right now, fill the

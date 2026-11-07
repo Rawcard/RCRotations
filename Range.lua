@@ -10,22 +10,65 @@ local R = ns.Range
 
 local MELEE = 5
 
--- Items whose use range is fixed (same set LibRangeCheck relies on).
--- Missing items are just skipped.
-local ITEMS = {
-	{ 37727, 5 }, -- Ruby Acorn
+-- Items whose use range is fixed (the set LibRangeCheck uses). The game
+-- answers for an item you don't own; items this client doesn't have are
+-- just skipped. More checkpoints = a tighter range.
+local HARM_ITEMS = {
+	{ 37727, 2 }, -- Ruby Acorn
+	{ 42732, 3 }, -- Everfrost Razor
+	{ 129055, 4 }, -- Shoe Shine Kit
+	{ 8149, 5 }, -- Voodoo Charm
+	{ 63427, 5 }, -- Worgsaw
+	{ 61323, 7 }, -- Ruby Seeds
 	{ 34368, 8 }, -- Attuned Crystal Cores
+	{ 33278, 8 }, -- Burning Torch
 	{ 32321, 10 }, -- Sparrowhawk Net
 	{ 33069, 15 }, -- Sturdy Rope
 	{ 10645, 20 }, -- Gnomish Death Ray
 	{ 24268, 25 }, -- Netherweave Net
+	{ 41509, 25 }, -- Frostweave Net
 	{ 835, 30 }, -- Large Rope Net
+	{ 7734, 30 }, -- Six Demon Bag
+	{ 34191, 30 }, -- Handful of Snowflakes
 	{ 24269, 35 }, -- Heavy Netherweave Net
+	{ 18904, 35 }, -- Zorbin's Ultra-Shrinker
+	{ 140786, 38 }, -- Ley Spider Eggs
 	{ 28767, 40 }, -- The Decapitator
 	{ 23836, 45 }, -- Goblin Rocket Launcher
+	{ 116139, 50 }, -- Haunting Memento
+	{ 74637, 55 }, -- Kiryn's Poison Vial
 	{ 32825, 60 }, -- Soul Cannon
+	{ 37887, 60 }, -- Seeds of Nature's Wrath
+	{ 41265, 70 }, -- Eyesore Blaster
+	{ 35278, 80 }, -- Reinforced Net
+	{ 133925, 90 }, -- Fel Lash
+	{ 33119, 100 }, -- Malister's Frost Wand
+}
+local HELP_ITEMS = {
+	{ 37727, 5 }, -- Ruby Acorn
+	{ 34368, 8 }, -- Attuned Crystal Cores
+	{ 32321, 10 }, -- Sparrowhawk Net
+	{ 1251, 15 }, -- Linen Bandage
+	{ 21519, 20 }, -- Mistletoe
+	{ 31463, 25 }, -- Zezzak's Shard
+	{ 1180, 30 }, -- Scroll of Stamina
+	{ 18904, 35 }, -- Zorbin's Ultra-Shrinker
+	{ 34471, 40 }, -- Vial of the Sunwell
+	{ 32698, 45 }, -- Wrangling Rope
+	{ 116139, 50 }, -- Haunting Memento
+	{ 32825, 60 }, -- Soul Cannon
+	{ 41265, 70 }, -- Eyesore Blaster
 	{ 35278, 80 }, -- Reinforced Net
 }
+
+R.HARM_ITEMS, R.HELP_ITEMS = HARM_ITEMS, HELP_ITEMS
+
+-- Text colors: green = melee, yellow = within your spell range,
+-- red = further than any of your spells reach.
+local GREEN = { 0.3, 1, 0.3 }
+local YELLOW = { 1, 0.85, 0.15 }
+local RED = { 1, 0.3, 0.3 }
+local WHITE = { 1, 1, 1 }
 
 local function flag(v)
 	if v == nil then
@@ -218,7 +261,16 @@ local function spellInRange(id, unit)
 	return nil
 end
 
+-- Item and interact-distance checks are off-limits to addons in combat
+-- (calling them there can get the addon blocked), so they only run out of it.
+local function restricted()
+	return InCombatLockdown and flag(call(InCombatLockdown)) == true
+end
+
 local function itemInRange(id, unit)
+	if restricted() then
+		return nil
+	end
 	local fn = (C_Item and C_Item.IsItemInRange) or IsItemInRange
 	if not fn then
 		return nil
@@ -230,7 +282,7 @@ local function itemInRange(id, unit)
 end
 
 local function interact(unit, index)
-	if not CheckInteractDistance then
+	if not CheckInteractDistance or restricted() then
 		return nil
 	end
 	return flag(call(CheckInteractDistance, unit, index))
@@ -288,7 +340,8 @@ function R.Band(unit, trace)
 			trace[#trace + 1] = ("  out %3d yd  %s"):format(r, why)
 		end
 	end
-	local list = canAttack(unit) and spells.harm or spells.help
+	local hostile = canAttack(unit)
+	local list = hostile and spells.harm or spells.help
 	for _, e in ipairs(list) do
 		for _, id in ipairs(e.ids) do
 			local f = spellInRange(id, unit)
@@ -309,7 +362,7 @@ function R.Band(unit, trace)
 			end
 		end
 	end
-	for _, it in ipairs(ITEMS) do
+	for _, it in ipairs(hostile and HARM_ITEMS or HELP_ITEMS) do
 		local f = itemInRange(it[1], unit)
 		if f == true then
 			inside(it[2], "item " .. it[1])
@@ -350,6 +403,9 @@ function R.Text(lo, hi)
 	if hi and hi <= MELEE then
 		return "melee"
 	end
+	if hi and hi - lo <= 1 then
+		return ("%d yd"):format(hi)
+	end
 	if not hi then
 		return ("%d+ yd"):format(lo)
 	end
@@ -358,22 +414,46 @@ end
 
 -- display -----------------------------------------------------------------
 
+-- the furthest any of your attack spells reaches (melee only: 5)
+function R.SpellReach()
+	ensure()
+	local reach = MELEE
+	for _, e in ipairs(spells.harm) do
+		if e.range > reach then
+			reach = e.range
+		end
+	end
+	return reach
+end
+
+function R.Color(lo, hi)
+	if hi and hi <= MELEE then
+		return GREEN
+	end
+	local reach = R.SpellReach()
+	if hi and hi <= reach then
+		return YELLOW
+	end
+	if lo and lo >= reach then
+		return RED
+	end
+	return WHITE
+end
+
+local function paintText(fs, lo, hi)
+	local text = R.Text(lo, hi)
+	if not text or (hi == 0 and lo == 0) then
+		fs:Hide()
+		return
+	end
+	fs:SetText(text)
+	local c = R.Color(lo, hi)
+	fs:SetTextColor(c[1], c[2], c[3])
+	fs:Show()
+end
+
 local label
 local elapsedSince = 0
-
-local function topSpellRange()
-	local slot = ns.UI and ns.UI.slots and ns.UI.slots[1]
-	local id = slot and slot.spellID
-	if not id or not (ns.API and ns.API.SpellMaxRange) then
-		return nil
-	end
-	local ok, r = pcall(ns.API.SpellMaxRange, id)
-	r = ok and num(r) or nil
-	if r and r <= 0 then
-		r = MELEE
-	end
-	return r
-end
 
 function R.Refresh()
 	if not label then
@@ -383,22 +463,7 @@ function R.Refresh()
 		label:Hide()
 		return
 	end
-	local lo, hi = R.Band("target")
-	local text = R.Text(lo, hi)
-	if not text or (hi == 0 and lo == 0) then
-		label:Hide()
-		return
-	end
-	label:SetText(text)
-	local r = topSpellRange()
-	if r and hi and hi <= r then
-		label:SetTextColor(0.35, 1, 0.35) -- your next spell reaches
-	elseif r and lo >= r then
-		label:SetTextColor(1, 0.3, 0.3) -- too far for your next spell
-	else
-		label:SetTextColor(1, 1, 1)
-	end
-	label:Show()
+	paintText(label, R.Band("target"))
 end
 
 function R.Attach()
@@ -431,6 +496,79 @@ function R.Attach()
 	end)
 end
 
+-- yards above enemy nameplates ---------------------------------------------
+
+local function plateUnit(plate)
+	local u = plate.namePlateUnitToken
+	if type(u) ~= "string" and type(plate.UnitFrame) == "table" then
+		u = plate.UnitFrame.unit
+	end
+	if type(u) == "string" and not (issecretvalue and issecretvalue(u)) then
+		return u
+	end
+	return nil
+end
+
+local function plateText(plate)
+	local fs = plate.rcrYards
+	if fs then
+		return fs
+	end
+	local holder = CreateFrame("Frame", nil, plate)
+	holder.rcrOwn = true -- the nameplate code leaves it alone
+	holder:SetAllPoints(plate)
+	if plate.GetFrameLevel then
+		pcall(holder.SetFrameLevel, holder, (plate:GetFrameLevel() or 0) + 21)
+	end
+	fs = holder:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	local font = fs:GetFont()
+	if font then
+		fs:SetFont(font, 10, "OUTLINE")
+	end
+	fs.holder = holder
+	plate.rcrYards = fs
+	return fs
+end
+
+local function placeYards(plate, fs)
+	local name = plate.rcrName
+	local anchor = (name and name:IsShown()) and name or plate
+	if fs.rcrAnchor == anchor then
+		return
+	end
+	fs.rcrAnchor = anchor
+	fs:ClearAllPoints()
+	if anchor == plate then
+		fs:SetPoint("BOTTOM", plate, "TOP", 0, 2)
+	else
+		fs:SetPoint("BOTTOM", name, "TOP", 0, 1)
+	end
+end
+
+function R.RefreshPlates()
+	local plates = C_NamePlate and C_NamePlate.GetNamePlates and call(C_NamePlate.GetNamePlates)
+	if type(plates) ~= "table" then
+		return
+	end
+	local on = ns.db and ns.db.showYards ~= false
+	for _, plate in ipairs(plates) do
+		if type(plate) == "table" then
+			local unit = on and plateUnit(plate)
+			local hostile = unit and canAttack(unit)
+			if hostile then
+				local fs = plateText(plate)
+				placeYards(plate, fs)
+				local ok = pcall(paintText, fs, R.Band(unit))
+				if not ok then
+					fs:Hide()
+				end
+			elseif plate.rcrYards then
+				plate.rcrYards:Hide()
+			end
+		end
+	end
+end
+
 -- /rcr range: what the game answered, so a wrong band can be traced.
 function R.Check()
 	local trace = {}
@@ -451,6 +589,15 @@ pcall(ev.RegisterEvent, ev, "LEARNED_SPELL_IN_TAB")
 pcall(ev.RegisterEvent, ev, "PLAYER_LEVEL_UP")
 pcall(ev.RegisterEvent, ev, "PLAYER_TALENT_UPDATE")
 pcall(ev.RegisterEvent, ev, "ACTIVE_TALENT_GROUP_CHANGED")
+local plateSince = 0
+ev:SetScript("OnUpdate", function(_, elapsed)
+	plateSince = plateSince + (elapsed or 0)
+	if plateSince < 0.3 then
+		return
+	end
+	plateSince = 0
+	pcall(R.RefreshPlates)
+end)
 ev:SetScript("OnEvent", function(_, event)
 	R.Invalidate()
 	if event == "PLAYER_ENTERING_WORLD" then

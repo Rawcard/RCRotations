@@ -191,7 +191,7 @@ local function iconCandidates(plate, uf)
 		end
 		local ok, kids = pcall(function() return { f:GetChildren() } end)
 		for _, k in ipairs(ok and kids or {}) do
-			if type(k) == "table" and not seen[k] and k ~= uf and not (plate.rcrName and k == plate.rcrName.holder) then
+			if type(k) == "table" and not seen[k] and k ~= uf and not k.rcrOwn and not (plate.rcrName and k == plate.rcrName.holder) then
 				seen[k] = true
 				out[#out + 1] = k
 				addRegions(k)

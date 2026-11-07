@@ -259,7 +259,37 @@ step("range", function()
 		assert(lo, "range: no band at " .. y .. " yd")
 		assert(lo <= y and (not hi or y <= hi), ("range: %d yd shown as %s"):format(y, tostring(ns.Range.Text(lo, hi))))
 		RANGE_SEEN = (RANGE_SEEN or "") .. y .. "=" .. ns.Range.Text(lo, hi) .. " "
+		local c = ns.Range.Color(lo, hi)
+		local want = y <= 5 and "green" or y <= 40 and "yellow" or "red"
+		local got = c[1] < 0.5 and "green" or c[2] > 0.5 and c[2] < 0.9 and "yellow" or c[2] < 0.5 and "red" or "white"
+		assert(got == want, ("range: %d yd colored %s, wanted %s"):format(y, got, want))
 	end
+	-- yards above the enemy names
+	YARDS = 22
+	ns.Range.RefreshPlates()
+	local fs = PLATES_LIST[1].rcrYards
+	assert(fs and fs.shown, "range: yards above the enemy nameplate")
+	assert(fs.pts[#fs.pts][2] == PLATES_LIST[1].rcrName or not (PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown), "range: yards sit just above the enemy name")
+	PLATE_YARDS = fs.text
+	-- range-check items add checkpoints: a tighter range out of combat, none in combat
+	local wasItem = C_Item
+	C_Item = { IsItemInRange = function(id)
+		for _, it in ipairs(ns.Range.HARM_ITEMS) do if it[1] == id then return YARDS <= it[2] end end
+	end }
+	YARDS = 22
+	local lo, hi = ns.Range.Band("target")
+	assert(lo == 20 and hi == 25, "range: items narrow 22 yd to 20-25, got " .. tostring(ns.Range.Text(lo, hi)))
+	YARDS = 3.5
+	lo, hi = ns.Range.Band("target")
+	assert(lo == 3 and hi == 4, "range: items narrow 3.5 yd to 3-4, got " .. tostring(ns.Range.Text(lo, hi)))
+	ITEM_YARDS = ns.Range.Text(lo, hi)
+	COMBAT = true
+	C_Item.IsItemInRange = function() error("item range check in combat") end
+	YARDS = 22
+	lo, hi = ns.Range.Band("target")
+	assert(lo == 20 and hi == 28 or lo == 20 and hi == 30, "range: in combat, spells only: " .. tostring(ns.Range.Text(lo, hi)))
+	COMBAT = false
+	C_Item = wasItem
 	-- in combat the game may hide the answers: no error, no made-up number
 	C_Spell.IsSpellInRange = function() return secret(true) end
 	CheckInteractDistance = function() return secret(true) end
@@ -692,7 +722,7 @@ def run(cls, cid, no_secrets=False):
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
     if cls == "WARRIOR":
-        print("  range:", g.RANGE_SEEN)
+        print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS)
     if cls == "WARRIOR" and os.environ.get("SHOW_PLATECHECK"):
         print(g.PLATECHECK)
     if cls == "PALADIN" and os.environ.get("SHOW_PLATECHECK"):

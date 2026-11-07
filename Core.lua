@@ -1175,6 +1175,10 @@ SlashCmdList.RCROT = function(msg)
 		if ns.ShowCopyLink then
 			ns.ShowCopyLink(ns.WORKSHOP_URL)
 		end
+	elseif msg == "version" or msg == "ver" then
+		local v = C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata(addonName, "Version")
+			or (GetAddOnMetadata and GetAddOnMetadata(addonName, "Version"))
+		ns.Print("version " .. tostring(v))
 	elseif msg == "news" or msg == "changelog" then
 		if ns.ShowWhatsNew then
 			ns.ShowWhatsNew()

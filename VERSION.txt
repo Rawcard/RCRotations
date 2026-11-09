@@ -1,4 +1,11 @@
-1.5.11
+1.5.12
+
+# 1.5.12
+
+- Smoother HUD on WoW Forever: when nothing is ready, the main icon shows the next spell to come
+  off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.
+- A blank lasting under half a second keeps the last suggestion, so the icon doesn't blink empty
+  between updates.
 
 # 1.5.11
 

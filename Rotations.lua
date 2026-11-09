@@ -437,7 +437,34 @@ local function withAutoAttack(q)
 end
 ns.WithAutoAttack = withAutoAttack
 
+-- Smoothing: the answer can drop out for a moment (a cast just landed, the
+-- game is between updates). A blank lasting under half a second keeps showing
+-- the last suggestion, so the icon doesn't blink empty.
+local HOLD_BLANK = 0.5
+local lastShown, lastShownAt
+
+local function smooth(q)
+	if type(q) ~= "table" then
+		return q
+	end
+	local now = GetTime and GetTime() or 0
+	if q[1] then
+		lastShown, lastShownAt = q, now
+		return q
+	end
+	local hostile = API.Hostile and API.Hostile()
+	if lastShown and lastShownAt and now > lastShownAt and now - lastShownAt < HOLD_BLANK and hostile then
+		return lastShown
+	end
+	return q
+end
+
+local buildQueueRaw
 function ns.BuildQueue()
+	return smooth(buildQueueRaw())
+end
+
+function buildQueueRaw()
 	ns.queueHeal = {}
 	if ns.Sim and ns.Sim.Active and ns.Sim.Active() then
 		local ok, simQueue = pcall(ns.Sim.BuildQueue)

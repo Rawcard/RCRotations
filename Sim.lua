@@ -1819,6 +1819,14 @@ function Sim.BuildQueue(rot)
 		if not ok then
 			Sim.NoteError(err)
 		end
+		-- still nothing: show whatever comes off cooldown next, however far
+		-- off, instead of a blank icon
+		if #q == 0 and ns.GAME == "forever" then
+			ok, err = pcall(Sim.FillComingUp, list, q, seen, 600)
+			if not ok then
+				Sim.NoteError(err)
+			end
+		end
 	end
 	return q
 end
@@ -1887,7 +1895,8 @@ end
 -- They pass the same checks as a normal suggestion apart from the cooldown,
 -- and are marked in q.soon so they don't flash until they're ready.
 Sim.LOOKAHEAD = 6
-function Sim.FillComingUp(list, q, seen)
+function Sim.FillComingUp(list, q, seen, lookahead)
+	lookahead = lookahead or Sim.LOOKAHEAD
 	local soon = {}
 	for _, item in ipairs(list) do
 		if item.id and not item.hold then
@@ -1895,7 +1904,7 @@ function Sim.FillComingUp(list, q, seen)
 			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and onBar(rid) then
 				local cd = cooldownRemain(rid)
 				local usable = ns.GAME == "forever" or usableNow(rid) ~= false
-				if cd > 0 and cd <= Sim.LOOKAHEAD and usable and test(item.c) then
+				if cd > 0 and cd <= lookahead and usable and test(item.c) then
 					soon[#soon + 1] = { rid = rid, cd = cd, order = #soon }
 					seen[rid] = true
 				end

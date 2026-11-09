@@ -659,6 +659,39 @@ do
 			SECRET_BOOLS = wasSB
 		end
 		AURAS_SECRET, AURAS_NONE = false, false
+		-- a blank for a moment keeps the last suggestion; a lasting one doesn't
+		do
+			NOW = NOW + 1
+			local first = ns.BuildQueue()[1]
+			assert(first, "smoothing: a suggestion to start from")
+			local wasBQ = ns.Sim.BuildQueue
+			ns.Sim.BuildQueue = function() return {} end
+			ns.db.autoAttack = false
+			NOW = NOW + 0.2
+			assert(ns.BuildQueue()[1] == first, "smoothing: a 0.2s blank keeps the last suggestion")
+			NOW = NOW + 0.6
+			assert(ns.BuildQueue()[1] == nil, "smoothing: a lasting blank shows blank")
+			ns.Sim.BuildQueue = wasBQ
+			ns.db.autoAttack = nil
+		end
+		-- everything on a long cooldown: the next one to come off shows, not a blank
+		do
+			local wasCD = C_Spell.GetSpellCooldown
+			C_Spell.GetSpellCooldown = function(id)
+				if id == 61304 then return { startTime = 0, duration = 0, isEnabled = true, modRate = 1 } end
+				return { startTime = NOW - 1, duration = 30, isEnabled = true, modRate = 1 }
+			end
+			ns.db.autoAttack = false
+			NOW = NOW + 1
+			if ns.API.InvalidateCooldowns then pcall(ns.API.InvalidateCooldowns) end
+			local q = ns.BuildQueue()
+			LONGCD = tostring(q[1]) .. (q.soon and q.soon[q[1]] and " (coming up)" or "")
+			assert(q[1] and q.soon and q.soon[q[1]], "long cooldowns: the next spell shows as coming up, got " .. LONGCD)
+			C_Spell.GetSpellCooldown = wasCD
+			ns.db.autoAttack = nil
+			ns.API.ForgetCooldowns()
+			NOW = NOW + 31
+		end
 		-- no Unsealed Wrath yet: no waiting for the gap after a swing
 		local gap = { k = "cmp", op = ">", v = { { k = "autoTimeToNext" }, 99 } }
 		ns.Sim.BeginPass(got20)
@@ -879,7 +912,7 @@ def run(cls, cid, no_secrets=False):
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
     if cls == "PALADIN":
-        print("  level 20:", g.PAL20)
+        print("  level 20:", g.PAL20, "| long cds:", g.LONGCD)
         print(g.WHY20)
     if cls == "WARRIOR":
         print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS, "| plate size:", g.PLATE_EST)

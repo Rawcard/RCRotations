@@ -232,6 +232,23 @@ do
 	pcall(ns.Plates.Apply)
 end
 assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
+-- hidden plates are click-through (Questie tooltips), and put back when plates are shown
+do
+	local ct = false
+	C_NamePlate.GetNamePlateEnemyClickThrough = function() return ct end
+	C_NamePlate.SetNamePlateEnemyClickThrough = function(v) ct = v end
+	local wasC = COMBAT
+	COMBAT = false
+	ns.Plates.Apply()
+	assert(ct == true, "name-only plates: enemy plates click-through")
+	ns.db.plateClickThrough = false
+	ns.Plates.Apply()
+	assert(ct == false, "/rcr plateclick: back to clickable")
+	ns.db.plateClickThrough = nil
+	ns.Plates.Apply()
+	assert(ct == true, "click-through again")
+	COMBAT = wasC
+end
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
 assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
 -- the game anchors it back to the bar: it comes back beside the name

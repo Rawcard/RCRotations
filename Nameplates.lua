@@ -616,6 +616,33 @@ function Plates.Apply()
 		end
 		ns.db.plateBackup = nil
 	end
+	Plates.ApplyClickThrough()
+end
+
+-- Hovering the invisible enemy plate (the area around the name) gave the game's
+-- nameplate tooltip, and on WoW Forever other addons can't read that one:
+-- Questie's quest lines went missing, on and off, depending on where the
+-- mouse was. With the hidden plates click-through the mouse reaches the mob
+-- itself, so the normal tooltip shows. Click the mob, not its name, to target.
+function Plates.ClickThroughWanted()
+	return on() and not (ns.db and ns.db.plateClickThrough == false)
+end
+
+function Plates.ApplyClickThrough()
+	local np = C_NamePlate
+	if type(np) ~= "table" or not np.SetNamePlateEnemyClickThrough or not ns.db or inCombat() then
+		return
+	end
+	if Plates.ClickThroughWanted() then
+		if ns.db.plateClickBackup == nil then
+			local ok, was = pcall(np.GetNamePlateEnemyClickThrough or function() return false end)
+			ns.db.plateClickBackup = (ok and not secret(was) and was == true) or false
+		end
+		pcall(np.SetNamePlateEnemyClickThrough, true)
+	elseif ns.db.plateClickBackup ~= nil then
+		pcall(np.SetNamePlateEnemyClickThrough, ns.db.plateClickBackup == true)
+		ns.db.plateClickBackup = nil
+	end
 end
 
 -- /rcr platecheck: what the addon sees on your target's nameplate (for fixing

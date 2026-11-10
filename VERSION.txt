@@ -6,6 +6,10 @@
   off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.
 - Enemy names on nameplates show the mob's level to the left, colored by difficulty like the
   quest log ("??" for far above you, "+" for elites). /rcr platelevel turns it off and on.
+- Questie: with name-only nameplates, the hidden enemy plates are now click-through. Hovering
+  the invisible plate around a name gave the game's nameplate tooltip, which Questie can't read
+  on WoW Forever, so its quest lines went missing on and off. Click the mob itself to target it;
+  /rcr plateclick makes the names clickable again.
 - A blank lasting under half a second keeps the last suggestion, so the icon doesn't blink empty
   between updates.
 

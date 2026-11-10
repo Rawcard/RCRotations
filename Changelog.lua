@@ -2,7 +2,7 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
-		version = "1.5.12",
+		version = "1.5.13",
 		items = {
 			"Smoother HUD on WoW Forever: when nothing is ready, the main icon shows the next spell to come off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.",
 			"Enemy names on nameplates show the mob's level to the left, colored by difficulty like the quest log (\"??\" for far above you, \"+\" for elites). /rcr platelevel turns it off and on.",

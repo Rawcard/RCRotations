@@ -56,12 +56,17 @@ jobs:
 
       # WoW Forever: WoWSims writes some Forever rotations in SIML, read with its
       # CLI (Go + protoc), so tools/forever_export.sh turns them all into JSON.
+      - name: Fetch WoWSims Forever
+        run: git clone --depth 1 https://github.com/wowsims/forever wowsims-forever
+
+      # Use the Go version WoWSims Forever asks for in its go.mod, so a newer
+      # requirement there doesn't break the sync again.
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.25"
+          go-version-file: wowsims-forever/go.mod
           cache: false
 
-      - name: Fetch WoWSims Forever
+      - name: Set up protoc
         run: |
           curl -fsSL --retry 5 -o "$RUNNER_TEMP/protoc.zip" https://github.com/protocolbuffers/protobuf/releases/download/v36.2/protoc-36.2-linux-x86_64.zip
           python3 -m zipfile -e "$RUNNER_TEMP/protoc.zip" "$RUNNER_TEMP/protoc"
@@ -69,7 +74,6 @@ jobs:
           echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
           go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-          git clone --depth 1 https://github.com/wowsims/forever wowsims-forever
 
       - name: Convert WoW Forever rotations
         run: |

@@ -5,6 +5,7 @@ ns.CHANGELOG = {
 		version = "1.5.12",
 		items = {
 			"Smoother HUD on WoW Forever: when nothing is ready, the main icon shows the next spell to come off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.",
+			"Enemy names on nameplates show the mob's level to the left, colored by difficulty like the quest log (\"??\" for far above you, \"+\" for elites). /rcr platelevel turns it off and on.",
 			"A blank lasting under half a second keeps the last suggestion, so the icon doesn't blink empty between updates.",
 		},
 	},

@@ -1170,6 +1170,12 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
 		end
+	elseif msg == "platelevel" or msg == "level" then
+		ns.db.plateLevel = (ns.db.plateLevel == false)
+		ns.Print("mob level on nameplates " .. (ns.db.plateLevel and "on" or "off"))
+		if ns.Plates and ns.Plates.Apply then
+			pcall(ns.Plates.Apply)
+		end
 	elseif msg == "plates" or msg == "nameplates" then
 		if ns.Plates then
 			ns.Plates.Set(ns.db.hidePlates ~= true)

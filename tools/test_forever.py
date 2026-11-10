@@ -209,10 +209,28 @@ local elvName = PLATES_LIST[3].rcrName
 assert(elvName, "ElvUI plate: our name")
 assert(eq.Default.pts[1] and eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
 local softF = PLATES_LIST[3].unitFrame.SoftTargetFrame
-assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvName or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, beside the name")
+local elvLevel = PLATES_LIST[3].rcrLevel
+assert(elvLevel and elvLevel.shown and elvLevel.text == "60", "mob level left of the name, got " .. tostring(elvLevel and elvLevel.text))
+assert(elvLevel.pts[1][1] == "RIGHT" and elvLevel.pts[1][2] == elvName, "level sits just left of the name")
+assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvLevel or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, past the level")
 local soft = PLATES_LIST[3].unitFrame.SoftTargetFrame
 local last = soft.pts[#soft.pts]
-assert(last and last[1] == "RIGHT" and (last[2] == elvName or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left beside the name")
+assert(last and last[1] == "RIGHT" and (last[2] == elvLevel or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left, past the level")
+-- level hidden in combat on a plate that just came up: no stale level from the plate's last mob
+do
+	local wasL, wasC = UnitLevel, UnitClassification
+	UnitLevel = function() return secret(60) end
+	PLATES_LIST[3].rcrLevelFresh = true
+	pcall(ns.Plates.Apply)
+	UnitLevel = function() return -1 end
+	UnitClassification = function() return "elite" end
+	PLATES_LIST[3].rcrLevelFresh = true
+	pcall(ns.Plates.Apply)
+	PLATE_LEVEL = elvLevel.text
+	assert(elvLevel.text == "??+", "boss-level elite shows ??+, got " .. tostring(elvLevel.text))
+	UnitLevel, UnitClassification = wasL, wasC
+	pcall(ns.Plates.Apply)
+end
 assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
 assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")

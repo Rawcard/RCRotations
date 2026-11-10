@@ -163,6 +163,9 @@ local function nameColor(unit)
 end
 
 Plates.NameColor = nameColor
+function Plates.ShowLevel()
+	return not (ns.db and ns.db.plateLevel == false)
+end
 
 -- ElvUI places its name at the left end of its own health bar, and keeps
 -- putting it back there. So while bars are hidden its name is faded out and
@@ -273,7 +276,8 @@ end
 -- line the icons up beside the name: left ones going left, right ones going
 -- right, each next to the one before (only the icons showing take a place)
 local function layoutIcons(plate, mine)
-	local prev = { left = mine, right = mine }
+	local lv = plate.rcrLevel
+	local prev = { left = (lv and lv:IsShown() and lv) or mine, right = mine }
 	for _, r in ipairs(plate.rcrIcons or {}) do
 		if r.rcrTucked then
 			local side = r.rcrSide == "left" and "left" or "right"
@@ -367,12 +371,68 @@ local function tuckIcons(plate, uf, mine, hide)
 	end
 end
 
+-- the mob's level, colored by difficulty like the quest log ("??" = far
+-- above you, "+" = elite). In combat Forever can hide the level: a plate keeps
+-- the level it showed, and a plate that just came up shows none until readable.
+local function levelText(unit)
+	if not unit or not UnitLevel then
+		return nil
+	end
+	local ok, lvl = pcall(UnitLevel, unit)
+	if not ok or secret(lvl) or type(lvl) ~= "number" then
+		return nil
+	end
+	local okC, class = pcall(UnitClassification or function() end, unit)
+	local elite = okC and not secret(class) and (class == "elite" or class == "rareelite" or class == "worldboss")
+	local r, g, b = 1, 0.82, 0
+	if lvl <= 0 then
+		return "??" .. (elite and "+" or ""), 1, 0.1, 0.1
+	end
+	local fn = GetCreatureDifficultyColor or GetQuestDifficultyColor
+	if fn then
+		local okD, c = pcall(fn, lvl)
+		if okD and type(c) == "table" and type(c.r) == "number" then
+			r, g, b = c.r, c.g, c.b
+		end
+	end
+	return lvl .. (elite and "+" or ""), r, g, b
+end
+
+local function ownLevel(plate, mine, unit)
+	local lv = plate.rcrLevel
+	if not lv then
+		lv = mine.holder:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		lv:SetPoint("RIGHT", mine, "LEFT", -3, 0)
+		plate.rcrLevel = lv
+	end
+	local font, size, flags = mine:GetFont()
+	if font then
+		pcall(lv.SetFont, lv, font, size, flags)
+	end
+	if Plates.ShowLevel and not Plates.ShowLevel() then
+		lv:Hide()
+		return
+	end
+	local text, r, g, b = levelText(unit)
+	if text then
+		lv:SetText(text)
+		lv:SetTextColor(r, g, b)
+		lv:Show()
+	elseif plate.rcrLevelFresh then
+		lv:Hide()
+	end
+	plate.rcrLevelFresh = nil
+end
+
 local function ownName(plate, uf, hide, unit)
 	local theirs = (type(uf.Name) == "table" and uf.Name) or (type(uf.name) == "table" and uf.name) or nil
 	local mine = plate.rcrName
 	if not secret(hide) and not hide then
 		if mine then
 			mine:Hide()
+		end
+		if plate.rcrLevel then
+			plate.rcrLevel:Hide()
 		end
 		fade(theirs, false)
 		tuckIcons(plate, uf, mine, false)
@@ -430,6 +490,7 @@ local function ownName(plate, uf, hide, unit)
 		mine.holder:Show()
 	end
 	mine:Show()
+	pcall(ownLevel, plate, mine, unit)
 	-- ours shows exactly when theirs is hidden
 	fade(mine, hide, 1, 0)
 	local okT, errT = pcall(tuckIcons, plate, uf, mine, true)
@@ -671,6 +732,7 @@ frame:SetScript("OnEvent", function(_, event, unit)
 		if type(C_NamePlate) == "table" and C_NamePlate.GetNamePlateForUnit then
 			local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
 			if ok and plate then
+				plate.rcrLevelFresh = true -- a new mob: don't keep the old level
 				-- plates are reused, so always set the bar one way or the other
 				pcall(styleBar, plate, on() and hostileUnit(unit), unit)
 			end

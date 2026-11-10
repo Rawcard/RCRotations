@@ -240,14 +240,26 @@ do
 	local wasC = COMBAT
 	COMBAT = false
 	ns.Plates.Apply()
-	assert(ct == true, "name-only plates: enemy plates click-through")
-	ns.db.plateClickThrough = false
+	assert(ct == false, "name-only plates: names stay clickable (through walls)")
+	ns.db.plateClickThrough = true
 	ns.Plates.Apply()
-	assert(ct == false, "/rcr plateclick: back to clickable")
+	assert(ct == true, "/rcr plateclick: click-through")
 	ns.db.plateClickThrough = nil
 	ns.Plates.Apply()
-	assert(ct == true, "click-through again")
+	assert(ct == false, "clickable again, setting put back")
 	COMBAT = wasC
+	-- the nameplate tooltip (hidden GUID) is swapped for the mob's normal tooltip
+	local set = {}
+	local wasTip, wasTimer = GameTooltip, C_Timer
+	GameTooltip = { IsShown = function() return true end, SetUnit = function(_, u) set[#set + 1] = u end }
+	C_Timer = { After = function(_, fn) fn() end }
+	local wasUE = UnitExists
+	UnitExists = function(u) return u == "mouseover" or wasUE(u) end
+	ns.Plates.OnUnitTooltip(GameTooltip, { guid = secret("Creature-0-0-0-0-898-0") })
+	assert(set[1] == "mouseover", "nameplate tooltip swapped for the normal one")
+	ns.Plates.OnUnitTooltip(GameTooltip, { guid = "Creature-0-0-0-0-898-0" })
+	assert(#set == 1, "a readable tooltip is left alone")
+	GameTooltip, C_Timer, UnitExists = wasTip, wasTimer, wasUE
 end
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
 assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")

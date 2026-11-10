@@ -1177,8 +1177,8 @@ SlashCmdList.RCROT = function(msg)
 			pcall(ns.Plates.Apply)
 		end
 	elseif msg == "plateclick" then
-		ns.db.plateClickThrough = (ns.db.plateClickThrough == false)
-		ns.Print("click the enemy's name to target: " .. (ns.db.plateClickThrough and "off (click the mob; Questie tooltips work)" or "on"))
+		ns.db.plateClickThrough = not (ns.db.plateClickThrough == true)
+		ns.Print("click the enemy's name to target: " .. (ns.db.plateClickThrough and "off (click the mob itself)" or "on"))
 		if ns.Plates and ns.Plates.ApplyClickThrough then
 			pcall(ns.Plates.ApplyClickThrough)
 		end

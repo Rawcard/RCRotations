@@ -622,10 +622,60 @@ end
 -- Hovering the invisible enemy plate (the area around the name) gave the game's
 -- nameplate tooltip, and on WoW Forever other addons can't read that one:
 -- Questie's quest lines went missing, on and off, depending on where the
--- mouse was. With the hidden plates click-through the mouse reaches the mob
--- itself, so the normal tooltip shows. Click the mob, not its name, to target.
+-- mouse was. Click-through plates let the mouse reach the mob itself.
+-- Off by default: you click the names through walls. Instead the nameplate
+-- tooltip is swapped for the normal one (below). /rcr plateclick turns
+-- click-through on if a tooltip still comes up without Questie's lines.
 function Plates.ClickThroughWanted()
-	return on() and not (ns.db and ns.db.plateClickThrough == false)
+	return on() and ns.db and ns.db.plateClickThrough == true
+end
+
+-- When the mouse is over a hidden enemy plate, the game shows the nameplate's
+-- tooltip, which other addons can't read on WoW Forever (the mob's GUID is
+-- hidden). Right after, the same mob's normal tooltip ("mouseover") is shown
+-- in its place, which Questie and the rest can read.
+local swapping, swapQueued = false, false
+local function swapTooltip()
+	swapQueued = false
+	local tip = GameTooltip
+	if not tip or not tip:IsShown() or swapping or not on() then
+		return
+	end
+	local okE, exists = pcall(UnitExists, "mouseover")
+	if not okE or secret(exists) or not exists then
+		return
+	end
+	swapping = true
+	pcall(tip.SetUnit, tip, "mouseover")
+	swapping = false
+end
+
+function Plates.OnUnitTooltip(tooltip, data)
+	if swapping or swapQueued or tooltip ~= GameTooltip or not on() then
+		return
+	end
+	if IsInInstance then
+		local okI, inside = pcall(IsInInstance)
+		if okI and not secret(inside) and inside then
+			return
+		end
+	end
+	local guid = type(data) == "table" and not secret(data) and data.guid
+	if guid == nil or not secret(guid) then
+		return -- readable already: nothing to fix
+	end
+	swapQueued = true
+	if C_Timer and C_Timer.After then
+		C_Timer.After(0, swapTooltip)
+	else
+		swapTooltip()
+	end
+end
+
+if type(TooltipDataProcessor) == "table" and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Unit then
+	pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Unit, function(tooltip, data)
+		pcall(Plates.OnUnitTooltip, tooltip, data)
+	end)
 end
 
 function Plates.ApplyClickThrough()

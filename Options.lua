@@ -1121,6 +1121,13 @@ local function ensureOptions()
 	frame.soundHint = soundHint
 
 	local colorCard = makeCard(extra, "OPT_COLORS", 338, -112, 318, 184)
+	local flashBtn = makeGoldBtn(colorCard, 110, 18, "Bar flash colors")
+	flashBtn:SetPoint("TOPRIGHT", -10, -6)
+	flashBtn:SetScript("OnClick", function()
+		if ns.ColorMenu and ns.ColorMenu.Toggle then
+			ns.ColorMenu.Toggle()
+		end
+	end)
 	frame.colorButtons = {}
 	frame.colorLabels = {}
 	local colorKeys = { "next", "heal", "def", "weapon", "range" }

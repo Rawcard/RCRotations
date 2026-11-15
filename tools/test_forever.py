@@ -439,10 +439,10 @@ step("tracking", function()
 	local tSlot, tWas = next(ACTION)
 	ACTION[tSlot] = 2481
 	ns.GlowFetch(true, true)
-	local flashed, wasGB = nil, ns.GlowBuffs
-	ns.GlowBuffs = function(l) flashed = table.concat(l or {}, ","); return wasGB(l) end
+	local flashed, wasGT = nil, ns.GlowTrack
+	ns.GlowTrack = function(l) flashed = table.concat(l or {}, ","); return wasGT(l) end
 	ns.Tick()
-	ns.GlowBuffs = wasGB
+	ns.GlowTrack = wasGT
 	TRACK_FLASH = tostring(flashed)
 	assert(flashed and (","..flashed..","):find(",2481,") and (","..flashed..","):find(",2580,"), "turned-off tracking flashes on the bars, flashed: " .. TRACK_FLASH)
 	assert(#ns.GlowDebug(2481) > 0, "Find Treasure has a bar button to flash")
@@ -467,6 +467,32 @@ step("tracking", function()
 	C_Minimap.GetNumTrackingTypes, C_Minimap.GetTrackingInfo = wasN, wasI
 	C_Minimap = wasMM
 	T.Refresh()
+end)
+-- flash colors window: presets, your own colors, the second-spell flash
+step("flash colors", function()
+	local r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 1 and b == 0, "default main flash is yellow")
+	ns.ColorMenu.Toggle()
+	assert(RCRotationsColorMenu and RCRotationsColorMenu.shown, "/rcr colors opens the window")
+	ns.ColorMenu.ApplyPreset({ name = "Fire & Ice", next = { 1, 0, 0 }, second = { 0, 0.5, 1 }, track = { 1, 0.5, 0 } })
+	r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 0 and b == 0, "Fire & Ice: main flash red")
+	r, g, b = ns.FlashColor("track")
+	assert(r == 1 and g == 0.5, "Fire & Ice: tracking orange")
+	ns.ColorMenu.ApplyPreset({ name = "Default" })
+	r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 1 and b == 0, "Default preset puts yellow back")
+	ns.ColorMenu.Toggle()
+	SlashCmdList.RCROT("colors")
+	SlashCmdList.RCROT("colors")
+	-- the second spell flashes in its own color
+	local seen
+	local wasGS = ns.GlowSecond
+	ns.GlowSecond = function(id) seen = id; return wasGS(id) end
+	if ns.InvalidateTick then ns.InvalidateTick() end
+	ns.Tick()
+	ns.GlowSecond = wasGS
+	SECOND_FLASH = tostring(seen)
 end)
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
@@ -1036,6 +1062,7 @@ def run(cls, cid, no_secrets=False):
     g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    print("  second flash:", cls, g.SECOND_FLASH)
     if cls == "PALADIN":
         print("  level 20:", g.PAL20, "| long cds:", g.LONGCD)
         print(g.WHY20)

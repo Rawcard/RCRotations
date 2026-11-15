@@ -7,6 +7,11 @@
   that run alongside the others), stacked against its left edge. The tracking spell also flashes
   on your action bars like a missing buff. Click the icon or the bar button to turn it on. Hidden
   in combat and while dead. /rcr tracking turns the reminders off and on.
+- Flash colors: the spell after the main one now flashes on your bars too, in its own color
+  (blue), and tracking flashes in its own color. A new Flash colors window (/rcr colors, or the
+  "Bar flash colors" button in Options > Extra > Colors) changes the color of every kind of flash,
+  turns the second-spell flash off, and has presets from RC-SpellFlash: Fire & Ice, Classic NAG,
+  RGB, and Default.
 
 # 1.5.17
 

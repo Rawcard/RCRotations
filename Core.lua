@@ -646,17 +646,7 @@ function ns.Tick()
 	local buffs = ns.Buffs and ns.Buffs.Missing and ns.Buffs.Missing() or {}
 	-- tracking you have turned off flashes on your bars like a missing buff
 	-- (its reminder icon sits left of the main icon, not with the buffs)
-	local flash = buffs
 	local track = ns.Tracking and ns.Tracking.FlashIds and ns.Tracking.FlashIds() or {}
-	if #track > 0 then
-		flash = {}
-		for _, id in ipairs(buffs) do
-			flash[#flash + 1] = id
-		end
-		for _, id in ipairs(track) do
-			flash[#flash + 1] = id
-		end
-	end
 	local buffSig = table.concat(buffs, ",") .. "|" .. table.concat(track, ",")
 	if buffSig ~= lastBuffSig then
 		lastBuffSig = buffSig
@@ -664,7 +654,10 @@ function ns.Tick()
 			ns.UI.UpdateBuffs(buffs)
 		end
 		if ns.GlowBuffs then
-			ns.GlowBuffs(flash)
+			ns.GlowBuffs(buffs)
+		end
+		if ns.GlowTrack then
+			ns.GlowTrack(track)
 		end
 	end
 	local soon = queue.soon and queue[1] and queue.soon[queue[1]]
@@ -674,6 +667,11 @@ function ns.Tick()
 		ns.UI.Update(queue, defense, interrupt, purge, cleanse, weapon, weaponNeed, notice)
 		if ns.GlowSpell then
 			ns.GlowSpell((ns.db.showRotation ~= false and not soon and not mounted) and queue[1] or nil)
+		end
+		if ns.GlowSecond then
+			local second = queue[2]
+			local secondSoon = second and queue.soon and queue.soon[second]
+			ns.GlowSecond((not mounted and second and second ~= queue[1] and not secondSoon) and second or nil)
 		end
 		if ns.GlowDef then
 			ns.GlowDef(not mounted and defense or nil)
@@ -1185,6 +1183,10 @@ SlashCmdList.RCROT = function(msg)
 	elseif msg == "platecheck" then
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
+		end
+	elseif msg == "colors" or msg == "colours" or msg == "flashcolors" then
+		if ns.ColorMenu and ns.ColorMenu.Toggle then
+			ns.ColorMenu.Toggle()
 		end
 	elseif msg == "tracking" then
 		ns.db.showTracking = (ns.db.showTracking == false)

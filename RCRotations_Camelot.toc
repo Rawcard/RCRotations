@@ -35,6 +35,7 @@ Buffs.lua
 Nameplates.lua
 Range.lua
 Tracking.lua
+Colors.lua
 SimPicker.lua
 Changelog.lua
 WhatsNew.lua

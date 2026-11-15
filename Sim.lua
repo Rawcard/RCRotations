@@ -247,6 +247,10 @@ local function canCast(id)
 		and not API.CreatureMatch({ "undead", "demon" }) then
 		return false
 	end
+	-- ...or "needs an active seal" (Judgement: it unleashes the seal you have)
+	if ns.GAME == "forever" and Sim.NeedsSeal(rid) and API.CurrentSeal and not API.CurrentSeal() then
+		return false
+	end
 	if ns.GAME ~= "forever" then
 		local u = usableNow(rid)
 		if u ~= nil then
@@ -269,6 +273,22 @@ function Sim.ExecuteOnly(id)
 	end
 	local n = API.SpellName and API.SpellName(id)
 	return type(n) == "string" and EXECUTE_ONLY[n] == true
+end
+
+-- Spells that need a seal up (on Forever Judgement doesn't use the seal up,
+-- but there has to be one to unleash).
+local NEEDS_SEAL
+function Sim.NeedsSeal(id)
+	if not NEEDS_SEAL then
+		NEEDS_SEAL = {}
+		local P = ns.Spell and ns.Spell.Paladin
+		local n = P and P.Judgement and API.SpellName and API.SpellName(P.Judgement)
+		if type(n) == "string" then
+			NEEDS_SEAL[n] = true
+		end
+	end
+	local n = API.SpellName and API.SpellName(id)
+	return type(n) == "string" and NEEDS_SEAL[n] == true
 end
 
 -- Spells the game only lets you use on Undead and Demons.

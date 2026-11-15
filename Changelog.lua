@@ -4,6 +4,7 @@ ns.CHANGELOG = {
 	{
 		version = "1.5.13",
 		items = {
+			"WoW Forever Paladin: Judgement is only suggested while you have a seal up (it unleashes your seal, so with none it can't be cast). With no seal, the seal comes first.",
 			"Smoother HUD on WoW Forever: when nothing is ready, the main icon shows the next spell to come off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.",
 			"Enemy names on nameplates show the mob's level to the left, colored by difficulty like the quest log (\"??\" for far above you, \"+\" for elites). /rcr platelevel turns it off and on.",
 			"Questie: with name-only nameplates, hovering the invisible plate around a name gave the game's nameplate tooltip, which Questie can't read on WoW Forever, so its quest lines went missing on and off. That tooltip is now swapped for the mob's normal one. Names stay clickable (through walls too); /rcr plateclick makes the hidden plates click-through instead.",

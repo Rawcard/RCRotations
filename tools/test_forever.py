@@ -739,6 +739,20 @@ do
 			ns.API.ForgetCooldowns()
 			NOW = NOW + 31
 		end
+		-- Judgement needs a seal up: never suggested with none
+		do
+			COMBAT = false
+			NOW = NOW + 40 -- any tracked seal has run out
+			for t = 1, 6 do
+				NOW = NOW + 0.5
+				local q = ns.BuildQueue()
+				assert(q[1] ~= 20271, "Judgement suggested with no seal up")
+			end
+			assert(not ns.API.CurrentSeal(), "no seal tracked after it ran out")
+			local ex = table.concat(ns.Sim.Explain(), "\n")
+			assert(ex:find("%(20271%): NOT castable"), "Judgement not castable without a seal:\n" .. ex)
+			COMBAT = true
+		end
 		-- no Unsealed Wrath yet: no waiting for the gap after a swing
 		local gap = { k = "cmp", op = ">", v = { { k = "autoTimeToNext" }, 99 } }
 		ns.Sim.BeginPass(got20)

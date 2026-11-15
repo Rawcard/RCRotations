@@ -404,6 +404,53 @@ step("range", function()
 	C_Spell.GetSpellInfo, C_Spell.IsSpellInRange, C_Spell.IsSpellHarmful, CheckInteractDistance = wasInfo, wasRange, wasHarm, wasCID
 	ns.Range.Invalidate()
 end)
+-- gathering / treasure tracking reminders left of the main icon
+step("tracking", function()
+	local T = ns.Tracking
+	T.Attach()
+	local active = {}
+	local wasMM = C_Minimap
+	if type(C_Minimap) ~= "table" then C_Minimap = {} end
+	local wasN, wasI = C_Minimap.GetNumTrackingTypes, C_Minimap.GetTrackingInfo
+	local types = { { name = "Find Minerals", spellID = 2580 }, { name = "Find Herbs", spellID = 2383 }, { name = "Find Treasure", spellID = 2481 } }
+	C_Minimap.GetNumTrackingTypes = function() return #types end
+	C_Minimap.GetTrackingInfo = function(i)
+		local t = types[i]
+		return { name = t.name, spellID = t.spellID, active = active[t.spellID] == true, texture = 136025 }
+	end
+	KNOWN[2580], KNOWN[2481] = true, true
+	local wasC = COMBAT
+	COMBAT = false
+	local function shown()
+		local out = {}
+		for i = 1, 2 do
+			local b = _G["RCRotationsTracking" .. i]
+			if b and b.shown then out[#out + 1] = b.spellID end
+		end
+		return table.concat(out, ",")
+	end
+	T.Refresh()
+	assert(shown() == "2580,2481", "both reminders when nothing is tracked, got " .. shown())
+	active[2580] = true
+	T.Refresh()
+	assert(shown() == "2481", "minerals on: only the treasure reminder, got " .. shown())
+	active[2481] = true
+	T.Refresh()
+	assert(shown() == "", "everything on: no reminders, got " .. shown())
+	active[2580] = nil
+	ns.db.showTracking = false
+	T.Refresh()
+	assert(shown() == "", "/rcr tracking off hides them")
+	ns.db.showTracking = nil
+	COMBAT = true
+	T.Refresh()
+
+	COMBAT = wasC
+	KNOWN[2580], KNOWN[2481] = nil, nil
+	C_Minimap.GetNumTrackingTypes, C_Minimap.GetTrackingInfo = wasN, wasI
+	C_Minimap = wasMM
+	T.Refresh()
+end)
 step("menu", ns.ToggleOptions)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)

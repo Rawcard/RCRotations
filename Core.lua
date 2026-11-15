@@ -898,6 +898,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 			if ns.Range and ns.Range.Attach then
 				pcall(ns.Range.Attach)
 			end
+			if ns.Tracking and ns.Tracking.Attach then
+				pcall(ns.Tracking.Attach)
+			end
 			if ns.CreateMinimap then
 				local okMini, errMini = pcall(ns.CreateMinimap)
 				if not okMini then
@@ -1169,6 +1172,12 @@ SlashCmdList.RCROT = function(msg)
 	elseif msg == "platecheck" then
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
+		end
+	elseif msg == "tracking" then
+		ns.db.showTracking = (ns.db.showTracking == false)
+		ns.Print("tracking reminders " .. (ns.db.showTracking and "on" or "off"))
+		if ns.Tracking and ns.Tracking.Refresh then
+			pcall(ns.Tracking.Refresh)
 		end
 	elseif msg == "platelevel" or msg == "level" then
 		ns.db.plateLevel = (ns.db.plateLevel == false)

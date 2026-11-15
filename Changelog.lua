@@ -2,6 +2,12 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.18",
+		items = {
+			"Tracking reminders: left of the main HUD icon, an icon shows for each tracking you have but haven't turned on: Find Minerals / Find Herbs, and the Dwarf's Find Treasure (WoW Forever lets that run alongside the others). Click it to turn the tracking on. Hidden in combat and while dead. /rcr tracking turns the reminders off and on.",
+		},
+	},
+	{
 		version = "1.5.17",
 		items = {
 			"WoW Forever Paladin: Judgement is only suggested while you have a seal up (it unleashes your seal, so with none it can't be cast). With no seal, the seal comes first.",
@@ -26,13 +32,6 @@ ns.CHANGELOG = {
 			"Forever Paladin: with no seal up, the first seal the rotation uses that you actually know is suggested (Seal of Righteousness before you have the Seal of Command talent).",
 			"Fixed: a spell learned mid-session (Consecration at level 20) wasn't suggested until a /reload when the rotation names a different rank of it.",
 			"Turn it off in Options > General > HUD (\"Yards: main icon and enemy names\"). /rcr range lists what the game answered.",
-		},
-	},
-	{
-		version = "1.5.6",
-		items = {
-			"Enemy names only (/rcr plates): names show from further away (the game's longest nameplate distance; your own setting comes back when you turn the option off), so you see them, and the addon counts them for multi-target, sooner.",
-			"A mob someone else has tagged now has a purple name instead of grey, since grey looks dead.",
 		},
 	},
 }

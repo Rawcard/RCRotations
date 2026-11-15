@@ -1,4 +1,11 @@
-1.5.17
+1.5.18
+
+# 1.5.18
+
+- Tracking reminders: left of the main HUD icon, an icon shows for each tracking you have but
+  haven't turned on: Find Minerals / Find Herbs, and the Dwarf's Find Treasure (WoW Forever lets
+  that run alongside the others). Click it to turn the tracking on. Hidden in combat and while
+  dead. /rcr tracking turns the reminders off and on.
 
 # 1.5.17
 

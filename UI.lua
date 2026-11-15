@@ -490,6 +490,7 @@ function ns.UI.Create()
 	kick.texture:SetTexture(IMG .. "lightning-interrupt")
 	kick.texture:SetVertexColor(0.2, 0.2, 0.2)
 	makeMovable(kick, "interrupt")
+	ns.UI.kick = kick
 	bindTip(kick, "TIP_INTERRUPT", "TIP_INTERRUPT_DESC")
 	local cast = CreateFrame("StatusBar", nil, kick)
 	cast:SetSize(26, 4)

@@ -672,12 +672,12 @@ function ns.Tick()
 			-- the second color shows what's next: the 2nd spell, or, while the
 			-- main spell is still on cooldown (e.g. Judgement), that spell itself,
 			-- so a bar button is always lit for what to press next
+			-- (the 2nd spell flashes even while it's still on cooldown)
 			local second = queue[2]
-			local secondSoon = second and queue.soon and queue.soon[second]
 			local pick
 			if soon and queue[1] and ns.db.showRotation ~= false then
 				pick = queue[1]
-			elseif second and second ~= queue[1] and not secondSoon then
+			elseif second and second ~= queue[1] then
 				pick = second
 			end
 			ns.GlowSecond((not mounted) and pick or nil)
@@ -1129,6 +1129,10 @@ SlashCmdList.RCROT = function(msg)
 			ns.GlowFetch(true, true) -- full scan now, so every bar is included
 		end
 		ns.Print("* = flashed")
+		if ns.GlowSecondNow then
+			local id, n = ns.GlowSecondNow()
+			ns.Print(("second-color flash: %s on %d button(s)%s"):format(id and (ns.API.SpellName(id) or id) or "none", n or 0, ns.db.flashSecond == false and " (turned off)" or ""))
+		end
 		if #queue == 0 then
 			ns.Print("no suggestion right now")
 		end

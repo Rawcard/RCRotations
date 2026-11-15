@@ -1233,6 +1233,15 @@ function ns.GlowClearSecond()
 	lastSecond = nil
 end
 
+-- /rcr why: what the second-color flash is on, and on how many buttons
+function ns.GlowSecondNow()
+	local n = 0
+	for _ in pairs(secondGlowing) do
+		n = n + 1
+	end
+	return lastSecond, n
+end
+
 function ns.GlowSecond(spellID)
 	styleSync()
 	if not spellID or ns.db.glow == false or ns.db.showRotation == false or ns.db.flashSecond == false then

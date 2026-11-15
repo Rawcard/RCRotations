@@ -439,10 +439,13 @@ step("tracking", function()
 	local tSlot, tWas = next(ACTION)
 	ACTION[tSlot] = 2481
 	ns.GlowFetch(true, true)
+	local flashed, wasGB = nil, ns.GlowBuffs
+	ns.GlowBuffs = function(l) flashed = table.concat(l or {}, ","); return wasGB(l) end
 	ns.Tick()
-	local glow = ns.GlowDebug(2481)
-	TRACK_FLASH = table.concat(glow, ";")
-	assert(TRACK_FLASH:find("%*"), "Find Treasure flashes on its bar button: " .. TRACK_FLASH)
+	ns.GlowBuffs = wasGB
+	TRACK_FLASH = tostring(flashed)
+	assert(flashed and (","..flashed..","):find(",2481,") and (","..flashed..","):find(",2580,"), "turned-off tracking flashes on the bars, flashed: " .. TRACK_FLASH)
+	assert(#ns.GlowDebug(2481) > 0, "Find Treasure has a bar button to flash")
 	ACTION[tSlot] = tWas
 	ns.GlowFetch(true, true)
 	active[2580] = true

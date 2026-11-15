@@ -472,6 +472,7 @@ end)
 step("flash colors", function()
 	local r, g, b = ns.FlashColor("next")
 	assert(r == 1 and g == 1 and b == 0, "default main flash is yellow")
+	if not ns.optSerial then ns.ToggleOptions(); ns.ToggleOptions() end
 	local opts = _G["RCRotationsOptions" .. ns.optSerial]
 	local wasShown = opts.shown
 	opts:Show()

@@ -472,8 +472,14 @@ end)
 step("flash colors", function()
 	local r, g, b = ns.FlashColor("next")
 	assert(r == 1 and g == 1 and b == 0, "default main flash is yellow")
+	local opts = _G["RCRotationsOptions" .. ns.optSerial]
+	local wasShown = opts.shown
+	opts:Show()
 	ns.ColorMenu.Toggle()
 	assert(RCRotationsColorMenu and RCRotationsColorMenu.shown, "/rcr colors opens the window")
+	local p = RCRotationsColorMenu.pts[#RCRotationsColorMenu.pts]
+	assert(p[1] == "TOPLEFT" and p[2] == opts and p[3] == "TOPRIGHT", "opens to the right of the options window")
+	if not wasShown then opts:Hide() end
 	ns.ColorMenu.ApplyPreset({ name = "Fire & Ice", next = { 1, 0, 0 }, second = { 0, 0.5, 1 }, track = { 1, 0.5, 0 } })
 	r, g, b = ns.FlashColor("next")
 	assert(r == 1 and g == 0 and b == 0, "Fire & Ice: main flash red")

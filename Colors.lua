@@ -91,7 +91,7 @@ end
 local function build()
 	local f = CreateFrame("Frame", "RCRotationsColorMenu", UIParent, "BackdropTemplate")
 	f:SetSize(330, 74 + #ROWS * 26 + 2 * 26 + 8 + 3 * 22 + 6 + 100)
-	f:SetPoint("CENTER", 380, 0)
+	f:SetPoint("CENTER")
 	-- above the options window, so nothing in it covers these buttons
 	f:SetFrameStrata("FULLSCREEN_DIALOG")
 	f:SetToplevel(true)
@@ -276,6 +276,14 @@ function M.Toggle()
 	if frame:IsShown() then
 		frame:Hide()
 	else
+		-- open beside the options window (to its right), or mid-screen without it
+		local opts = ns.optSerial and _G["RCRotationsOptions" .. ns.optSerial]
+		frame:ClearAllPoints()
+		if opts and opts:IsShown() then
+			frame:SetPoint("TOPLEFT", opts, "TOPRIGHT", 8, 0)
+		else
+			frame:SetPoint("CENTER", 0, 0)
+		end
 		M.Refresh()
 		frame:Show()
 	end

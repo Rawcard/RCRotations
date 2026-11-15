@@ -432,7 +432,8 @@ step("tracking", function()
 	T.Refresh()
 	assert(shown() == "2580,2481", "both reminders when nothing is tracked, got " .. shown())
 	local h = RCRotationsTrackingHolder
-	assert(h.pts[1][1] == "TOPRIGHT" and h.pts[1][2] == ns.UI.slots[1] and h.pts[1][3] == "TOPLEFT" and h.pts[1][4] == 0, "column touches the main icon's left edge")
+	local hp = h.pts[#h.pts]
+	assert(hp[1] == "TOPRIGHT" and hp[2] == UIParent and hp[3] == "BOTTOMLEFT" and hp[4] == ns.UI.slots[1]:GetLeft() and hp[5] == ns.UI.slots[1]:GetTop(), "column at the main icon's left edge, not anchored to the HUD")
 	local b2 = RCRotationsTracking2
 	assert(b2.pts[1][1] == "TOPRIGHT" and b2.pts[1][5] == -25, "second reminder right under the first")
 	-- the turned-off tracking flashes on the action bars

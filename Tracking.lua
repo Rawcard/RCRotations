@@ -196,7 +196,7 @@ function T.Attach()
 	local slot = ns.UI.slots[1]
 	holder = CreateFrame("Frame", "RCRotationsTrackingHolder", UIParent)
 	holder:SetSize(SIZE, SIZE * #GROUPS)
-	holder:SetPoint("TOPRIGHT", slot, "TOPLEFT", 0, 0)
+	T.Place()
 	for i = 1, #GROUPS do
 		buttons[i] = makeButton(i)
 		buttons[i]:SetPoint("TOPRIGHT", holder, "TOPRIGHT", 0, -(i - 1) * SIZE)
@@ -224,10 +224,36 @@ function T.Enabled()
 	return not (ns.db and ns.db.showTracking == false)
 end
 
+-- The reminder buttons are secure (a click casts the tracking spell), and a
+-- frame anchored to a secure frame becomes protected itself: the HUD then
+-- couldn't be shown or hidden in combat (ADDON_ACTION_BLOCKED). So the column
+-- isn't anchored to the HUD; it's placed at the main icon's screen position,
+-- out of combat, and follows it when the HUD moves.
+function T.Place()
+	local slot = ns.UI and ns.UI.slots and ns.UI.slots[1]
+	if not holder or not slot or inCombat() then
+		return
+	end
+	local left, top = slot:GetLeft(), slot:GetTop()
+	if not left or not top then
+		return
+	end
+	local s = slot:GetEffectiveScale() / UIParent:GetEffectiveScale()
+	holder:SetScale(s)
+	local x, y = left * slot:GetEffectiveScale() / holder:GetEffectiveScale(), top * slot:GetEffectiveScale() / holder:GetEffectiveScale()
+	if holder.placedX == x and holder.placedY == y then
+		return
+	end
+	holder.placedX, holder.placedY = x, y
+	holder:ClearAllPoints()
+	holder:SetPoint("TOPRIGHT", UIParent, "BOTTOMLEFT", x, y)
+end
+
 function T.Refresh()
 	if not holder then
 		return
 	end
+	pcall(T.Place)
 	-- secure buttons can't change in combat: hide them by alpha instead, and
 	-- leave the layout until the fight ends
 	local dead = UnitIsDeadOrGhost and call(UnitIsDeadOrGhost, "player")
@@ -236,6 +262,8 @@ function T.Refresh()
 		return
 	end
 	holder:SetAlpha(1)
+	local hud = ns.UI and ns.UI.root
+	holder:SetShown(not (hud and hud.IsVisible and not hud:IsVisible()))
 	local list = (T.Enabled() and not (dead == true)) and T.Missing() or {}
 	for i, b in ipairs(buttons) do
 		local m = list[i]

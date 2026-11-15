@@ -892,8 +892,16 @@ function ns.GlowFetch(force, sync)
 		if gen ~= glowFetchGen then
 			return
 		end
-		local budget = sync and 100000 or 20
+		-- a few buttons per frame, and never more than ~2 ms of work: WoW Forever
+		-- stops an addon whose code runs too long in one frame ("script ran too
+		-- long"), and other addons share that frame
+		local budget = sync and 100000 or 12
+		local clock = debugprofilestop
+		local started = clock and clock()
 		while idx <= #queue and budget > 0 do
+			if not sync and started and clock() - started > 2 then
+				break
+			end
 			local entry = queue[idx]
 			idx = idx + 1
 			budget = budget - 1

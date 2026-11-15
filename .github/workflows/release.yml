@@ -23,5 +23,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      # A manual run ("Run workflow") releases the version in the .toc: it tags
+      # that version first, so the packager builds a normal release.
+      - name: Tag the .toc version (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          v=$(sed -n 's/^## Version: *//p' RCRotations.toc | head -1 | tr -d '\r')
+          case "$v" in ""|*test*|*" "*) echo "not a release version: '$v'"; exit 1;; esac
+          tag="v$v"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then echo "$tag already released"; exit 1; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "$tag"
+          git push origin "$tag"
+
       - name: Package
         uses: BigWigsMods/packager@v2

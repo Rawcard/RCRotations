@@ -2,7 +2,7 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
-		version = "1.5.13",
+		version = "1.5.17",
 		items = {
 			"WoW Forever Paladin: Judgement is only suggested while you have a seal up (it unleashes your seal, so with none it can't be cast). With no seal, the seal comes first.",
 			"Smoother HUD on WoW Forever: when nothing is ready, the main icon shows the next spell to come off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.",

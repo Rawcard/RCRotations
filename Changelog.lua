@@ -5,7 +5,8 @@ ns.CHANGELOG = {
 		version = "1.5.18",
 		items = {
 			"Tracking reminders: left of the main HUD icon, an icon shows for each tracking you have but haven't turned on: Find Minerals / Find Herbs, and the Dwarf's Find Treasure (WoW Forever lets that run alongside the others), stacked against its left edge. The tracking spell also flashes on your action bars like a missing buff. Click the icon or the bar button to turn it on. Hidden in combat and while dead. /rcr tracking turns the reminders off and on.",
-			"Flash colors: the spell after the main one now flashes on your bars too, in its own color (blue), and tracking flashes in its own color. A new Flash colors window (/rcr colors, or the \"Bar flash colors\" button in Options > Extra > Colors) changes the color of every kind of flash, turns the second-spell flash off, and has presets from RC-SpellFlash: Fire & Ice, Classic NAG, RGB, and Default.",
+			"Flash colors: the spell after the main one now flashes on your bars too, in its own color (blue), and tracking flashes in its own color. A new Flash colors window (/rcr colors, or the \"Bar flash colors\" button in Options > Extra > Colors) changes the color of every kind of flash, turns the second-spell flash off, and has presets from RC-SpellFlash: Fire & Ice, Classic NAG, RGB, and Default. Pick a flash, then a color from the palette or the red / green / blue sliders.",
+			"Options: the Extra and Info pages scroll (mouse wheel or scroll bar), so their cards no longer run over each other; the commands list gets the room it needs.",
 		},
 	},
 	{

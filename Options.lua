@@ -736,15 +736,27 @@ local function ensureOptions()
 		simNote:SetText(ns.T("OPT_SIM_NOTE"))
 	end
 
-	local extra = CreateFrame("Frame", nil, content)
-	extra:SetPoint("TOPLEFT", 8, -72)
-	extra:SetPoint("BOTTOMRIGHT", -8, 8)
-	extra:Hide()
-
-	local info = CreateFrame("Frame", nil, content)
-	info:SetPoint("TOPLEFT", 8, -72)
-	info:SetPoint("BOTTOMRIGHT", -8, 8)
-	info:Hide()
+	-- Extra and Info hold more than fits: each is a page inside a scroll frame
+	-- (mouse wheel or the scroll bar), so cards never run over each other.
+	local function scrollPage(name, height)
+		local sf = CreateFrame("ScrollFrame", name, content, "UIPanelScrollFrameTemplate")
+		sf:SetPoint("TOPLEFT", 8, -72)
+		sf:SetPoint("BOTTOMRIGHT", -30, 8)
+		local page = CreateFrame("Frame", nil, sf)
+		page:SetSize(664, height)
+		sf:SetScrollChild(page)
+		sf:EnableMouseWheel(true)
+		sf:SetScript("OnMouseWheel", function(self, delta)
+			local range = self:GetVerticalScrollRange() or 0
+			local v = (self:GetVerticalScroll() or 0) - delta * 40
+			self:SetVerticalScroll(math.max(0, math.min(range, v)))
+		end)
+		sf:Hide()
+		page.scroll = sf
+		return page
+	end
+	local extra = scrollPage("RCRotationsExtraScroll", 570)
+	local info = scrollPage("RCRotationsInfoScroll", 760)
 	frame.general = general
 	frame.rotation = rotation
 	frame.extra = extra
@@ -1099,7 +1111,7 @@ local function ensureOptions()
 	frame.optCleanseGroup = addSwitch(autoCard, "cleanseGroup", ns.T("OPT_CLEANSE_GROUP"))
 	frame.optPlates = addSwitch(autoCard, "hidePlates", ns.T("OPT_HIDE_PLATES"))
 
-	local alertCard = makeCard(extra, "OPT_CARD_ALERTS", 8, -138, 318, 132)
+	local alertCard = makeCard(extra, "OPT_CARD_ALERTS", 8, -160, 318, 132)
 	local soundLabel = alertCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	soundLabel:SetPoint("TOPLEFT", 12, -32)
 	soundLabel:SetTextColor(0.92, 0.92, 0.92)
@@ -1120,7 +1132,7 @@ local function ensureOptions()
 	soundHint:SetTextColor(0.65, 0.65, 0.65)
 	frame.soundHint = soundHint
 
-	local colorCard = makeCard(extra, "OPT_COLORS", 338, -112, 318, 184)
+	local colorCard = makeCard(extra, "OPT_COLORS", 338, -118, 318, 184)
 	local flashBtn = makeGoldBtn(colorCard, 110, 18, "Bar flash colors")
 	flashBtn:SetPoint("TOPRIGHT", -10, -6)
 	flashBtn:SetScript("OnClick", function()
@@ -1158,7 +1170,7 @@ local function ensureOptions()
 		frame.colorLabels[i] = label
 	end
 
-	local shareCard = makeCard(extra, "OPT_CARD_SHARE", 8, -282, 648, 248)
+	local shareCard = makeCard(extra, "OPT_CARD_SHARE", 8, -312, 648, 248)
 	local shareHint = shareCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	shareHint:SetPoint("TOPLEFT", 12, -28)
 	shareHint:SetPoint("RIGHT", -12, 0)
@@ -1358,6 +1370,19 @@ local function ensureOptions()
 		end
 		if frame.cmdList then
 			frame.cmdList:SetText(ns.T("INFO_CMD_LIST"))
+			-- the commands card grows to fit the list; the links card follows it
+			local h = (frame.cmdList:GetStringHeight() or 140) + 64
+			if h < 196 then
+				h = 196
+			end
+			if cmdCard then
+				cmdCard:SetHeight(h)
+			end
+			if linksCard then
+				linksCard:ClearAllPoints()
+				linksCard:SetPoint("TOPLEFT", 8, -212 - h - 12)
+				info:SetHeight(212 + h + 12 + 150 + 12)
+			end
 		end
 		for _, row in ipairs({ frame.siteRow, frame.discordRow, frame.curseRow, frame.githubRow }) do
 			if row and row.label and row.labelKey then
@@ -1392,8 +1417,10 @@ local function ensureOptions()
 		if which == "rotation" and frame.RefreshSim then
 			frame.RefreshSim()
 		end
-		extra:SetShown(which == "extra")
-		info:SetShown(which == "info")
+		extra.scroll:SetShown(which == "extra")
+		info.scroll:SetShown(which == "info")
+		extra.scroll:SetVerticalScroll(0)
+		info.scroll:SetVerticalScroll(0)
 		local titles = {
 			general = "TAB_GENERAL",
 			rotation = "TAB_ROTATION",

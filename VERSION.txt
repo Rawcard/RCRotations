@@ -11,7 +11,9 @@
   (blue), and tracking flashes in its own color. A new Flash colors window (/rcr colors, or the
   "Bar flash colors" button in Options > Extra > Colors) changes the color of every kind of flash,
   turns the second-spell flash off, and has presets from RC-SpellFlash: Fire & Ice, Classic NAG,
-  RGB, and Default.
+  RGB, and Default. Pick a flash, then a color from the palette or the red / green / blue sliders.
+- Options: the Extra and Info pages scroll (mouse wheel or scroll bar), so their cards no longer
+  run over each other; the commands list gets the room it needs.
 
 # 1.5.17
 

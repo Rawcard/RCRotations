@@ -644,14 +644,27 @@ function ns.Tick()
 		end
 	end
 	local buffs = ns.Buffs and ns.Buffs.Missing and ns.Buffs.Missing() or {}
-	local buffSig = table.concat(buffs, ",")
+	-- tracking you have turned off flashes on your bars like a missing buff
+	-- (its reminder icon sits left of the main icon, not with the buffs)
+	local flash = buffs
+	local track = ns.Tracking and ns.Tracking.FlashIds and ns.Tracking.FlashIds() or {}
+	if #track > 0 then
+		flash = {}
+		for _, id in ipairs(buffs) do
+			flash[#flash + 1] = id
+		end
+		for _, id in ipairs(track) do
+			flash[#flash + 1] = id
+		end
+	end
+	local buffSig = table.concat(buffs, ",") .. "|" .. table.concat(track, ",")
 	if buffSig ~= lastBuffSig then
 		lastBuffSig = buffSig
 		if ns.UI.UpdateBuffs then
 			ns.UI.UpdateBuffs(buffs)
 		end
 		if ns.GlowBuffs then
-			ns.GlowBuffs(buffs)
+			ns.GlowBuffs(flash)
 		end
 	end
 	local soon = queue.soon and queue[1] and queue.soon[queue[1]]

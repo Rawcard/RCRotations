@@ -435,6 +435,16 @@ step("tracking", function()
 	assert(h.pts[1][1] == "TOPRIGHT" and h.pts[1][2] == ns.UI.slots[1] and h.pts[1][3] == "TOPLEFT" and h.pts[1][4] == 0, "column touches the main icon's left edge")
 	local b2 = RCRotationsTracking2
 	assert(b2.pts[1][1] == "TOPRIGHT" and b2.pts[1][5] == -25, "second reminder right under the first")
+	-- the turned-off tracking flashes on the action bars
+	local tSlot, tWas = next(ACTION)
+	ACTION[tSlot] = 2481
+	ns.GlowFetch(true, true)
+	ns.Tick()
+	local glow = ns.GlowDebug(2481)
+	TRACK_FLASH = table.concat(glow, ";")
+	assert(TRACK_FLASH:find("%*"), "Find Treasure flashes on its bar button: " .. TRACK_FLASH)
+	ACTION[tSlot] = tWas
+	ns.GlowFetch(true, true)
 	active[2580] = true
 	T.Refresh()
 	assert(shown() == "2481", "minerals on: only the treasure reminder, got " .. shown())

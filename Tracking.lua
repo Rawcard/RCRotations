@@ -184,20 +184,6 @@ local function makeButton(i)
 			GameTooltip:Hide()
 		end
 	end)
-	-- flash: the button pulses while it's showing
-	local pulse = b:CreateAnimationGroup()
-	pulse:SetLooping("BOUNCE")
-	local fade = pulse:CreateAnimation("Alpha")
-	fade:SetFromAlpha(1)
-	fade:SetToAlpha(0.3)
-	fade:SetDuration(0.6)
-	b.pulse = pulse
-	b:SetScript("OnShow", function(self)
-		self.pulse:Play()
-	end)
-	b:SetScript("OnHide", function(self)
-		self.pulse:Stop()
-	end)
 	b:Hide()
 	return b
 end
@@ -215,6 +201,23 @@ function T.Attach()
 		buttons[i] = makeButton(i)
 		buttons[i]:SetPoint("TOPRIGHT", holder, "TOPRIGHT", 0, -(i - 1) * SIZE)
 	end
+end
+
+-- spell IDs to flash on your action bars (same flash as missing buffs):
+-- the tracking you have turned off, outside combat
+function T.FlashIds()
+	if not T.Enabled() or inCombat() then
+		return {}
+	end
+	local dead = UnitIsDeadOrGhost and call(UnitIsDeadOrGhost, "player")
+	if dead == true then
+		return {}
+	end
+	local out = {}
+	for _, m in ipairs(T.Missing()) do
+		out[#out + 1] = m.id
+	end
+	return out
 end
 
 function T.Enabled()

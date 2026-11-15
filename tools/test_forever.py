@@ -855,6 +855,13 @@ do
 			local q = ns.BuildQueue()
 			LONGCD = tostring(q[1]) .. (q.soon and q.soon[q[1]] and " (coming up)" or "")
 			assert(q[1] and q.soon and q.soon[q[1]], "long cooldowns: the next spell shows as coming up, got " .. LONGCD)
+			-- and it flashes on the bar in the second color while it's on cooldown
+			local lit, wasGS = nil, ns.GlowSecond
+			ns.GlowSecond = function(id) lit = id; return wasGS(id) end
+			if ns.InvalidateTick then ns.InvalidateTick() end
+			ns.Tick()
+			ns.GlowSecond = wasGS
+			assert(lit == q[1], "coming-up spell flashes in the second color, got " .. tostring(lit))
 			C_Spell.GetSpellCooldown = wasCD
 			ns.db.autoAttack = nil
 			ns.API.ForgetCooldowns()

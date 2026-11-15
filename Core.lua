@@ -669,9 +669,18 @@ function ns.Tick()
 			ns.GlowSpell((ns.db.showRotation ~= false and not soon and not mounted) and queue[1] or nil)
 		end
 		if ns.GlowSecond then
+			-- the second color shows what's next: the 2nd spell, or, while the
+			-- main spell is still on cooldown (e.g. Judgement), that spell itself,
+			-- so a bar button is always lit for what to press next
 			local second = queue[2]
 			local secondSoon = second and queue.soon and queue.soon[second]
-			ns.GlowSecond((not mounted and second and second ~= queue[1] and not secondSoon) and second or nil)
+			local pick
+			if soon and queue[1] and ns.db.showRotation ~= false then
+				pick = queue[1]
+			elseif second and second ~= queue[1] and not secondSoon then
+				pick = second
+			end
+			ns.GlowSecond((not mounted) and pick or nil)
 		end
 		if ns.GlowDef then
 			ns.GlowDef(not mounted and defense or nil)

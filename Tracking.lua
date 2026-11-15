@@ -12,7 +12,7 @@ local GROUPS = {
 	{ key = "treasure", spells = { 2481 } }, -- Find Treasure (Dwarf)
 }
 
-local SIZE = 26
+local SIZE = 25 -- two stacked = the main icon's height (50)
 
 local function secret(v)
 	return issecretvalue and issecretvalue(v)
@@ -184,31 +184,36 @@ local function makeButton(i)
 			GameTooltip:Hide()
 		end
 	end)
+	-- flash: the button pulses while it's showing
+	local pulse = b:CreateAnimationGroup()
+	pulse:SetLooping("BOUNCE")
+	local fade = pulse:CreateAnimation("Alpha")
+	fade:SetFromAlpha(1)
+	fade:SetToAlpha(0.3)
+	fade:SetDuration(0.6)
+	b.pulse = pulse
+	b:SetScript("OnShow", function(self)
+		self.pulse:Play()
+	end)
+	b:SetScript("OnHide", function(self)
+		self.pulse:Stop()
+	end)
 	b:Hide()
 	return b
 end
 
-local function anchor()
-	local kick = ns.UI and ns.UI.kick
-	local slot = ns.UI and ns.UI.slots and ns.UI.slots[1]
-	return kick or slot
-end
-
 function T.Attach()
-	if holder or not anchor() then
+	if holder or not (ns.UI and ns.UI.slots and ns.UI.slots[1]) then
 		return
 	end
+	-- a column touching the main icon's left edge, top to bottom
+	local slot = ns.UI.slots[1]
 	holder = CreateFrame("Frame", "RCRotationsTrackingHolder", UIParent)
-	holder:SetSize(1, SIZE)
-	local a = anchor()
-	holder:SetPoint("RIGHT", a, "LEFT", -6, 0)
+	holder:SetSize(SIZE, SIZE * #GROUPS)
+	holder:SetPoint("TOPRIGHT", slot, "TOPLEFT", 0, 0)
 	for i = 1, #GROUPS do
 		buttons[i] = makeButton(i)
-		if i == 1 then
-			buttons[i]:SetPoint("RIGHT", holder, "RIGHT", 0, 0)
-		else
-			buttons[i]:SetPoint("RIGHT", buttons[i - 1], "LEFT", -4, 0)
-		end
+		buttons[i]:SetPoint("TOPRIGHT", holder, "TOPRIGHT", 0, -(i - 1) * SIZE)
 	end
 end
 

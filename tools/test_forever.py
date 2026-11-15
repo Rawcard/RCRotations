@@ -431,6 +431,10 @@ step("tracking", function()
 	end
 	T.Refresh()
 	assert(shown() == "2580,2481", "both reminders when nothing is tracked, got " .. shown())
+	local h = RCRotationsTrackingHolder
+	assert(h.pts[1][1] == "TOPRIGHT" and h.pts[1][2] == ns.UI.slots[1] and h.pts[1][3] == "TOPLEFT" and h.pts[1][4] == 0, "column touches the main icon's left edge")
+	local b2 = RCRotationsTracking2
+	assert(b2.pts[1][1] == "TOPRIGHT" and b2.pts[1][5] == -25, "second reminder right under the first")
 	active[2580] = true
 	T.Refresh()
 	assert(shown() == "2481", "minerals on: only the treasure reminder, got " .. shown())

@@ -163,6 +163,9 @@ local function nameColor(unit)
 end
 
 Plates.NameColor = nameColor
+function Plates.ShowLevel()
+	return not (ns.db and ns.db.plateLevel == false)
+end
 
 -- ElvUI places its name at the left end of its own health bar, and keeps
 -- putting it back there. So while bars are hidden its name is faded out and
@@ -273,7 +276,8 @@ end
 -- line the icons up beside the name: left ones going left, right ones going
 -- right, each next to the one before (only the icons showing take a place)
 local function layoutIcons(plate, mine)
-	local prev = { left = mine, right = mine }
+	local lv = plate.rcrLevel
+	local prev = { left = (lv and lv:IsShown() and lv) or mine, right = mine }
 	for _, r in ipairs(plate.rcrIcons or {}) do
 		if r.rcrTucked then
 			local side = r.rcrSide == "left" and "left" or "right"
@@ -367,12 +371,68 @@ local function tuckIcons(plate, uf, mine, hide)
 	end
 end
 
+-- the mob's level, colored by difficulty like the quest log ("??" = far
+-- above you, "+" = elite). In combat Forever can hide the level: a plate keeps
+-- the level it showed, and a plate that just came up shows none until readable.
+local function levelText(unit)
+	if not unit or not UnitLevel then
+		return nil
+	end
+	local ok, lvl = pcall(UnitLevel, unit)
+	if not ok or secret(lvl) or type(lvl) ~= "number" then
+		return nil
+	end
+	local okC, class = pcall(UnitClassification or function() end, unit)
+	local elite = okC and not secret(class) and (class == "elite" or class == "rareelite" or class == "worldboss")
+	local r, g, b = 1, 0.82, 0
+	if lvl <= 0 then
+		return "??" .. (elite and "+" or ""), 1, 0.1, 0.1
+	end
+	local fn = GetCreatureDifficultyColor or GetQuestDifficultyColor
+	if fn then
+		local okD, c = pcall(fn, lvl)
+		if okD and type(c) == "table" and type(c.r) == "number" then
+			r, g, b = c.r, c.g, c.b
+		end
+	end
+	return lvl .. (elite and "+" or ""), r, g, b
+end
+
+local function ownLevel(plate, mine, unit)
+	local lv = plate.rcrLevel
+	if not lv then
+		lv = mine.holder:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		lv:SetPoint("RIGHT", mine, "LEFT", -3, 0)
+		plate.rcrLevel = lv
+	end
+	local font, size, flags = mine:GetFont()
+	if font then
+		pcall(lv.SetFont, lv, font, size, flags)
+	end
+	if Plates.ShowLevel and not Plates.ShowLevel() then
+		lv:Hide()
+		return
+	end
+	local text, r, g, b = levelText(unit)
+	if text then
+		lv:SetText(text)
+		lv:SetTextColor(r, g, b)
+		lv:Show()
+	elseif plate.rcrLevelFresh then
+		lv:Hide()
+	end
+	plate.rcrLevelFresh = nil
+end
+
 local function ownName(plate, uf, hide, unit)
 	local theirs = (type(uf.Name) == "table" and uf.Name) or (type(uf.name) == "table" and uf.name) or nil
 	local mine = plate.rcrName
 	if not secret(hide) and not hide then
 		if mine then
 			mine:Hide()
+		end
+		if plate.rcrLevel then
+			plate.rcrLevel:Hide()
 		end
 		fade(theirs, false)
 		tuckIcons(plate, uf, mine, false)
@@ -430,6 +490,7 @@ local function ownName(plate, uf, hide, unit)
 		mine.holder:Show()
 	end
 	mine:Show()
+	pcall(ownLevel, plate, mine, unit)
 	-- ours shows exactly when theirs is hidden
 	fade(mine, hide, 1, 0)
 	local okT, errT = pcall(tuckIcons, plate, uf, mine, true)
@@ -555,6 +616,83 @@ function Plates.Apply()
 		end
 		ns.db.plateBackup = nil
 	end
+	Plates.ApplyClickThrough()
+end
+
+-- Hovering the invisible enemy plate (the area around the name) gave the game's
+-- nameplate tooltip, and on WoW Forever other addons can't read that one:
+-- Questie's quest lines went missing, on and off, depending on where the
+-- mouse was. Click-through plates let the mouse reach the mob itself.
+-- Off by default: you click the names through walls. Instead the nameplate
+-- tooltip is swapped for the normal one (below). /rcr plateclick turns
+-- click-through on if a tooltip still comes up without Questie's lines.
+function Plates.ClickThroughWanted()
+	return on() and ns.db and ns.db.plateClickThrough == true
+end
+
+-- When the mouse is over a hidden enemy plate, the game shows the nameplate's
+-- tooltip, which other addons can't read on WoW Forever (the mob's GUID is
+-- hidden). Right after, the same mob's normal tooltip ("mouseover") is shown
+-- in its place, which Questie and the rest can read.
+local swapping, swapQueued = false, false
+local function swapTooltip()
+	swapQueued = false
+	local tip = GameTooltip
+	if not tip or not tip:IsShown() or swapping or not on() then
+		return
+	end
+	local okE, exists = pcall(UnitExists, "mouseover")
+	if not okE or secret(exists) or not exists then
+		return
+	end
+	swapping = true
+	pcall(tip.SetUnit, tip, "mouseover")
+	swapping = false
+end
+
+function Plates.OnUnitTooltip(tooltip, data)
+	if swapping or swapQueued or tooltip ~= GameTooltip or not on() then
+		return
+	end
+	if IsInInstance then
+		local okI, inside = pcall(IsInInstance)
+		if okI and not secret(inside) and inside then
+			return
+		end
+	end
+	local guid = type(data) == "table" and not secret(data) and data.guid
+	if guid == nil or not secret(guid) then
+		return -- readable already: nothing to fix
+	end
+	swapQueued = true
+	if C_Timer and C_Timer.After then
+		C_Timer.After(0, swapTooltip)
+	else
+		swapTooltip()
+	end
+end
+
+if type(TooltipDataProcessor) == "table" and TooltipDataProcessor.AddTooltipPostCall and Enum and Enum.TooltipDataType and Enum.TooltipDataType.Unit then
+	pcall(TooltipDataProcessor.AddTooltipPostCall, Enum.TooltipDataType.Unit, function(tooltip, data)
+		pcall(Plates.OnUnitTooltip, tooltip, data)
+	end)
+end
+
+function Plates.ApplyClickThrough()
+	local np = C_NamePlate
+	if type(np) ~= "table" or not np.SetNamePlateEnemyClickThrough or not ns.db or inCombat() then
+		return
+	end
+	if Plates.ClickThroughWanted() then
+		if ns.db.plateClickBackup == nil then
+			local ok, was = pcall(np.GetNamePlateEnemyClickThrough or function() return false end)
+			ns.db.plateClickBackup = (ok and not secret(was) and was == true) or false
+		end
+		pcall(np.SetNamePlateEnemyClickThrough, true)
+	elseif ns.db.plateClickBackup ~= nil then
+		pcall(np.SetNamePlateEnemyClickThrough, ns.db.plateClickBackup == true)
+		ns.db.plateClickBackup = nil
+	end
 end
 
 -- /rcr platecheck: what the addon sees on your target's nameplate (for fixing
@@ -671,6 +809,7 @@ frame:SetScript("OnEvent", function(_, event, unit)
 		if type(C_NamePlate) == "table" and C_NamePlate.GetNamePlateForUnit then
 			local ok, plate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
 			if ok and plate then
+				plate.rcrLevelFresh = true -- a new mob: don't keep the old level
 				-- plates are reused, so always set the bar one way or the other
 				pcall(styleBar, plate, on() and hostileUnit(unit), unit)
 			end

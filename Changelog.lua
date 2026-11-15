@@ -2,6 +2,16 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.17",
+		items = {
+			"WoW Forever Paladin: Judgement is only suggested while you have a seal up (it unleashes your seal, so with none it can't be cast). With no seal, the seal comes first.",
+			"Smoother HUD on WoW Forever: when nothing is ready, the main icon shows the next spell to come off cooldown (dimmed, with its countdown) instead of going blank, however long the wait.",
+			"Enemy names on nameplates show the mob's level to the left, colored by difficulty like the quest log (\"??\" for far above you, \"+\" for elites). /rcr platelevel turns it off and on.",
+			"Questie: with name-only nameplates, hovering the invisible plate around a name gave the game's nameplate tooltip, which Questie can't read on WoW Forever, so its quest lines went missing on and off. That tooltip is now swapped for the mob's normal one. Names stay clickable (through walls too); /rcr plateclick makes the hidden plates click-through instead.",
+			"A blank lasting under half a second keeps the last suggestion, so the icon doesn't blink empty between updates.",
+		},
+	},
+	{
 		version = "1.5.9",
 		items = {
 			"Range detector: the main HUD icon shows how far your target is, top left (\"20-25 yd\", or \"melee\"), and the same distance shows just above each enemy's name. WoW doesn't tell addons the exact distance to an enemy, so it's worked out from which of your spells (and a list of range-check items) can reach; out of combat it's often within 5 yards, in combat only your spells can be asked so the range gets wider. An enemy with a nameplate is always shown as within 60 yards (the game only makes nameplates that close), in combat too.",
@@ -23,14 +33,6 @@ ns.CHANGELOG = {
 		items = {
 			"Enemy names only (/rcr plates): names show from further away (the game's longest nameplate distance; your own setting comes back when you turn the option off), so you see them, and the addon counts them for multi-target, sooner.",
 			"A mob someone else has tagged now has a purple name instead of grey, since grey looks dead.",
-		},
-	},
-	{
-		version = "1.5.5",
-		items = {
-			"Blessing of Kings (and other talents you didn't take) are no longer suggested. WoW Forever's spellbook lists spells you haven't learned too, greyed out or inside a flyout (the Paladin \"Blessings\" button), and the addon counted those as known.",
-			"WoW Forever: in combat, Seal of Righteousness (or a DoT) is no longer asked for again right after you cast it. In a fight the game can give addons no buffs or debuffs at all, which read as \"none\"; now what you cast counts until the fight ends.",
-			"/rcr spellcheck <spell>: shows what the game says about whether you know a spell.",
 		},
 	},
 }

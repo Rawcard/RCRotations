@@ -1058,6 +1058,12 @@ local function fallbackSeconds(spellID)
 	return 0
 end
 
+-- forget learned cooldown lengths (they're learned again from the next casts)
+function ns.API.ForgetCooldowns()
+	wipe(cdKnown)
+	wipe(cdUntil)
+end
+
 function ns.API.SpellCooldownSec(spellID)
 	spellID = ns.API.Resolve(spellID) or spellID
 	if not spellID then

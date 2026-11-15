@@ -1170,6 +1170,18 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
 		end
+	elseif msg == "platelevel" or msg == "level" then
+		ns.db.plateLevel = (ns.db.plateLevel == false)
+		ns.Print("mob level on nameplates " .. (ns.db.plateLevel and "on" or "off"))
+		if ns.Plates and ns.Plates.Apply then
+			pcall(ns.Plates.Apply)
+		end
+	elseif msg == "plateclick" then
+		ns.db.plateClickThrough = not (ns.db.plateClickThrough == true)
+		ns.Print("click the enemy's name to target: " .. (ns.db.plateClickThrough and "off (click the mob itself)" or "on"))
+		if ns.Plates and ns.Plates.ApplyClickThrough then
+			pcall(ns.Plates.ApplyClickThrough)
+		end
 	elseif msg == "plates" or msg == "nameplates" then
 		if ns.Plates then
 			ns.Plates.Set(ns.db.hidePlates ~= true)

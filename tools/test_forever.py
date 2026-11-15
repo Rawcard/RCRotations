@@ -209,11 +209,58 @@ local elvName = PLATES_LIST[3].rcrName
 assert(elvName, "ElvUI plate: our name")
 assert(eq.Default.pts[1] and eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
 local softF = PLATES_LIST[3].unitFrame.SoftTargetFrame
-assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvName or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, beside the name")
+local elvLevel = PLATES_LIST[3].rcrLevel
+assert(elvLevel and elvLevel.shown and elvLevel.text == "60", "mob level left of the name, got " .. tostring(elvLevel and elvLevel.text))
+assert(elvLevel.pts[1][1] == "RIGHT" and elvLevel.pts[1][2] == elvName, "level sits just left of the name")
+assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvLevel or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, past the level")
 local soft = PLATES_LIST[3].unitFrame.SoftTargetFrame
 local last = soft.pts[#soft.pts]
-assert(last and last[1] == "RIGHT" and (last[2] == elvName or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left beside the name")
+assert(last and last[1] == "RIGHT" and (last[2] == elvLevel or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left, past the level")
+-- level hidden in combat on a plate that just came up: no stale level from the plate's last mob
+do
+	local wasL, wasC = UnitLevel, UnitClassification
+	UnitLevel = function() return secret(60) end
+	PLATES_LIST[3].rcrLevelFresh = true
+	pcall(ns.Plates.Apply)
+	UnitLevel = function() return -1 end
+	UnitClassification = function() return "elite" end
+	PLATES_LIST[3].rcrLevelFresh = true
+	pcall(ns.Plates.Apply)
+	PLATE_LEVEL = elvLevel.text
+	assert(elvLevel.text == "??+", "boss-level elite shows ??+, got " .. tostring(elvLevel.text))
+	UnitLevel, UnitClassification = wasL, wasC
+	pcall(ns.Plates.Apply)
+end
 assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
+-- hidden plates are click-through (Questie tooltips), and put back when plates are shown
+do
+	local ct = false
+	C_NamePlate.GetNamePlateEnemyClickThrough = function() return ct end
+	C_NamePlate.SetNamePlateEnemyClickThrough = function(v) ct = v end
+	local wasC = COMBAT
+	COMBAT = false
+	ns.Plates.Apply()
+	assert(ct == false, "name-only plates: names stay clickable (through walls)")
+	ns.db.plateClickThrough = true
+	ns.Plates.Apply()
+	assert(ct == true, "/rcr plateclick: click-through")
+	ns.db.plateClickThrough = nil
+	ns.Plates.Apply()
+	assert(ct == false, "clickable again, setting put back")
+	COMBAT = wasC
+	-- the nameplate tooltip (hidden GUID) is swapped for the mob's normal tooltip
+	local set = {}
+	local wasTip, wasTimer = GameTooltip, C_Timer
+	GameTooltip = { IsShown = function() return true end, SetUnit = function(_, u) set[#set + 1] = u end }
+	C_Timer = { After = function(_, fn) fn() end }
+	local wasUE = UnitExists
+	UnitExists = function(u) return u == "mouseover" or wasUE(u) end
+	ns.Plates.OnUnitTooltip(GameTooltip, { guid = secret("Creature-0-0-0-0-898-0") })
+	assert(set[1] == "mouseover", "nameplate tooltip swapped for the normal one")
+	ns.Plates.OnUnitTooltip(GameTooltip, { guid = "Creature-0-0-0-0-898-0" })
+	assert(#set == 1, "a readable tooltip is left alone")
+	GameTooltip, C_Timer, UnitExists = wasTip, wasTimer, wasUE
+end
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
 assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
 -- the game anchors it back to the bar: it comes back beside the name
@@ -659,6 +706,53 @@ do
 			SECRET_BOOLS = wasSB
 		end
 		AURAS_SECRET, AURAS_NONE = false, false
+		-- a blank for a moment keeps the last suggestion; a lasting one doesn't
+		do
+			NOW = NOW + 1
+			local first = ns.BuildQueue()[1]
+			assert(first, "smoothing: a suggestion to start from")
+			local wasBQ = ns.Sim.BuildQueue
+			ns.Sim.BuildQueue = function() return {} end
+			ns.db.autoAttack = false
+			NOW = NOW + 0.2
+			assert(ns.BuildQueue()[1] == first, "smoothing: a 0.2s blank keeps the last suggestion")
+			NOW = NOW + 0.6
+			assert(ns.BuildQueue()[1] == nil, "smoothing: a lasting blank shows blank")
+			ns.Sim.BuildQueue = wasBQ
+			ns.db.autoAttack = nil
+		end
+		-- everything on a long cooldown: the next one to come off shows, not a blank
+		do
+			local wasCD = C_Spell.GetSpellCooldown
+			C_Spell.GetSpellCooldown = function(id)
+				if id == 61304 then return { startTime = 0, duration = 0, isEnabled = true, modRate = 1 } end
+				return { startTime = NOW - 1, duration = 30, isEnabled = true, modRate = 1 }
+			end
+			ns.db.autoAttack = false
+			NOW = NOW + 1
+			if ns.API.InvalidateCooldowns then pcall(ns.API.InvalidateCooldowns) end
+			local q = ns.BuildQueue()
+			LONGCD = tostring(q[1]) .. (q.soon and q.soon[q[1]] and " (coming up)" or "")
+			assert(q[1] and q.soon and q.soon[q[1]], "long cooldowns: the next spell shows as coming up, got " .. LONGCD)
+			C_Spell.GetSpellCooldown = wasCD
+			ns.db.autoAttack = nil
+			ns.API.ForgetCooldowns()
+			NOW = NOW + 31
+		end
+		-- Judgement needs a seal up: never suggested with none
+		do
+			COMBAT = false
+			NOW = NOW + 40 -- any tracked seal has run out
+			for t = 1, 6 do
+				NOW = NOW + 0.5
+				local q = ns.BuildQueue()
+				assert(q[1] ~= 20271, "Judgement suggested with no seal up")
+			end
+			assert(not ns.API.CurrentSeal(), "no seal tracked after it ran out")
+			local ex = table.concat(ns.Sim.Explain(), "\n")
+			assert(ex:find("%(20271%): NOT castable"), "Judgement not castable without a seal:\n" .. ex)
+			COMBAT = true
+		end
 		-- no Unsealed Wrath yet: no waiting for the gap after a swing
 		local gap = { k = "cmp", op = ">", v = { { k = "autoTimeToNext" }, 99 } }
 		ns.Sim.BeginPass(got20)
@@ -879,7 +973,7 @@ def run(cls, cid, no_secrets=False):
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
     if cls == "PALADIN":
-        print("  level 20:", g.PAL20)
+        print("  level 20:", g.PAL20, "| long cds:", g.LONGCD)
         print(g.WHY20)
     if cls == "WARRIOR":
         print("  range:", g.RANGE_SEEN, "| plate:", g.PLATE_YARDS, "| items 3.5:", g.ITEM_YARDS, "| plate size:", g.PLATE_EST)

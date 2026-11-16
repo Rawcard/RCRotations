@@ -187,6 +187,7 @@ local function build()
 	y = y - 2 * 26 - 8
 	-- red / green / blue sliders for an exact color
 	f.sliders = {}
+	local okSliders, errSliders = pcall(function()
 	for i, name in ipairs({ "Red", "Green", "Blue" }) do
 		local label = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		label:SetPoint("TOPLEFT", 14, y - (i - 1) * 22 - 3)
@@ -203,8 +204,13 @@ local function build()
 		thumb:SetColorTexture(1, 0.82, 0.2, 1)
 		sl:SetThumbTexture(thumb)
 		sl:SetMinMaxValues(0, 255)
-		sl:SetValueStep(1)
-		sl:SetObeyStepDuringDrag(true)
+		-- some of these aren't on every client: a missing one mustn't stop the
+		-- rest of the window (the presets) from being built
+		pcall(sl.SetValueStep, sl, 1)
+		if sl.SetObeyStepDuringDrag then
+			pcall(sl.SetObeyStepDuringDrag, sl, true)
+		end
+		sl:EnableMouse(true)
 		local val = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		val:SetPoint("LEFT", sl, "RIGHT", 8, 0)
 		sl.valueText = val
@@ -219,6 +225,10 @@ local function build()
 			setColor(selected, r, g, b)
 		end)
 		f.sliders[i] = sl
+	end
+	end)
+	if not okSliders then
+		f.sliderError = errSliders
 	end
 	y = y - 3 * 22 - 6
 	local second = CreateFrame("CheckButton", nil, f, "UICheckButtonTemplate")
@@ -264,15 +274,30 @@ function M.Refresh()
 	local r, g, b = ns.FlashColor(selected)
 	frame.refreshing = true
 	for i, v in ipairs({ r or 1, g or 1, b or 1 }) do
-		frame.sliders[i]:SetValue(math.floor(v * 255 + 0.5))
-		frame.sliders[i].valueText:SetText(math.floor(v * 255 + 0.5))
+		local sl = frame.sliders[i]
+		if sl then
+			pcall(sl.SetValue, sl, math.floor(v * 255 + 0.5))
+			if sl.valueText then
+				sl.valueText:SetText(math.floor(v * 255 + 0.5))
+			end
+		end
 	end
 	frame.refreshing = false
 	frame.secondCheck:SetChecked(ns.db.flashSecond ~= false)
 end
 
 function M.Toggle()
-	frame = frame or build()
+	if not frame then
+		local ok, f = pcall(build)
+		if not ok then
+			ns.Print("flash colors window: " .. tostring(f))
+			return
+		end
+		frame = f
+		if frame.sliderError then
+			ns.Print("flash colors sliders: " .. tostring(frame.sliderError))
+		end
+	end
 	if frame:IsShown() then
 		frame:Hide()
 	else

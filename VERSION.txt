@@ -18,7 +18,7 @@
   The second color lights the spell after the main one, even while it's still on cooldown, and
   while the main spell itself is on cooldown (Judgement, say) it lights that, so a button is
   always lit for what to press next. /rcr why shows what the second-color flash is on.
-- Options: the Extra and Info pages scroll (mouse wheel or scroll bar), so their cards no longer
+- Options: the General, Extra and Info pages scroll (mouse wheel or scroll bar), so their cards no longer
   run over each other; the commands list gets the room it needs.
 
 # 1.5.17

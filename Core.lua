@@ -644,7 +644,10 @@ function ns.Tick()
 		end
 	end
 	local buffs = ns.Buffs and ns.Buffs.Missing and ns.Buffs.Missing() or {}
-	local buffSig = table.concat(buffs, ",")
+	-- tracking you have turned off flashes on your bars like a missing buff
+	-- (its reminder icon sits left of the main icon, not with the buffs)
+	local track = ns.Tracking and ns.Tracking.FlashIds and ns.Tracking.FlashIds() or {}
+	local buffSig = table.concat(buffs, ",") .. "|" .. table.concat(track, ",")
 	if buffSig ~= lastBuffSig then
 		lastBuffSig = buffSig
 		if ns.UI.UpdateBuffs then
@@ -652,6 +655,9 @@ function ns.Tick()
 		end
 		if ns.GlowBuffs then
 			ns.GlowBuffs(buffs)
+		end
+		if ns.GlowTrack then
+			ns.GlowTrack(track)
 		end
 	end
 	local soon = queue.soon and queue[1] and queue.soon[queue[1]]
@@ -661,6 +667,20 @@ function ns.Tick()
 		ns.UI.Update(queue, defense, interrupt, purge, cleanse, weapon, weaponNeed, notice)
 		if ns.GlowSpell then
 			ns.GlowSpell((ns.db.showRotation ~= false and not soon and not mounted) and queue[1] or nil)
+		end
+		if ns.GlowSecond then
+			-- the second color shows what's next: the 2nd spell, or, while the
+			-- main spell is still on cooldown (e.g. Judgement), that spell itself,
+			-- so a bar button is always lit for what to press next
+			-- (the 2nd spell flashes even while it's still on cooldown)
+			local second = queue[2]
+			local pick
+			if soon and queue[1] and ns.db.showRotation ~= false then
+				pick = queue[1]
+			elseif second and second ~= queue[1] then
+				pick = second
+			end
+			ns.GlowSecond((not mounted) and pick or nil)
 		end
 		if ns.GlowDef then
 			ns.GlowDef(not mounted and defense or nil)
@@ -898,6 +918,9 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 			if ns.Range and ns.Range.Attach then
 				pcall(ns.Range.Attach)
 			end
+			if ns.Tracking and ns.Tracking.Attach then
+				pcall(ns.Tracking.Attach)
+			end
 			if ns.CreateMinimap then
 				local okMini, errMini = pcall(ns.CreateMinimap)
 				if not okMini then
@@ -1106,6 +1129,10 @@ SlashCmdList.RCROT = function(msg)
 			ns.GlowFetch(true, true) -- full scan now, so every bar is included
 		end
 		ns.Print("* = flashed")
+		if ns.GlowSecondNow then
+			local id, n = ns.GlowSecondNow()
+			ns.Print(("second-color flash: %s on %d button(s)%s"):format(id and (ns.API.SpellName(id) or id) or "none", n or 0, ns.db.flashSecond == false and " (turned off)" or ""))
+		end
 		if #queue == 0 then
 			ns.Print("no suggestion right now")
 		end
@@ -1169,6 +1196,16 @@ SlashCmdList.RCROT = function(msg)
 	elseif msg == "platecheck" then
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
+		end
+	elseif msg == "colors" or msg == "colours" or msg == "flashcolors" then
+		if ns.ColorMenu and ns.ColorMenu.Toggle then
+			ns.ColorMenu.Toggle()
+		end
+	elseif msg == "tracking" then
+		ns.db.showTracking = (ns.db.showTracking == false)
+		ns.Print("tracking reminders " .. (ns.db.showTracking and "on" or "off"))
+		if ns.Tracking and ns.Tracking.Refresh then
+			pcall(ns.Tracking.Refresh)
 		end
 	elseif msg == "platelevel" or msg == "level" then
 		ns.db.plateLevel = (ns.db.plateLevel == false)

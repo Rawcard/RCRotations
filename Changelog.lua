@@ -2,6 +2,15 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.18",
+		items = {
+			"Tracking reminders: left of the main HUD icon, an icon shows for each tracking you have but haven't turned on: Find Minerals / Find Herbs, and the Dwarf's Find Treasure (WoW Forever lets that run alongside the others), stacked against its left edge. The tracking spell also flashes on your action bars like a missing buff. Click the icon or the bar button to turn it on. Hidden in combat and while dead. /rcr tracking turns the reminders off and on. (They sit beside the HUD without being attached to it, so the HUD can still show and hide in combat.)",
+			"The action-bar scan does at most ~2 ms of work per frame, so WoW Forever doesn't stop it with \"script ran too long\".",
+			"Flash colors: the spell after the main one now flashes on your bars too, in its own color (blue), and tracking flashes in its own color. A new Flash colors window (/rcr colors, or the \"Bar flash colors\" button in Options > Extra > Colors) changes the color of every kind of flash, turns the second-spell flash off, and has presets from RC-SpellFlash: Fire & Ice, Classic NAG, RGB, and Default. Pick a flash, then a color from the palette or the red / green / blue sliders. The second color lights the spell after the main one, even while it's still on cooldown, and while the main spell itself is on cooldown (Judgement, say) it lights that, so a button is always lit for what to press next. /rcr why shows what the second-color flash is on.",
+			"Options: the General, Extra and Info pages scroll (mouse wheel or scroll bar), so their cards no longer run over each other; the commands list gets the room it needs.",
+		},
+	},
+	{
 		version = "1.5.17",
 		items = {
 			"WoW Forever Paladin: Judgement is only suggested while you have a seal up (it unleashes your seal, so with none it can't be cast). With no seal, the seal comes first.",
@@ -26,13 +35,6 @@ ns.CHANGELOG = {
 			"Forever Paladin: with no seal up, the first seal the rotation uses that you actually know is suggested (Seal of Righteousness before you have the Seal of Command talent).",
 			"Fixed: a spell learned mid-session (Consecration at level 20) wasn't suggested until a /reload when the rotation names a different rank of it.",
 			"Turn it off in Options > General > HUD (\"Yards: main icon and enemy names\"). /rcr range lists what the game answered.",
-		},
-	},
-	{
-		version = "1.5.6",
-		items = {
-			"Enemy names only (/rcr plates): names show from further away (the game's longest nameplate distance; your own setting comes back when you turn the option off), so you see them, and the addon counts them for multi-target, sooner.",
-			"A mob someone else has tagged now has a purple name instead of grey, since grey looks dead.",
 		},
 	},
 }

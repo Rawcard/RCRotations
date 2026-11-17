@@ -404,7 +404,129 @@ step("range", function()
 	C_Spell.GetSpellInfo, C_Spell.IsSpellInRange, C_Spell.IsSpellHarmful, CheckInteractDistance = wasInfo, wasRange, wasHarm, wasCID
 	ns.Range.Invalidate()
 end)
+-- gathering / treasure tracking reminders left of the main icon
+step("tracking", function()
+	local T = ns.Tracking
+	T.Attach()
+	local active = {}
+	local wasMM = C_Minimap
+	if type(C_Minimap) ~= "table" then C_Minimap = {} end
+	local wasN, wasI = C_Minimap.GetNumTrackingTypes, C_Minimap.GetTrackingInfo
+	local types = { { name = "Find Minerals", spellID = 2580 }, { name = "Find Herbs", spellID = 2383 }, { name = "Find Treasure", spellID = 2481 } }
+	C_Minimap.GetNumTrackingTypes = function() return #types end
+	C_Minimap.GetTrackingInfo = function(i)
+		local t = types[i]
+		return { name = t.name, spellID = t.spellID, active = active[t.spellID] == true, texture = 136025 }
+	end
+	KNOWN[2580], KNOWN[2481] = true, true
+	local wasC = COMBAT
+	COMBAT = false
+	local function shown()
+		local out = {}
+		for i = 1, 2 do
+			local b = _G["RCRotationsTracking" .. i]
+			if b and b.shown then out[#out + 1] = b.spellID end
+		end
+		return table.concat(out, ",")
+	end
+	T.Refresh()
+	assert(shown() == "2580,2481", "both reminders when nothing is tracked, got " .. shown())
+	local h = RCRotationsTrackingHolder
+	local hp = h.pts[#h.pts]
+	assert(hp[1] == "TOPRIGHT" and hp[2] == UIParent and hp[3] == "BOTTOMLEFT" and hp[4] == ns.UI.slots[1]:GetLeft() and hp[5] == ns.UI.slots[1]:GetTop(), "column at the main icon's left edge, not anchored to the HUD")
+	local b2 = RCRotationsTracking2
+	assert(b2.pts[1][1] == "TOPRIGHT" and b2.pts[1][5] == -25, "second reminder right under the first")
+	-- the turned-off tracking flashes on the action bars
+	local tSlot, tWas = next(ACTION)
+	ACTION[tSlot] = 2481
+	ns.GlowFetch(true, true)
+	local flashed, wasGT = nil, ns.GlowTrack
+	ns.GlowTrack = function(l) flashed = table.concat(l or {}, ","); return wasGT(l) end
+	ns.Tick()
+	ns.GlowTrack = wasGT
+	TRACK_FLASH = tostring(flashed)
+	assert(flashed and (","..flashed..","):find(",2481,") and (","..flashed..","):find(",2580,"), "turned-off tracking flashes on the bars, flashed: " .. TRACK_FLASH)
+	assert(#ns.GlowDebug(2481) > 0, "Find Treasure has a bar button to flash")
+	ACTION[tSlot] = tWas
+	ns.GlowFetch(true, true)
+	active[2580] = true
+	T.Refresh()
+	assert(shown() == "2481", "minerals on: only the treasure reminder, got " .. shown())
+	active[2481] = true
+	T.Refresh()
+	assert(shown() == "", "everything on: no reminders, got " .. shown())
+	active[2580] = nil
+	ns.db.showTracking = false
+	T.Refresh()
+	assert(shown() == "", "/rcr tracking off hides them")
+	ns.db.showTracking = nil
+	COMBAT = true
+	T.Refresh()
+
+	COMBAT = wasC
+	KNOWN[2580], KNOWN[2481] = nil, nil
+	C_Minimap.GetNumTrackingTypes, C_Minimap.GetTrackingInfo = wasN, wasI
+	C_Minimap = wasMM
+	T.Refresh()
+end)
+-- flash colors window: presets, your own colors, the second-spell flash
+step("flash colors", function()
+	local r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 1 and b == 0, "default main flash is yellow")
+	if not ns.optSerial then ns.ToggleOptions(); ns.ToggleOptions() end
+	local opts = _G["RCRotationsOptions" .. ns.optSerial]
+	local wasShown = opts.shown
+	opts:Show()
+	ns.ColorMenu.Toggle()
+	assert(RCRotationsColorMenu and RCRotationsColorMenu.shown, "/rcr colors opens the window")
+	local p = RCRotationsColorMenu.pts[#RCRotationsColorMenu.pts]
+	assert(p[1] == "TOPLEFT" and p[2] == opts and p[3] == "TOPRIGHT", "opens to the right of the options window")
+	if not wasShown then opts:Hide() end
+	ns.ColorMenu.ApplyPreset({ name = "Fire & Ice", next = { 1, 0, 0 }, second = { 0, 0.5, 1 }, track = { 1, 0.5, 0 } })
+	r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 0 and b == 0, "Fire & Ice: main flash red")
+	r, g, b = ns.FlashColor("track")
+	assert(r == 1 and g == 0.5, "Fire & Ice: tracking orange")
+	ns.ColorMenu.ApplyPreset({ name = "Default" })
+	r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 1 and b == 0, "Default preset puts yellow back")
+	-- pick "Tracking", then the green palette color: tracking flashes green
+	local f = RCRotationsColorMenu
+	f.swatches.track:GetScript("OnClick")(f.swatches.track)
+	f.palette[13]:GetScript("OnClick")(f.palette[13])
+	r, g, b = ns.FlashColor("track")
+	assert(r == 0 and g == 1 and b == 0, "palette: tracking now green")
+	r, g, b = ns.FlashColor("next")
+	assert(r == 1 and g == 1 and b == 0, "palette changed only the picked flash")
+	-- the blue slider moves just the blue part
+	f.sliders[3]:GetScript("OnValueChanged")(f.sliders[3], 255)
+	r, g, b = ns.FlashColor("track")
+	assert(r == 0 and g == 1 and b == 1, "blue slider: tracking now cyan")
+	ns.ColorMenu.ApplyPreset({ name = "Default" })
+	ns.ColorMenu.Toggle()
+	SlashCmdList.RCROT("colors")
+	SlashCmdList.RCROT("colors")
+	-- the second spell flashes in its own color
+	local seen
+	local wasGS = ns.GlowSecond
+	ns.GlowSecond = function(id) seen = id; return wasGS(id) end
+	if ns.InvalidateTick then ns.InvalidateTick() end
+	ns.Tick()
+	ns.GlowSecond = wasGS
+	SECOND_FLASH = tostring(seen)
+end)
 step("menu", ns.ToggleOptions)
+-- the Extra and Info pages scroll, and the links card sits below the commands
+step("options pages scroll", function()
+	local f = _G["RCRotationsOptions" .. ns.optSerial]
+	assert(f and f.ShowTab, "options window built")
+	f.ShowTab("extra")
+	assert(RCRotationsExtraScroll.shown and not RCRotationsInfoScroll.shown, "Extra page in its scroll frame")
+	f.ShowTab("info")
+	assert(RCRotationsInfoScroll.shown and not RCRotationsExtraScroll.shown, "Info page in its scroll frame")
+	ns.RefreshOptions()
+	f.ShowTab("general")
+end)
 step("refresh menu", ns.RefreshOptions or function() end)
 step("what's new", ns.ShowWhatsNew)
 step("copy link", ns.ShowCopyLink)
@@ -734,6 +856,13 @@ do
 			local q = ns.BuildQueue()
 			LONGCD = tostring(q[1]) .. (q.soon and q.soon[q[1]] and " (coming up)" or "")
 			assert(q[1] and q.soon and q.soon[q[1]], "long cooldowns: the next spell shows as coming up, got " .. LONGCD)
+			-- and it flashes on the bar in the second color while it's on cooldown
+			local lit, wasGS = nil, ns.GlowSecond
+			ns.GlowSecond = function(id) lit = id; return wasGS(id) end
+			if ns.InvalidateTick then ns.InvalidateTick() end
+			ns.Tick()
+			ns.GlowSecond = wasGS
+			assert(lit == q[1], "coming-up spell flashes in the second color, got " .. tostring(lit))
 			C_Spell.GetSpellCooldown = wasCD
 			ns.db.autoAttack = nil
 			ns.API.ForgetCooldowns()
@@ -972,6 +1101,7 @@ def run(cls, cid, no_secrets=False):
     g.RET_EXPORT = open(os.path.join(ROOT, "tools", "fixtures", "forever_ret_twist.json"), encoding="utf-8").read()
     L.execute(open(os.path.join(ROOT, "tools", "forever_env.lua"), encoding="utf-8").read() + "\n" + RUN)
     r = g.REPORT
+    print("  second flash:", cls, g.SECOND_FLASH)
     if cls == "PALADIN":
         print("  level 20:", g.PAL20, "| long cds:", g.LONGCD)
         print(g.WHY20)

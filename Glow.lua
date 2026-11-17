@@ -261,13 +261,30 @@ end
 -- ---------------------------------------------------------------------------
 local SF_FILL = "Interface\\Cooldown\\star4"
 local SF_EDGE = "Interface\\Buttons\\WHITE8X8"
+-- Flash colors per kind of flash. These are the defaults; the Flash colors
+-- window (/rcr colors) stores your own in ns.db.flashColors.
 local SF_COLORS = {
 	next = { 1, 1, 0 }, -- yellow: primary / next spell
+	second = { 0.2, 0.55, 1 }, -- blue: the spell after it
+	track = { 1, 0.08, 0.08 }, -- red: gathering / treasure tracking that's off
 	def = { 0, 1, 1 }, -- cyan: defense, long buffs
 	kick = { 1, 0.5, 0 }, -- orange: interrupt
 	purge = { 0.85, 0.35, 1 }, -- purple: purge
 	buff = { 1, 0.08, 0.08 }, -- bright red: missing buff
 }
+ns.FLASH_DEFAULTS = SF_COLORS
+
+function ns.FlashColor(key)
+	local mine = ns.db and ns.db.flashColors and ns.db.flashColors[key]
+	if type(mine) == "table" and tonumber(mine[1]) then
+		return tonumber(mine[1]), tonumber(mine[2]) or 0, tonumber(mine[3]) or 0
+	end
+	local c = SF_COLORS[key]
+	if c then
+		return c[1], c[2], c[3]
+	end
+	return nil
+end
 local SF_FILL_ALPHA = 0.8
 
 local function useSpellFlash()
@@ -347,9 +364,9 @@ local function sfFrame(button, key)
 end
 
 local function sfShow(button, key, r, g, b)
-	local c = SF_COLORS[key]
-	if c then
-		r, g, b = c[1], c[2], c[3]
+	local cr, cg, cb = ns.FlashColor(key)
+	if cr then
+		r, g, b = cr, cg, cb
 	end
 	local flash = sfFrame(button, key)
 	flash.texture:SetVertexColor(r or 1, g or 1, b or 0)
@@ -875,8 +892,16 @@ function ns.GlowFetch(force, sync)
 		if gen ~= glowFetchGen then
 			return
 		end
-		local budget = sync and 100000 or 20
+		-- a few buttons per frame, and never more than ~2 ms of work: WoW Forever
+		-- stops an addon whose code runs too long in one frame ("script ran too
+		-- long"), and other addons share that frame
+		local budget = sync and 100000 or 12
+		local clock = debugprofilestop
+		local started = clock and clock()
 		while idx <= #queue and budget > 0 do
+			if not sync and started and clock() - started > 2 then
+				break
+			end
 			local entry = queue[idx]
 			idx = idx + 1
 			budget = budget - 1
@@ -1172,6 +1197,75 @@ function ns.GlowBuffs(list)
 		for _, button in ipairs(flashTargets(id)) do
 			mark(button, "buff", IMG .. "skull", 1, 0.08, 0.08, 1.45, 1)
 			buffGlowing[button] = true
+		end
+	end
+end
+
+-- Gathering / treasure tracking that's turned off (Tracking.lua): its own color.
+local trackGlowing, lastTrackSig = {}, nil
+
+function ns.GlowClearTrack()
+	for button in pairs(trackGlowing) do
+		unmark(button, "track")
+	end
+	wipe(trackGlowing)
+	lastTrackSig = nil
+end
+
+function ns.GlowTrack(list)
+	styleSync()
+	list = list or {}
+	local sig = table.concat(list, ",")
+	if sig == lastTrackSig and (sig == "" or next(trackGlowing)) then
+		return
+	end
+	ns.GlowClearTrack()
+	lastTrackSig = sig
+	local r, g, b = ns.FlashColor("track")
+	for _, id in ipairs(list) do
+		for _, button in ipairs(flashTargets(id)) do
+			mark(button, "track", IMG .. "skull", r, g, b, 1.45, 1)
+			trackGlowing[button] = true
+		end
+	end
+end
+
+-- The second spell in the queue: a second color, so you can see what's next.
+local secondGlowing, lastSecond = {}, nil
+
+function ns.GlowClearSecond()
+	for button in pairs(secondGlowing) do
+		unmark(button, "second")
+	end
+	wipe(secondGlowing)
+	lastSecond = nil
+end
+
+-- /rcr why: what the second-color flash is on, and on how many buttons
+function ns.GlowSecondNow()
+	local n = 0
+	for _ in pairs(secondGlowing) do
+		n = n + 1
+	end
+	return lastSecond, n
+end
+
+function ns.GlowSecond(spellID)
+	styleSync()
+	if not spellID or ns.db.glow == false or ns.db.showRotation == false or ns.db.flashSecond == false then
+		ns.GlowClearSecond()
+		return
+	end
+	if spellID == lastSecond and next(secondGlowing) then
+		return
+	end
+	ns.GlowClearSecond()
+	lastSecond = spellID
+	local r, g, b = ns.FlashColor("second")
+	for _, button in ipairs(flashTargets(spellID)) do
+		if not damageGlowing[button] then -- the main flash wins a shared button
+			mark(button, "second", IMG .. "skull", r, g, b, 1.3, 0.85)
+			secondGlowing[button] = true
 		end
 	end
 end
@@ -1547,6 +1641,12 @@ function ns.GlowClearAllStyles()
 	ns.GlowClearWeapon()
 	if ns.GlowClearBuffs then
 		ns.GlowClearBuffs()
+	end
+	if ns.GlowClearTrack then
+		ns.GlowClearTrack()
+	end
+	if ns.GlowClearSecond then
+		ns.GlowClearSecond()
 	end
 	ns.GlowInvalidate()
 	if ns.InvalidateTick then

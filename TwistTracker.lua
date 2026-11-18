@@ -62,12 +62,21 @@ end
 local function applyLock()
 	local locked = ns.db.twistLocked ~= false
 	frame.bar:SetShown(not locked)
+	frame.grip:SetShown(not locked)
 	frame.lockText:SetText(locked and "Unlock" or "Lock")
 end
 
 local function build()
 	local f = CreateFrame("Frame", "RCRotationsTwist", UIParent, "BackdropTemplate")
-	f:SetSize(176, 46)
+	local sz = ns.db and ns.db.twistSize
+	f:SetSize(type(sz) == "table" and sz[1] or 150, type(sz) == "table" and sz[2] or 46)
+	f:SetResizable(true)
+	if f.SetResizeBounds then
+		pcall(f.SetResizeBounds, f, 110, 30, 320, 90)
+	else
+		pcall(f.SetMinResize, f, 110, 30)
+		pcall(f.SetMaxResize, f, 320, 90)
+	end
 	f:SetFrameStrata("MEDIUM")
 	f:SetMovable(true)
 	f:SetClampedToScreen(true)
@@ -150,6 +159,44 @@ local function build()
 		W.CyclePattern()
 	end)
 	f.patButton = pat
+
+	-- resize grip (bottom-right corner, while unlocked): drag to make it
+	-- narrower / wider / taller; everything inside follows the size
+	local grip = CreateFrame("Button", nil, f)
+	grip:SetSize(14, 14)
+	grip:SetPoint("BOTTOMRIGHT", 0, 0)
+	grip:SetFrameLevel(f:GetFrameLevel() + 5)
+	local gt = grip:CreateTexture(nil, "OVERLAY")
+	gt:SetAllPoints()
+	gt:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+	grip:SetScript("OnMouseDown", function()
+		f:StartSizing("BOTTOMRIGHT")
+	end)
+	grip:SetScript("OnMouseUp", function()
+		f:StopMovingOrSizing()
+		ns.db.twistSize = { math.floor(f:GetWidth() + 0.5), math.floor(f:GetHeight() + 0.5) }
+		savePos()
+	end)
+	f.grip = grip
+
+	local function layout()
+		local w, h = f:GetWidth(), f:GetHeight()
+		local isz = math.max(16, h - 8)
+		f.icon:SetSize(isz, isz)
+		local room = w - isz - 14 - 30 -- leave room for SWAP / pattern on the right
+		local pw = math.max(6, math.min(16, math.floor((room - 8) / 3)))
+		local ph = math.max(4, math.floor(isz / 4))
+		for i, p in ipairs(f.pips) do
+			p:SetSize(pw, ph)
+			p:ClearAllPoints()
+			p:SetPoint("BOTTOMLEFT", f.icon, "BOTTOMRIGHT", 6 + (i - 1) * (pw + 4), 2)
+		end
+		f.name:SetWidth(math.max(20, w - isz - 16))
+		f.name:SetWordWrap(false)
+	end
+	f:SetScript("OnSizeChanged", layout)
+	f.layout = layout
+	layout()
 
 	f:Hide()
 	return f

@@ -987,6 +987,11 @@ if CLASS_FILE == "PALADIN" then
 	SlashCmdList.RCROT("twist preview")
 	assert(RCRotationsTwist.shown and RCRotationsTwist.bar.shown, "/rcr twist preview shows it unlocked before Unsealed Wrath")
 	assert(RCRotationsTwist.name.text == "Command (preview)", "preview label")
+	assert(RCRotationsTwist.grip.shown, "unlocked: the resize grip shows")
+	RCRotationsTwist.grip:GetScript("OnMouseDown")(RCRotationsTwist.grip)
+	RCRotationsTwist.grip:GetScript("OnMouseUp")(RCRotationsTwist.grip)
+	assert(type(ns.db.twistSize) == "table", "resizing saves the size")
+	RCRotationsTwist.layout()
 	SlashCmdList.RCROT("twist preview")
 	assert(not RCRotationsTwist.shown, "preview off hides it again")
 	ns.db.twistLocked = nil

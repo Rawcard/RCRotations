@@ -8,7 +8,8 @@
   bar, click Lock. The bar also switches the twist pattern: 3/1 (WoWSims, the default), 3/3 or
   2/1 swings on Command / Righteousness; the rotation follows the pattern you pick.
   /rcr twist turns the tracker off and on. /rcr twist preview shows it before you have the
-  talent, so you can put it where you want it now.
+  talent, so you can put it where you want it now. While unlocked, drag its bottom-right corner
+  to resize it.
 
 # 1.5.18
 

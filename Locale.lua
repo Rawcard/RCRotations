@@ -67,6 +67,7 @@ L.enUS = {
 	OPT_LOCK = "Lock interface",
 	OPT_BUFFS = "Missing buff reminders (red)",
 	OPT_YARDS = "Yards: main icon and enemy names",
+	OPT_TWIST = "Seal twist tracker (Paladin)",
 	OPT_HIDE_PLATES = "Enemy names only (hides nameplate bars, counts enemies for AoE)",
 	PLATES_ON = "Enemy nameplates show names only (no health bars), so RCRotations can count enemies for AoE.",
 	PLATES_ON_LATER = "Name-only enemy nameplates turn on when this fight ends.",

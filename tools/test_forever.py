@@ -998,6 +998,11 @@ if CLASS_FILE == "PALADIN" then
 	KNOWN[1310735] = true
 	ns.Twist.Refresh()
 	assert(RCRotationsTwist and RCRotationsTwist.shown, "twist tracker shows with Unsealed Wrath")
+	ns.db.showTwist = false -- the Options switch
+	ns.Twist.Refresh()
+	assert(not RCRotationsTwist.shown, "turned off in Options: no tracker even with Unsealed Wrath")
+	ns.db.showTwist = nil
+	ns.Twist.Refresh()
 	assert(RCRotationsTwist.name.text == "Righteousness", "tracker shows the seal you have, got " .. tostring(RCRotationsTwist.name.text))
 	assert(RCRotationsTwist.swap.text == "SWAP", "tracker says SWAP on the swing to change seal")
 	assert(not RCRotationsTwist.bar.shown, "locked by default: no lock bar")

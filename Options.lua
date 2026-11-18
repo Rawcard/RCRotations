@@ -780,6 +780,7 @@ local function ensureOptions()
 	frame.optPurge = addSwitch(winCard, "showPurge", ns.T("OPT_PURGE"))
 	frame.optCleanse = addSwitch(winCard, "showCleanse", ns.T("OPT_CLEANSE"))
 	frame.optWeapon = addSwitch(winCard, "showWeapon", ns.T("OPT_WEAPON"))
+	frame.optTwist = addSwitch(winCard, "showTwist", ns.T("OPT_TWIST"))
 
 	local displayCard = makeCard(general, "OPT_CARD_DISPLAY", 8, -212, 318, 196)
 	local scaleLabel = displayCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -1636,6 +1637,9 @@ function ns.RefreshOptions()
 		if frame.optCleanse then
 			frame.optCleanse:SetChecked(ns.db.showCleanse ~= false)
 			frame.optWeapon:SetChecked(ns.db.showWeapon ~= false)
+		end
+		if frame.optTwist then
+			frame.optTwist:SetChecked(ns.db.showTwist ~= false)
 		end
 		if frame.optHideIdle then
 			frame.optHideIdle:SetChecked(ns.db.hideIdle ~= false)

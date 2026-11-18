@@ -984,6 +984,12 @@ if CLASS_FILE == "PALADIN" then
 	-- the twist tracker pops up with Unsealed Wrath, shows the seal and SWAP
 	ns.Twist.Refresh()
 	assert(not (RCRotationsTwist and RCRotationsTwist.shown), "twist tracker hidden without Unsealed Wrath")
+	SlashCmdList.RCROT("twist preview")
+	assert(RCRotationsTwist.shown and RCRotationsTwist.bar.shown, "/rcr twist preview shows it unlocked before Unsealed Wrath")
+	assert(RCRotationsTwist.name.text == "Command (preview)", "preview label")
+	SlashCmdList.RCROT("twist preview")
+	assert(not RCRotationsTwist.shown, "preview off hides it again")
+	ns.db.twistLocked = nil
 	KNOWN[1310735] = true
 	ns.Twist.Refresh()
 	assert(RCRotationsTwist and RCRotationsTwist.shown, "twist tracker shows with Unsealed Wrath")

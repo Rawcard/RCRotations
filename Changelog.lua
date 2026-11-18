@@ -4,7 +4,7 @@ ns.CHANGELOG = {
 	{
 		version = "1.5.19",
 		items = {
-			"Seal twist tracker (WoW Forever Paladin): pops up once you have Unsealed Wrath. Shows your seal, the echoes it has stored (counted from your swings, since the game hides them in combat) and SWAP on the swing to change seal. It has its own lock bar: /rcr twist unlock, drag it by the bar, click Lock. The bar also switches the twist pattern: 3/1 (WoWSims, the default), 3/3 or 2/1 swings on Command / Righteousness; the rotation follows the pattern you pick. /rcr twist turns the tracker off and on.",
+			"Seal twist tracker (WoW Forever Paladin): pops up once you have Unsealed Wrath. Shows your seal, the echoes it has stored (counted from your swings, since the game hides them in combat) and SWAP on the swing to change seal. It has its own lock bar: /rcr twist unlock, drag it by the bar, click Lock. The bar also switches the twist pattern: 3/1 (WoWSims, the default), 3/3 or 2/1 swings on Command / Righteousness; the rotation follows the pattern you pick. /rcr twist turns the tracker off and on. /rcr twist preview shows it before you have the talent, so you can put it where you want it now.",
 		},
 	},
 	{

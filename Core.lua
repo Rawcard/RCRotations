@@ -1199,7 +1199,17 @@ SlashCmdList.RCROT = function(msg)
 		end
 	elseif msg == "twist" or msg:find("^twist ") then
 		local arg = msg:match("^twist%s+(%S+)")
-		if arg == "unlock" then
+		if arg == "preview" then
+			if ns.Twist then
+				ns.Twist.preview = not ns.Twist.preview
+				ns.db.showTwist = true
+				pcall(ns.Twist.Refresh)
+				if ns.Twist.preview then
+					pcall(ns.Twist.Unlock)
+				end
+			end
+			ns.Print("seal twist tracker preview " .. ((ns.Twist and ns.Twist.preview) and "on: drag it by its bar, click Lock, then /rcr twist preview again to hide it" or "off"))
+		elseif arg == "unlock" then
 			ns.db.showTwist = true
 			if ns.Twist then
 				pcall(ns.Twist.Refresh)

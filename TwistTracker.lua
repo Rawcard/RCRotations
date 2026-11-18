@@ -186,7 +186,7 @@ function W.Refresh()
 	if not (ns.db and ns.API) then
 		return
 	end
-	local want = W.Enabled() and W.Specced()
+	local want = W.Enabled() and (W.Specced() or W.preview)
 	if not want then
 		if frame then
 			frame:Hide()
@@ -199,10 +199,26 @@ function W.Refresh()
 		applyLock()
 	end
 	frame:Show()
+	applyLock()
 	local cmd, sor, name = ns.API.TwistPattern()
 	frame.pattern:SetText(name)
 	frame.patButton.text:SetText(name)
 	local current = ns.API.CurrentSeal and ns.API.CurrentSeal()
+	if W.preview and not W.Specced() then
+		-- preview before you have Unsealed Wrath: a made-up moment, so you can
+		-- place and look at the tracker (2 Command echoes, then SWAP flashing)
+		local t = GetTime and GetTime() or 0
+		local phase = math.floor(t / 1.5) % 4
+		frame.icon:SetTexture(seal("SealCommand") and C_Spell and C_Spell.GetSpellTexture and call(C_Spell.GetSpellTexture, seal("SealCommand")) or 134400)
+		frame.icon:SetDesaturated(false)
+		frame.name:SetText("Command (preview)")
+		for i, p in ipairs(frame.pips) do
+			p:SetShown(i <= cmd)
+			p:SetColorTexture(i <= phase and 0.35 or 0.25, i <= phase and 0.65 or 0.25, i <= phase and 1 or 0.25, 1)
+		end
+		frame.swap:SetText(phase >= cmd and "SWAP" or "")
+		return
+	end
 	local id = current and seal(current)
 	if id then
 		local tex = C_Spell and C_Spell.GetSpellTexture and call(C_Spell.GetSpellTexture, id)

@@ -1246,6 +1246,34 @@ function ns.API.EchoStacks(auraID)
 	return math.min(3, swingsSince(sealAt))
 end
 
+-- The twist pattern: swings on Seal of Command, then on Righteousness.
+-- WoWSims plays 3/1; the twist tracker can switch it to 3/3 or 2/1.
+local PATTERNS = { ["3/1"] = { 3, 1 }, ["3/3"] = { 3, 3 }, ["2/1"] = { 2, 1 } }
+ns.API.TWIST_PATTERNS = { "3/1", "3/3", "2/1" }
+function ns.API.TwistPattern()
+	local p = ns.db and PATTERNS[ns.db.twistPattern or "3/1"] or PATTERNS["3/1"]
+	return p[1], p[2], (ns.db and ns.db.twistPattern) or "3/1"
+end
+
+-- Echo stacks as the rotation should see them under the chosen pattern. The
+-- WoWSims rotation swaps to Righteousness at 3 Command echoes and back at 1
+-- Righteousness echo; other patterns are fed to it by moving those points.
+local ECHO_COMMAND, ECHO_RIGHTEOUSNESS = 1311703, 1311704
+function ns.API.EchoStacksForRotation(auraID)
+	local n = ns.API.EchoStacks(auraID)
+	if n == nil then
+		return nil
+	end
+	local cmd, sor = ns.API.TwistPattern()
+	local swings = (ECHO_OF[auraID] == liveSeal()) and swingsSince(sealAt) or 0
+	if auraID == ECHO_COMMAND then
+		return swings >= cmd and 3 or math.min(n, 2)
+	elseif auraID == ECHO_RIGHTEOUSNESS then
+		return swings >= sor and math.max(1, n) or 0
+	end
+	return n
+end
+
 -- Is this seal (any rank) the one you have now? Then also how long it has left.
 function ns.API.SealUp(spellID)
 	local n = ns.API.SpellName(spellID)
@@ -1273,11 +1301,12 @@ function ns.API.TwistReady(spellID)
 		return false
 	end
 	local swings = swingsSince(sealAt)
+	local cmd, sor = ns.API.TwistPattern()
 	if sealNow == "SealCommand" and want == "SealRighteousness" then
-		return swings >= 3 -- three Command echoes stored
+		return swings >= cmd -- Command echoes stored (3 in the usual 3/1)
 	end
 	if sealNow == "SealRighteousness" and want == "SealCommand" then
-		return swings >= 1 -- one Righteousness echo, back to Command
+		return swings >= sor -- Righteousness swings, then back to Command
 	end
 	return false
 end

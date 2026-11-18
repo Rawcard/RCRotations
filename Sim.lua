@@ -434,7 +434,7 @@ heldPlayerAura = function(id, force)
 	if not force and not playerAurasHidden() then
 		return nil
 	end
-	local stacks = API.EchoStacks and API.EchoStacks(id)
+	local stacks = (API.EchoStacksForRotation or API.EchoStacks) and (API.EchoStacksForRotation or API.EchoStacks)(id)
 	if stacks ~= nil then
 		if stacks > 0 then
 			return { id = id, count = stacks, expires = GetTime() + 15, duration = 15 }

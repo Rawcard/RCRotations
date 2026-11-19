@@ -1197,6 +1197,38 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Plates and ns.Plates.Check then
 			ns.Plates.Check()
 		end
+	elseif msg == "twist" or msg:find("^twist ") then
+		local arg = msg:match("^twist%s+(%S+)")
+		if arg == "preview" then
+			if ns.Twist then
+				ns.Twist.preview = not ns.Twist.preview
+				ns.db.showTwist = true
+				pcall(ns.Twist.Refresh)
+				if ns.Twist.preview then
+					pcall(ns.Twist.Unlock)
+				end
+			end
+			ns.Print("seal twist tracker preview " .. ((ns.Twist and ns.Twist.preview) and "on: drag it by its bar, click Lock, then /rcr twist preview again to hide it" or "off"))
+		elseif arg == "unlock" then
+			ns.db.showTwist = true
+			if ns.Twist then
+				pcall(ns.Twist.Refresh)
+				pcall(ns.Twist.Unlock)
+			end
+			ns.Print("seal twist tracker unlocked: drag it by its bar, then click Lock")
+		elseif arg and ns.API.TWIST_PATTERNS and tContains(ns.API.TWIST_PATTERNS, arg) then
+			ns.db.twistPattern = arg
+			ns.Print("seal twist pattern: " .. arg)
+			if ns.InvalidateTick then
+				ns.InvalidateTick()
+			end
+		else
+			ns.db.showTwist = (ns.db.showTwist == false)
+			ns.Print("seal twist tracker " .. (ns.db.showTwist and "on (shows once you have Unsealed Wrath)" or "off"))
+		end
+		if ns.Twist then
+			pcall(ns.Twist.Refresh)
+		end
 	elseif msg == "colors" or msg == "colours" or msg == "flashcolors" then
 		if ns.ColorMenu and ns.ColorMenu.Toggle then
 			ns.ColorMenu.Toggle()

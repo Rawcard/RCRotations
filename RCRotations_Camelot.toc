@@ -2,7 +2,7 @@
 ## AllowLoadGameType: camelot
 ## Title: |cff66ccffRC|r|cffd4a017Rotations|r
 ## Notes: Rotation helper for WoW Classic (Era, TBC, Wrath, Cata, MoP) and WoW Forever. HUD, button flash, heals, defense, interrupts. Not a bot. Based on Forever Rotation by Vohnka (MIT); MoP rotations from WoWSims (MIT).
-## Version: 1.5.18
+## Version: 1.5.19
 ## Author: Raw Card
 ## X-Curse-Project-ID: 1747270
 ## X-Original-Author: Vohnka (Forever Rotation, MIT)
@@ -36,6 +36,7 @@ Nameplates.lua
 Range.lua
 Tracking.lua
 Colors.lua
+TwistTracker.lua
 SimPicker.lua
 Changelog.lua
 WhatsNew.lua

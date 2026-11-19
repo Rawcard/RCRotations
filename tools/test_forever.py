@@ -965,6 +965,54 @@ if CLASS_FILE == "PALADIN" then
 	assert(not ns.API.TwistReady(P.SealCommand), "twist: Righteousness needs 1 swing first")
 	NOW = NOW + 2.5
 	assert(ns.API.TwistReady(P.SealCommand), "twist: after 1 swing on Righteousness, back to Command")
+	-- other patterns: 2/1 swaps after 2 Command swings, 3/3 stays 3 swings on Righteousness
+	ns.db.twistPattern = "2/1"
+	NOW = NOW + 10
+	ns.API.NoteSpellCast(P.SealCommand)
+	NOW = NOW + 5 -- 2 swings
+	assert(ns.API.TwistReady(P.SealRighteousness), "2/1: swap to Righteousness after 2 Command swings")
+	assert(ns.API.EchoStacksForRotation(1311703) == 3, "2/1: the rotation sees its swap point at 2 swings")
+	ns.db.twistPattern = "3/3"
+	NOW = NOW + 3
+	ns.API.NoteSpellCast(P.SealRighteousness)
+	NOW = NOW + 2.5 -- 1 swing
+	assert(not ns.API.TwistReady(P.SealCommand), "3/3: 1 Righteousness swing isn't enough")
+	assert(ns.API.EchoStacksForRotation(1311704) == 0, "3/3: the rotation holds Righteousness")
+	NOW = NOW + 5
+	assert(ns.API.TwistReady(P.SealCommand), "3/3: back to Command after 3 Righteousness swings")
+	ns.db.twistPattern = nil
+	-- the twist tracker pops up with Unsealed Wrath, shows the seal and SWAP
+	ns.Twist.Refresh()
+	assert(not (RCRotationsTwist and RCRotationsTwist.shown), "twist tracker hidden without Unsealed Wrath")
+	SlashCmdList.RCROT("twist preview")
+	assert(RCRotationsTwist.shown and RCRotationsTwist.bar.shown, "/rcr twist preview shows it unlocked before Unsealed Wrath")
+	assert(RCRotationsTwist.name.text == "Command (preview)", "preview label")
+	assert(RCRotationsTwist.grip.shown, "unlocked: the resize grip shows")
+	RCRotationsTwist.grip:GetScript("OnMouseDown")(RCRotationsTwist.grip)
+	RCRotationsTwist.grip:GetScript("OnMouseUp")(RCRotationsTwist.grip)
+	assert(type(ns.db.twistSize) == "table", "resizing saves the size")
+	RCRotationsTwist.layout()
+	SlashCmdList.RCROT("twist preview")
+	assert(not RCRotationsTwist.shown, "preview off hides it again")
+	ns.db.twistLocked = nil
+	KNOWN[1310735] = true
+	ns.Twist.Refresh()
+	assert(RCRotationsTwist and RCRotationsTwist.shown, "twist tracker shows with Unsealed Wrath")
+	ns.db.showTwist = false -- the Options switch
+	ns.Twist.Refresh()
+	assert(not RCRotationsTwist.shown, "turned off in Options: no tracker even with Unsealed Wrath")
+	ns.db.showTwist = nil
+	ns.Twist.Refresh()
+	assert(RCRotationsTwist.name.text == "Righteousness", "tracker shows the seal you have, got " .. tostring(RCRotationsTwist.name.text))
+	assert(RCRotationsTwist.swap.text == "SWAP", "tracker says SWAP on the swing to change seal")
+	assert(not RCRotationsTwist.bar.shown, "locked by default: no lock bar")
+	SlashCmdList.RCROT("twist unlock")
+	assert(RCRotationsTwist.bar.shown, "/rcr twist unlock shows the lock bar to drag it")
+	RCRotationsTwist.patButton:GetScript("OnClick")(RCRotationsTwist.patButton)
+	assert(select(3, ns.API.TwistPattern()) == "3/3", "pattern button cycles 3/1 -> 3/3")
+	ns.db.twistPattern, ns.db.twistLocked = nil, nil
+	KNOWN[1310735] = nil
+	ns.Twist.Refresh()
 	-- auto-pick: Unsealed Wrath known -> Seal Twist
 	KNOWN[1310735] = true
 	local autoWas0 = ns.db.roleAuto

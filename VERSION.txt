@@ -1,4 +1,11 @@
-1.5.19
+1.5.20
+
+# 1.5.20
+
+- WoW Forever rotations updated from WoWSims. WoWSims dropped the Hunter Beast Mastery and
+  Marksmanship melee-weave builds, so those two rotations are gone (Auto picks another), and the
+  Shaman Elemental and Enhancement rotations now come from WoWSims' default builds.
+- Rotations that check how long the target has left work again (those lines were skipped).
 
 # 1.5.19
 

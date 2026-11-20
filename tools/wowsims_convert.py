@@ -59,7 +59,7 @@ SPECS = {
 # Value kinds evaluated live by Sim.lua (keep in sync; tools/test_sim.py checks).
 SUPPORTED = {
     "and", "or", "not", "cmp", "math", "max", "min",
-    "currentTime", "currentTimePercent", "remainingTime", "remainingTimePercent",
+    "currentTime", "currentTimePercent", "remainingTime", "remainingTimePercent", "timeUntilTargetDies",
     "isExecutePhase", "numberTargets", "bossCurrentTarget",
     "currentHealth", "currentHealthPercent", "maxHealth",
     "currentMana", "currentManaPercent",

@@ -53,9 +53,7 @@ SOURCES = [
      "talents": ("preset", "druid/feralbear", "BearTalents")},
     # Hunter (the builds carry their talents and rotation)
     {"file": "hunter/dps/builds/bm.json", "name": "Beast Mastery", "role": "range", "talents": "build"},
-    {"file": "hunter/dps/builds/bm_weave.json", "name": "Beast Mastery (melee weave)", "role": "range", "talents": "build"},
     {"file": "hunter/dps/builds/mm.json", "name": "Marksmanship", "role": "range", "talents": "build"},
-    {"file": "hunter/dps/builds/mm_weave.json", "name": "Marksmanship (melee weave)", "role": "range", "talents": "build"},
     {"file": "hunter/dps/builds/sv.json", "name": "Survival", "role": "range", "talents": "build"},
     {"file": "hunter/dps/builds/sv_weave.json", "name": "Survival (melee weave)", "role": "range", "talents": "build"},
     {"file": "hunter/dps/builds/sv_melee.json", "name": "Survival (melee)", "role": "melee", "talents": "build"},
@@ -83,8 +81,8 @@ SOURCES = [
     # Rogue
     {"file": "rogue/dps/apls/default.apl.json", "name": "Rogue", "role": "damage", "talents": None},
     # Shaman
-    {"file": "shaman/elemental/builds/testing.build.json", "name": "Elemental", "role": "caster", "talents": "build"},
-    {"file": "shaman/enhancement/builds/testing.build.json", "name": "Enhancement", "role": "melee", "talents": "build"},
+    {"file": "shaman/elemental/builds/default.build.json", "name": "Elemental", "role": "caster", "talents": "build"},
+    {"file": "shaman/enhancement/builds/default.build.json", "name": "Enhancement", "role": "melee", "talents": "build"},
     # Warlock
     {"file": "warlock/dps/builds/aff_wrack.build.json", "name": "Affliction (Wrack)", "role": "damage", "talents": "build"},
     {"file": "warlock/dps/builds/demo_fire_brand.build.json", "name": "Demonology (Fire Brand)", "role": "damage", "talents": "build"},

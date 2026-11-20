@@ -97,7 +97,7 @@ SOURCES = [
     {"file": "warrior/dps/apls/fury.apl.json", "name": "Fury", "role": "damage",
      "talents": ("preset", "warrior/dps", "FuryTalents")},
     {"file": "warrior/protection/apls/default.apl.json", "name": "Protection", "role": "tank",
-     "talents": ("preset", "warrior/protection", "ProtectionTalents")},
+     "talents": ("preset", "warrior/protection", "BalancedTalents")},
 ]
 
 
@@ -117,7 +117,13 @@ def preset_talents(sims, spec_dir, const):
     m = re.search(r"const\s+%s\s*=\s*PresetUtils\.makePresetTalents\([^;]*?talentsString:\s*'([^']*)'" % re.escape(const),
                   text, re.S)
     if not m:
-        raise SystemExit("talents %s not found in %s" % (const, path))
+        # WoWSims renamed or split the preset: use the first talent preset in
+        # that file rather than stop the whole nightly sync
+        first = re.search(r"const\s+(\w+)\s*=\s*PresetUtils\.makePresetTalents\([^;]*?talentsString:\s*'([^']*)'", text, re.S)
+        if not first:
+            raise SystemExit("talents %s not found in %s (and no other talent preset there)" % (const, path))
+        sys.stderr.write("warning: talents %s not found in %s, using %s\n" % (const, path, first.group(1)))
+        return first.group(2)
     return m.group(1)
 
 

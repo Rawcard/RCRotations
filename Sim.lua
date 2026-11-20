@@ -781,6 +781,10 @@ end
 V.remainingTime = function()
 	return remainingTime()
 end
+-- WoW Forever rotations ask how long the target has left: the same estimate
+V.timeUntilTargetDies = function()
+	return remainingTime()
+end
 V.currentTimePercent = function()
 	local c, r = currentTime(), remainingTime()
 	return (c + r) > 0 and c / (c + r) or 0

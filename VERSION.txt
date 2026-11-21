@@ -1,4 +1,9 @@
-1.5.20
+1.5.21
+
+# 1.5.21
+
+- Name-only enemy nameplates: the quest and loot / interact icons now sit in a row above the
+  enemy's name (above the yards readout when it shows) instead of beside it.
 
 # 1.5.20
 

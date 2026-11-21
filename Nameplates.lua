@@ -275,25 +275,47 @@ end
 
 -- line the icons up beside the name: left ones going left, right ones going
 -- right, each next to the one before (only the icons showing take a place)
+-- The tucked icons (quest marker, loot / interact marker...) sit in a row
+-- centred above the enemy's name, above the yards readout when it shows.
 local function layoutIcons(plate, mine)
-	local lv = plate.rcrLevel
-	local prev = { left = (lv and lv:IsShown() and lv) or mine, right = mine }
+	local row, widths, total = {}, {}, 0
 	for _, r in ipairs(plate.rcrIcons or {}) do
 		if r.rcrTucked then
-			local side = r.rcrSide == "left" and "left" or "right"
-			r.rcrTucking = true
-			pcall(r.ClearAllPoints, r)
-			if side == "left" then
-				pcall(r.SetPoint, r, "RIGHT", prev.left, "LEFT", -3, 0)
-			else
-				pcall(r.SetPoint, r, "LEFT", prev.right, "RIGHT", 3, 0)
-			end
-			r.rcrTucking = nil
 			local okS, shown = pcall(r.IsShown, r)
 			if not okS or secret(shown) or shown ~= false then
-				prev[side] = r
+				local okW, w = pcall(r.GetWidth, r)
+				w = (okW and not secret(w) and type(w) == "number" and w > 0) and w or 16
+				row[#row + 1] = r
+				widths[#row] = w
+				total = total + w
 			end
 		end
+	end
+	if #row == 0 then
+		return
+	end
+	total = total + 2 * (#row - 1)
+	local yards = plate.rcrYards
+	local okY, yShown = pcall(function()
+		return yards and yards:IsShown()
+	end)
+	local up = (okY and yShown == true) and 14 or 2
+	local x = -total / 2
+	for i, r in ipairs(row) do
+		r.rcrTucking = true
+		pcall(r.ClearAllPoints, r)
+		pcall(r.SetPoint, r, "BOTTOMLEFT", mine, "TOP", x, up)
+		r.rcrTucking = nil
+		x = x + widths[i] + 2
+	end
+end
+
+-- the yards readout came or went: move the icon row above it / back down
+function Plates.LayoutIcons(plate)
+	if plate and plate.rcrName and plate.rcrIcons and not plate.rcrLaying then
+		plate.rcrLaying = true
+		pcall(layoutIcons, plate, plate.rcrName)
+		plate.rcrLaying = nil
 	end
 end
 

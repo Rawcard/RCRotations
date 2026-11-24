@@ -761,6 +761,14 @@ function R.RefreshPlates()
 				if not ok then
 					fs:Hide()
 				end
+				-- the quest / loot icons sit above the yards: re-row them when it shows or hides
+				local nowShown = fs:IsShown()
+				if nowShown ~= fs.rcrWasShown then
+					fs.rcrWasShown = nowShown
+					if ns.Plates and ns.Plates.LayoutIcons then
+						ns.Plates.LayoutIcons(plate)
+					end
+				end
 			elseif plate.rcrYards then
 				plate.rcrYards:Hide()
 			end

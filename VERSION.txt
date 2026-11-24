@@ -10,6 +10,8 @@
   those instead of counting swings.
 - Seal twist tracker: click the pattern in its corner (3/1) to switch between 3/1 (WoWSims),
   3/3 (levelling) and 2/1 (end game), locked or not; the rotation follows it.
+- Name-only enemy nameplates: the quest, elite and loot / interact icons now sit in a row above
+  the enemy's name (above the yards readout when it shows) instead of beside it.
 
 # 1.5.23
 

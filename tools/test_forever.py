@@ -207,15 +207,17 @@ assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: 
 local eq = PLATES_LIST[3].unitFrame.QuestIcons
 local elvName = PLATES_LIST[3].rcrName
 assert(elvName, "ElvUI plate: our name")
-assert(eq.Default.pts[1] and eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
+local function onTop(r) local p = r.pts[#r.pts]; return p and p[1] == "BOTTOMLEFT" and p[2] == elvName and p[3] == "TOP" end
+assert(onTop(eq.Default), "ElvUI quest \"!\" icon in the row above the name")
 local softF = PLATES_LIST[3].unitFrame.SoftTargetFrame
 local elvLevel = PLATES_LIST[3].rcrLevel
 assert(elvLevel and elvLevel.shown and elvLevel.text == "60", "mob level left of the name, got " .. tostring(elvLevel and elvLevel.text))
 assert(elvLevel.pts[1][1] == "RIGHT" and elvLevel.pts[1][2] == elvName, "level sits just left of the name")
-assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvLevel or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, past the level")
+assert(onTop(eq.Item), "ElvUI quest item icon in the row above the name")
 local soft = PLATES_LIST[3].unitFrame.SoftTargetFrame
 local last = soft.pts[#soft.pts]
-assert(last and last[1] == "RIGHT" and (last[2] == elvLevel or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left, past the level")
+assert(onTop(soft), "loot marker (SoftTargetFrame) in the row above the name")
+assert(eq.Default.pts[#eq.Default.pts][4] ~= eq.Item.pts[#eq.Item.pts][4], "icons side by side in the row, not stacked")
 -- level hidden in combat on a plate that just came up: no stale level from the plate's last mob
 do
 	local wasL, wasC = UnitLevel, UnitClassification
@@ -262,10 +264,10 @@ do
 	GameTooltip, C_Timer, UnitExists = wasTip, wasTimer, wasUE
 end
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
-assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
+assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "BOTTOMLEFT", "quest icon above the name")
 -- the game anchors it back to the bar: it comes back beside the name
 qi:SetPoint("LEFT", PLATES_LIST[1].UnitFrame.healthBar, "RIGHT", 4, 0)
-assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays beside the name when the game moves it")
+assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays above the name when the game moves it")
 -- the game resets the plate's alpha (range, target change): it stays hidden
 PLATES_LIST[1].UnitFrame:SetAlpha(1)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "plate stays hidden when the game sets its alpha again")

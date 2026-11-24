@@ -981,6 +981,24 @@ if CLASS_FILE == "PALADIN" then
 	NOW = NOW + 5
 	assert(ns.API.TwistReady(P.SealCommand), "3/3: back to Command after 3 Righteousness swings")
 	ns.db.twistPattern = nil
+	-- recasting Command (same seal) keeps the echoes: no starting over at 0
+	NOW = NOW + 3
+	ns.API.NoteSpellCast(P.SealCommand)
+	NOW = NOW + 5 -- 2 swings
+	local before = ns.API.EchoStacks(1311703)
+	ns.API.NoteSpellCast(P.SealCommand)
+	assert(ns.API.EchoStacks(1311703) == before and before >= 1, "recasting Command keeps its echoes (" .. tostring(before) .. ")")
+	-- when the game shows the real Echo stacks, those win over the swing count
+	local wasGA = C_UnitAuras.GetPlayerAuraBySpellID
+	C_UnitAuras.GetPlayerAuraBySpellID = function(id) if id == 1311703 then return { applications = 3, spellId = id } end end
+	assert(ns.API.EchoStacks(1311703) == 3, "real Echo stacks read from the buff")
+	assert(ns.API.TwistReady(P.SealRighteousness), "3 real echoes: swap now")
+	C_UnitAuras.GetPlayerAuraBySpellID = function() return secret({}) end
+	assert(ns.API.EchoStacks(1311703) == before, "hidden in combat: back to counting swings")
+	C_UnitAuras.GetPlayerAuraBySpellID = wasGA
+	NOW = NOW + 1
+	ns.API.NoteSpellCast(P.SealRighteousness)
+	NOW = NOW + 2.5 -- 1 swing on Righteousness: time to go back to Command
 	-- the twist tracker pops up with Unsealed Wrath, shows the seal and SWAP
 	ns.Twist.Refresh()
 	assert(not (RCRotationsTwist and RCRotationsTwist.shown), "twist tracker hidden without Unsealed Wrath")

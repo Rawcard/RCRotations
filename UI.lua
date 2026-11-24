@@ -1341,7 +1341,16 @@ function ns.UI.UpdateBuffs(list)
 end
 
 function ns.UI.SetLocked(locked)
+	local was = ns.db.locked == true
 	ns.db.locked = locked and true or false
+	-- the seal twist tracker locks and unlocks along with the HUD (when you
+	-- change it, not when the saved setting is just applied at login)
+	if was ~= ns.db.locked then
+		ns.db.twistLocked = ns.db.locked
+		if ns.Twist and ns.Twist.Refresh then
+			pcall(ns.Twist.Refresh)
+		end
+	end
 	local layout = sharedLayout()
 	if layout then
 		layout.locked = ns.db.locked

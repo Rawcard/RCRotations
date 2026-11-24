@@ -620,7 +620,7 @@ local function ensureOptions()
 		page.scroll = sf
 		return page
 	end
-	local general = scrollPage("RCRotationsGeneralScroll", 420)
+	local general = scrollPage("RCRotationsGeneralScroll", 446)
 	general.scroll:Show()
 
 	local rotation = CreateFrame("Frame", nil, content)
@@ -763,7 +763,7 @@ local function ensureOptions()
 	frame.content = content
 	frame.nav = nav
 
-	local hudCard = makeCard(general, "OPT_CARD_HUD", 8, -4, 318, 196)
+	local hudCard = makeCard(general, "OPT_CARD_HUD", 8, -4, 318, 222)
 	frame.optLock = addSwitch(hudCard, "locked", ns.T("OPT_LOCK"))
 	frame.optRotation = addSwitch(hudCard, "showRotation", ns.T("OPT_ROTATION"))
 	frame.optGlow = addSwitch(hudCard, "glow", ns.T("OPT_GLOW"))
@@ -774,15 +774,44 @@ local function ensureOptions()
 	hudCard._y = hudCard._y + 26 -- the hidden row gives its spot to the next one
 	frame.optYards = addSwitch(hudCard, "showYards", ns.T("OPT_YARDS"))
 
-	local winCard = makeCard(general, "OPT_CARD_WINDOWS", 338, -4, 318, 196)
+	local winCard = makeCard(general, "OPT_CARD_WINDOWS", 338, -4, 318, 222)
 	frame.optDef = addSwitch(winCard, "showDefense", ns.T("OPT_DEFENSE"))
 	frame.optKick = addSwitch(winCard, "showInterrupt", ns.T("OPT_INTERRUPT"))
 	frame.optPurge = addSwitch(winCard, "showPurge", ns.T("OPT_PURGE"))
 	frame.optCleanse = addSwitch(winCard, "showCleanse", ns.T("OPT_CLEANSE"))
 	frame.optWeapon = addSwitch(winCard, "showWeapon", ns.T("OPT_WEAPON"))
 	frame.optTwist = addSwitch(winCard, "showTwist", ns.T("OPT_TWIST"))
+	-- unlock / lock just the twist tracker, to move or resize it
+	local twistBtn = makeGoldBtn(winCard, 150, 20, "")
+	twistBtn:SetPoint("TOPRIGHT", winCard, "TOPRIGHT", -12, winCard._y - 2)
+	winCard._y = winCard._y - 26
+	local function twistBtnText()
+		twistBtn:SetText(ns.T(ns.db.twistLocked == false and "OPT_TWIST_LOCK" or "OPT_TWIST_UNLOCK"))
+	end
+	twistBtn:SetScript("OnClick", function()
+		ns.db.twistLocked = not (ns.db.twistLocked ~= false)
+		if ns.db.twistLocked == false then
+			ns.db.showTwist = true
+			if frame.optTwist then
+				frame.optTwist:SetChecked(true)
+			end
+			-- no Unsealed Wrath yet: show the preview so there's something to move
+			if ns.Twist and ns.Twist.Specced and not ns.Twist.Specced() then
+				ns.Twist.preview = true
+			end
+		elseif ns.Twist then
+			ns.Twist.preview = nil
+		end
+		if ns.Twist and ns.Twist.Refresh then
+			pcall(ns.Twist.Refresh)
+		end
+		twistBtnText()
+	end)
+	twistBtn:SetScript("OnShow", twistBtnText)
+	twistBtnText()
+	frame.twistBtn = twistBtn
 
-	local displayCard = makeCard(general, "OPT_CARD_DISPLAY", 8, -212, 318, 196)
+	local displayCard = makeCard(general, "OPT_CARD_DISPLAY", 8, -238, 318, 196)
 	local scaleLabel = displayCard:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	scaleLabel:SetPoint("TOPLEFT", 12, -32)
 	scaleLabel:SetTextColor(0.92, 0.92, 0.92)
@@ -852,7 +881,7 @@ local function ensureOptions()
 	sfRow:SetPoint("TOPRIGHT", displayCard, "TOPRIGHT", -12, -164)
 	frame.optSpellFlash = sfRow
 
-	local weaponCard = makeCard(general, "OPT_CARD_WEAPON", 338, -212, 318, 196)
+	local weaponCard = makeCard(general, "OPT_CARD_WEAPON", 338, -238, 318, 196)
 	frame.weaponCard = weaponCard
 	frame.weaponLabel = weaponCard.title
 	frame.weaponBoxes = {}

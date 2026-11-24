@@ -63,6 +63,8 @@ local function applyLock()
 	local locked = ns.db.twistLocked ~= false
 	frame.bar:SetShown(not locked)
 	frame.grip:SetShown(not locked)
+	frame.patternButton:ClearAllPoints()
+	frame.patternButton:SetPoint("BOTTOMRIGHT", locked and -3 or -16, 3)
 	frame.lockText:SetText(locked and "Unlock" or "Lock")
 end
 
@@ -110,10 +112,39 @@ local function build()
 	swap:SetTextColor(0.3, 1, 0.3)
 	f.swap = swap
 
-	local pattern = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	pattern:SetPoint("BOTTOMRIGHT", -6, 3)
-	pattern:SetTextColor(0.7, 0.7, 0.7)
+	-- the pattern (3/1, 3/3, 2/1): click it to switch, locked or not
+	local patBtn = CreateFrame("Button", nil, f, "BackdropTemplate")
+	patBtn:SetSize(30, 16)
+	patBtn:SetPoint("BOTTOMRIGHT", -3, 3)
+	patBtn:SetFrameLevel(f:GetFrameLevel() + 3)
+	patBtn:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
+	patBtn:SetBackdropColor(0.12, 0.1, 0.06, 0.9)
+	patBtn:SetBackdropBorderColor(0.8, 0.62, 0.15, 0.8)
+	local pattern = patBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	pattern:SetPoint("CENTER")
+	pattern:SetTextColor(1, 0.85, 0.3)
+	patBtn:RegisterForClicks("LeftButtonUp")
+	patBtn:SetScript("OnClick", function()
+		W.CyclePattern()
+	end)
+	patBtn:SetScript("OnEnter", function(self)
+		self:SetBackdropBorderColor(1, 0.85, 0.3, 1)
+		if GameTooltip then
+			GameTooltip:SetOwner(self, "ANCHOR_TOP")
+			GameTooltip:SetText("Twist pattern", 1, 0.82, 0)
+			GameTooltip:AddLine("Swings on Command / swings on Righteousness.", 1, 1, 1)
+			GameTooltip:AddLine("Click to switch: 3/1 (WoWSims) > 3/3 (levelling) > 2/1 (end game)", 0.7, 0.7, 0.7, true)
+			GameTooltip:Show()
+		end
+	end)
+	patBtn:SetScript("OnLeave", function(self)
+		self:SetBackdropBorderColor(0.8, 0.62, 0.15, 0.8)
+		if GameTooltip then
+			GameTooltip:Hide()
+		end
+	end)
 	f.pattern = pattern
+	f.patternButton = patBtn
 
 	-- the lock bar: drag handle + pattern + lock button, shown while unlocked
 	local bar = CreateFrame("Frame", nil, f, "BackdropTemplate")

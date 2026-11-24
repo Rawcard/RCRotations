@@ -716,6 +716,9 @@ local function plateText(plate)
 	local holder = CreateFrame("Frame", nil, plate)
 	holder.rcrOwn = true -- the nameplate code leaves it alone
 	holder:SetAllPoints(plate)
+	if holder.SetIgnoreParentAlpha then
+		pcall(holder.SetIgnoreParentAlpha, holder, true) -- no distance fade
+	end
 	if plate.GetFrameLevel then
 		pcall(holder.SetFrameLevel, holder, (plate:GetFrameLevel() or 0) + 21)
 	end
@@ -760,6 +763,14 @@ function R.RefreshPlates()
 				local ok = pcall(paintText, fs, R.Measure(unit, nil, plate))
 				if not ok then
 					fs:Hide()
+				end
+				-- the quest / loot icons sit above the yards: re-row them when it shows or hides
+				local nowShown = fs:IsShown()
+				if nowShown ~= fs.rcrWasShown then
+					fs.rcrWasShown = nowShown
+					if ns.Plates and ns.Plates.LayoutIcons then
+						ns.Plates.LayoutIcons(plate)
+					end
 				end
 			elseif plate.rcrYards then
 				plate.rcrYards:Hide()

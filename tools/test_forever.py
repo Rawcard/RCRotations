@@ -207,15 +207,17 @@ assert(PLATES_LIST[1].rcrName and PLATES_LIST[1].rcrName.shown, "out of combat: 
 local eq = PLATES_LIST[3].unitFrame.QuestIcons
 local elvName = PLATES_LIST[3].rcrName
 assert(elvName, "ElvUI plate: our name")
-assert(eq.Default.pts[1] and eq.Default.pts[1][2] == elvName and eq.Default.pts[1][1] == "LEFT", "ElvUI quest \"!\" icon right beside the name")
+local function onTop(r) local p = r.pts[#r.pts]; return p and p[1] == "BOTTOMLEFT" and p[2] == elvName and p[3] == "TOP" end
+assert(onTop(eq.Default), "ElvUI quest \"!\" icon in the row above the name")
 local softF = PLATES_LIST[3].unitFrame.SoftTargetFrame
 local elvLevel = PLATES_LIST[3].rcrLevel
 assert(elvLevel and elvLevel.shown and elvLevel.text == "60", "mob level left of the name, got " .. tostring(elvLevel and elvLevel.text))
 assert(elvLevel.pts[1][1] == "RIGHT" and elvLevel.pts[1][2] == elvName, "level sits just left of the name")
-assert(eq.Item.pts[1] and (eq.Item.pts[1][2] == elvLevel or eq.Item.pts[1][2] == softF) and eq.Item.pts[1][1] == "RIGHT", "ElvUI quest item icon on the left, past the level")
+assert(onTop(eq.Item), "ElvUI quest item icon in the row above the name")
 local soft = PLATES_LIST[3].unitFrame.SoftTargetFrame
 local last = soft.pts[#soft.pts]
-assert(last and last[1] == "RIGHT" and (last[2] == elvLevel or last[2] == eq.Item), "loot marker (SoftTargetFrame) on the left, past the level")
+assert(onTop(soft), "loot marker (SoftTargetFrame) in the row above the name")
+assert(eq.Default.pts[#eq.Default.pts][4] ~= eq.Item.pts[#eq.Item.pts][4], "icons side by side in the row, not stacked")
 -- level hidden in combat on a plate that just came up: no stale level from the plate's last mob
 do
 	local wasL, wasC = UnitLevel, UnitClassification
@@ -262,10 +264,10 @@ do
 	GameTooltip, C_Timer, UnitExists = wasTip, wasTimer, wasUE
 end
 local qi = PLATES_LIST[1].UnitFrame.QuestIcon
-assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "LEFT", "quest icon tucked in right beside the name")
+assert(qi.pts[1] and qi.pts[1][2] == PLATES_LIST[1].rcrName and qi.pts[1][1] == "BOTTOMLEFT", "quest icon above the name")
 -- the game anchors it back to the bar: it comes back beside the name
 qi:SetPoint("LEFT", PLATES_LIST[1].UnitFrame.healthBar, "RIGHT", 4, 0)
-assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays beside the name when the game moves it")
+assert(qi.pts[#qi.pts][2] == PLATES_LIST[1].rcrName, "quest icon stays above the name when the game moves it")
 -- the game resets the plate's alpha (range, target change): it stays hidden
 PLATES_LIST[1].UnitFrame:SetAlpha(1)
 assert(PLATES_LIST[1].UnitFrame.alpha == 0, "plate stays hidden when the game sets its alpha again")
@@ -981,6 +983,24 @@ if CLASS_FILE == "PALADIN" then
 	NOW = NOW + 5
 	assert(ns.API.TwistReady(P.SealCommand), "3/3: back to Command after 3 Righteousness swings")
 	ns.db.twistPattern = nil
+	-- recasting Command (same seal) keeps the echoes: no starting over at 0
+	NOW = NOW + 3
+	ns.API.NoteSpellCast(P.SealCommand)
+	NOW = NOW + 5 -- 2 swings
+	local before = ns.API.EchoStacks(1311703)
+	ns.API.NoteSpellCast(P.SealCommand)
+	assert(ns.API.EchoStacks(1311703) == before and before >= 1, "recasting Command keeps its echoes (" .. tostring(before) .. ")")
+	-- when the game shows the real Echo stacks, those win over the swing count
+	local wasGA = C_UnitAuras.GetPlayerAuraBySpellID
+	C_UnitAuras.GetPlayerAuraBySpellID = function(id) if id == 1311703 then return { applications = 3, spellId = id } end end
+	assert(ns.API.EchoStacks(1311703) == 3, "real Echo stacks read from the buff")
+	assert(ns.API.TwistReady(P.SealRighteousness), "3 real echoes: swap now")
+	C_UnitAuras.GetPlayerAuraBySpellID = function() return secret({}) end
+	assert(ns.API.EchoStacks(1311703) == before, "hidden in combat: back to counting swings")
+	C_UnitAuras.GetPlayerAuraBySpellID = wasGA
+	NOW = NOW + 1
+	ns.API.NoteSpellCast(P.SealRighteousness)
+	NOW = NOW + 2.5 -- 1 swing on Righteousness: time to go back to Command
 	-- the twist tracker pops up with Unsealed Wrath, shows the seal and SWAP
 	ns.Twist.Refresh()
 	assert(not (RCRotationsTwist and RCRotationsTwist.shown), "twist tracker hidden without Unsealed Wrath")
@@ -1008,8 +1028,33 @@ if CLASS_FILE == "PALADIN" then
 	assert(not RCRotationsTwist.bar.shown, "locked by default: no lock bar")
 	SlashCmdList.RCROT("twist unlock")
 	assert(RCRotationsTwist.bar.shown, "/rcr twist unlock shows the lock bar to drag it")
+	-- the Options button locks and unlocks it again
+	if not ns.optSerial then ns.ToggleOptions(); ns.ToggleOptions() end
+	local ob = _G["RCRotationsOptions" .. ns.optSerial].twistBtn
+	ob:GetScript("OnClick")(ob)
+	assert(not RCRotationsTwist.bar.shown, "Options button locks the twist tracker")
+	ob:GetScript("OnClick")(ob)
+	assert(RCRotationsTwist.bar.shown, "Options button unlocks it to move again")
+	-- and it follows the HUD lock
+	ns.UI.SetLocked(true)
+	assert(not RCRotationsTwist.bar.shown, "locking the HUD locks the twist tracker")
+	ns.UI.SetLocked(false)
+	assert(RCRotationsTwist.bar.shown, "unlocking the HUD unlocks it")
+	ns.UI.SetLocked(true)
+	SlashCmdList.RCROT("twist unlock")
 	RCRotationsTwist.patButton:GetScript("OnClick")(RCRotationsTwist.patButton)
 	assert(select(3, ns.API.TwistPattern()) == "3/3", "pattern button cycles 3/1 -> 3/3")
+	-- the 3/3 label on the tracker itself switches too, even locked
+	ns.db.twistLocked = true
+	ns.Twist.Refresh()
+	RCRotationsTwist.patternButton:GetScript("OnClick")(RCRotationsTwist.patternButton)
+	assert(select(3, ns.API.TwistPattern()) == "2/1", "clicking the pattern on the tracker: 3/3 -> 2/1")
+	assert(RCRotationsTwist.pattern.text == "2/1", "tracker shows the new pattern")
+	RCRotationsTwist.patternButton:GetScript("OnClick")(RCRotationsTwist.patternButton)
+	assert(select(3, ns.API.TwistPattern()) == "3/1", "and round to 3/1")
+	ns.db.twistLocked = false
+	ns.Twist.Refresh()
+	RCRotationsTwist.patButton:GetScript("OnClick")(RCRotationsTwist.patButton)
 	ns.db.twistPattern, ns.db.twistLocked = nil, nil
 	KNOWN[1310735] = nil
 	ns.Twist.Refresh()

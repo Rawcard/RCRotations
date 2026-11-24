@@ -1170,8 +1170,13 @@ local function noteSeal(spellID)
 	end
 	local key = sealSets()[n:lower()]
 	if key then
-		sealNow, sealAt, sealSeen = key, GetTime(), true
-		sealExpire = sealAt + (ns.API.sealDuration or 30)
+		-- recasting the seal you already have keeps its echoes: only a
+		-- different seal starts the count over
+		if not (key == sealNow and sealExpire and GetTime() < sealExpire) then
+			sealAt = GetTime()
+		end
+		sealNow, sealSeen = key, true
+		sealExpire = GetTime() + (ns.API.sealDuration or 30)
 	end
 end
 
@@ -1235,6 +1240,34 @@ end
 
 -- Echo stacks (Unsealed Wrath) of the seal behind this Echo aura ID, or nil
 -- when the ID isn't an Echo.
+-- the real Echo stacks from your buffs, when the game shows them (nil when
+-- it hides them, as WoW Forever does in combat)
+local function realEchoStacks(auraID)
+	if not (C_UnitAuras and C_UnitAuras.GetPlayerAuraBySpellID) then
+		return nil
+	end
+	local ok, a = pcall(C_UnitAuras.GetPlayerAuraBySpellID, auraID)
+	if not ok or type(a) ~= "table" or not readable(a) then
+		return nil
+	end
+	local n = a.applications
+	if n == nil or not readable(n) or type(n) ~= "number" then
+		return nil
+	end
+	return math.max(1, n)
+end
+ns.API.RealEchoStacks = realEchoStacks
+
+-- how many swings count toward the echoes: the real stacks when readable,
+-- otherwise swings counted since the seal went up
+local function echoSwings(auraID)
+	local real = realEchoStacks(auraID)
+	if real then
+		return real
+	end
+	return swingsSince(sealAt)
+end
+
 function ns.API.EchoStacks(auraID)
 	local key = ECHO_OF[auraID]
 	if not key then
@@ -1243,7 +1276,7 @@ function ns.API.EchoStacks(auraID)
 	if key ~= liveSeal() then
 		return 0
 	end
-	return math.min(3, swingsSince(sealAt))
+	return math.min(3, echoSwings(auraID))
 end
 
 -- The twist pattern: swings on Seal of Command, then on Righteousness.
@@ -1265,7 +1298,7 @@ function ns.API.EchoStacksForRotation(auraID)
 		return nil
 	end
 	local cmd, sor = ns.API.TwistPattern()
-	local swings = (ECHO_OF[auraID] == liveSeal()) and swingsSince(sealAt) or 0
+	local swings = (ECHO_OF[auraID] == liveSeal()) and echoSwings(auraID) or 0
 	if auraID == ECHO_COMMAND then
 		return swings >= cmd and 3 or math.min(n, 2)
 	elseif auraID == ECHO_RIGHTEOUSNESS then
@@ -1300,7 +1333,8 @@ function ns.API.TwistReady(spellID)
 	if ns.API.TargetInMelee and not ns.API.TargetInMelee() then
 		return false
 	end
-	local swings = swingsSince(sealAt)
+	local echoOf = { SealCommand = 1311703, SealRighteousness = 1311704 }
+	local swings = echoOf[sealNow] and echoSwings(echoOf[sealNow]) or swingsSince(sealAt)
 	local cmd, sor = ns.API.TwistPattern()
 	if sealNow == "SealCommand" and want == "SealRighteousness" then
 		return swings >= cmd -- Command echoes stored (3 in the usual 3/1)

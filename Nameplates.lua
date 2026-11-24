@@ -469,6 +469,11 @@ local function ownName(plate, uf, hide, unit)
 		if holder.SetFrameLevel and plate.GetFrameLevel then
 			pcall(holder.SetFrameLevel, holder, (plate:GetFrameLevel() or 0) + 20)
 		end
+		-- the game fades far-away and behind-a-wall plates (often to nothing on
+		-- WoW Forever past ~30 yards): the name stays fully visible anyway
+		if holder.SetIgnoreParentAlpha then
+			pcall(holder.SetIgnoreParentAlpha, holder, true)
+		end
 		mine = holder:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 		mine:SetPoint("CENTER", plate, "CENTER", 0, 0)
 		mine:SetJustifyH("CENTER")

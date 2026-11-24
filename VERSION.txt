@@ -12,6 +12,8 @@
   3/3 (levelling) and 2/1 (end game), locked or not; the rotation follows it.
 - Name-only enemy nameplates: the quest, elite and loot / interact icons now sit in a row above
   the enemy's name (above the yards readout when it shows) instead of beside it.
+- Name-only enemy nameplates: names (and their yards) stay fully visible far away and behind
+  walls; the game's own distance / line-of-sight fade made them vanish around 30-40 yards.
 
 # 1.5.23
 

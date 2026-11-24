@@ -716,6 +716,9 @@ local function plateText(plate)
 	local holder = CreateFrame("Frame", nil, plate)
 	holder.rcrOwn = true -- the nameplate code leaves it alone
 	holder:SetAllPoints(plate)
+	if holder.SetIgnoreParentAlpha then
+		pcall(holder.SetIgnoreParentAlpha, holder, true) -- no distance fade
+	end
 	if plate.GetFrameLevel then
 		pcall(holder.SetFrameLevel, holder, (plate:GetFrameLevel() or 0) + 21)
 	end

@@ -8,6 +8,7 @@ ns.CHANGELOG = {
 			"Seal twist: recasting the seal you already have no longer restarts the echo count (the game keeps the echoes), and when the game shows your real Echo stacks the tracker and rotation use those instead of counting swings.",
 			"Seal twist tracker: click the pattern in its corner (3/1) to switch between 3/1 (WoWSims), 3/3 (levelling) and 2/1 (end game), locked or not; the rotation follows it.",
 			"Name-only enemy nameplates: the quest, elite and loot / interact icons now sit in a row above the enemy's name (above the yards readout when it shows) instead of beside it.",
+			"Name-only enemy nameplates: names (and their yards) stay fully visible far away and behind walls; the game's own distance / line-of-sight fade made them vanish around 30-40 yards.",
 		},
 	},
 	{

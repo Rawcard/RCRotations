@@ -1008,6 +1008,20 @@ if CLASS_FILE == "PALADIN" then
 	assert(not RCRotationsTwist.bar.shown, "locked by default: no lock bar")
 	SlashCmdList.RCROT("twist unlock")
 	assert(RCRotationsTwist.bar.shown, "/rcr twist unlock shows the lock bar to drag it")
+	-- the Options button locks and unlocks it again
+	if not ns.optSerial then ns.ToggleOptions(); ns.ToggleOptions() end
+	local ob = _G["RCRotationsOptions" .. ns.optSerial].twistBtn
+	ob:GetScript("OnClick")(ob)
+	assert(not RCRotationsTwist.bar.shown, "Options button locks the twist tracker")
+	ob:GetScript("OnClick")(ob)
+	assert(RCRotationsTwist.bar.shown, "Options button unlocks it to move again")
+	-- and it follows the HUD lock
+	ns.UI.SetLocked(true)
+	assert(not RCRotationsTwist.bar.shown, "locking the HUD locks the twist tracker")
+	ns.UI.SetLocked(false)
+	assert(RCRotationsTwist.bar.shown, "unlocking the HUD unlocks it")
+	ns.UI.SetLocked(true)
+	SlashCmdList.RCROT("twist unlock")
 	RCRotationsTwist.patButton:GetScript("OnClick")(RCRotationsTwist.patButton)
 	assert(select(3, ns.API.TwistPattern()) == "3/3", "pattern button cycles 3/1 -> 3/3")
 	ns.db.twistPattern, ns.db.twistLocked = nil, nil

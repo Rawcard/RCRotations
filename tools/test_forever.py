@@ -1042,6 +1042,17 @@ if CLASS_FILE == "PALADIN" then
 	SlashCmdList.RCROT("twist unlock")
 	RCRotationsTwist.patButton:GetScript("OnClick")(RCRotationsTwist.patButton)
 	assert(select(3, ns.API.TwistPattern()) == "3/3", "pattern button cycles 3/1 -> 3/3")
+	-- the 3/3 label on the tracker itself switches too, even locked
+	ns.db.twistLocked = true
+	ns.Twist.Refresh()
+	RCRotationsTwist.patternButton:GetScript("OnClick")(RCRotationsTwist.patternButton)
+	assert(select(3, ns.API.TwistPattern()) == "2/1", "clicking the pattern on the tracker: 3/3 -> 2/1")
+	assert(RCRotationsTwist.pattern.text == "2/1", "tracker shows the new pattern")
+	RCRotationsTwist.patternButton:GetScript("OnClick")(RCRotationsTwist.patternButton)
+	assert(select(3, ns.API.TwistPattern()) == "3/1", "and round to 3/1")
+	ns.db.twistLocked = false
+	ns.Twist.Refresh()
+	RCRotationsTwist.patButton:GetScript("OnClick")(RCRotationsTwist.patButton)
 	ns.db.twistPattern, ns.db.twistLocked = nil, nil
 	KNOWN[1310735] = nil
 	ns.Twist.Refresh()

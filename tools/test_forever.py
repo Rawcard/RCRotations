@@ -551,6 +551,12 @@ step("buffs", function()
 		local after = ns.Buffs.Missing()
 		if #after ~= #m - 1 then error("casting " .. m[1] .. " in combat didn't clear its reminder") end
 		for _, id in ipairs(after) do if id == m[1] then error("reminder " .. id .. " stayed after casting it") end end
+		-- the game hides the spell ID in combat: the cast GUID still names it
+		if #after > 0 then
+			fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-3-4170-0-1-" .. after[1] .. "-0000ABCDEF", secret(after[1]))
+			local after2 = ns.Buffs.Missing()
+			for _, id in ipairs(after2) do if id == after[1] then error("hidden spell ID: reminder " .. id .. " stayed (cast GUID not read)") end end
+		end
 	end
 	COMBAT, AURAS_SECRET = false, false
 	AURAS.player = { { spellId = 1, name = "Buff" } }

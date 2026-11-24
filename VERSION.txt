@@ -4,7 +4,7 @@
 
 Rotations updated from WoWSims (wowsims/mop@ec2c6c2552). Automatic release.
 
-# 1.5.24
+# 1.5.25
 
 - Seal twist tracker: an "Unlock twist tracker" button in Options > General > Windows to move or
   resize it again after locking it (click again to lock). It also unlocks and locks along with

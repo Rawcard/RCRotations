@@ -147,9 +147,20 @@ end
 local buttons = {}
 local holder
 
+-- in combat by either test; a hidden (secret) answer counts as in combat
 local function inCombat()
 	local v = InCombatLockdown and call(InCombatLockdown)
-	return v == true
+	if v ~= nil and secret(v) then
+		return true
+	end
+	if v == true then
+		return true
+	end
+	local c = UnitAffectingCombat and call(UnitAffectingCombat, "player")
+	if c ~= nil and secret(c) then
+		return true
+	end
+	return c == true
 end
 
 local function makeButton(i)

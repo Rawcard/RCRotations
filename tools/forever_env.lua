@@ -499,3 +499,9 @@ C_NamePlate = {
 	GetNamePlates = function() return plateList end,
 	GetNamePlateForUnit = function(u) for _, p in ipairs(plateList) do if p.namePlateUnitToken == u then return p end end end,
 }
+
+function strsplit(sep, str)
+	local out = {}
+	for part in (str .. sep):gmatch("(.-)" .. sep:gsub("%p", "%%%0")) do out[#out + 1] = part end
+	return unpack(out)
+end

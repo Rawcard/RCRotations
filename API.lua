@@ -1320,6 +1320,12 @@ function ns.API.SealUp(spellID)
 	return true, math.max(0, sealExpire - GetTime())
 end
 
+-- Which seal (SealCommand, SealFury, ...) a spell is, by name; nil if none.
+function ns.API.SealKey(spellID)
+	local n = ns.API.SpellName(spellID)
+	return type(n) == "string" and sealSets()[n:lower()] or nil
+end
+
 -- Should the twist swap to this seal now?
 function ns.API.TwistReady(spellID)
 	local n = ns.API.SpellName(spellID)

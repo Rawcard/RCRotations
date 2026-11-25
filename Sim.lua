@@ -1775,11 +1775,27 @@ function Sim.BuildQueue(rot)
 	if ns.GAME == "forever" and token == "PALADIN" and API.SealUp then
 		local okSeal, errSeal = pcall(function()
 		local anyUp, first = false, nil
+		-- Damage rotations open on Command, else Righteousness (Command is a
+		-- talent). Seal of Fury is a tank seal: a damage rotation that only
+		-- lists it for a rare swap must not open on it. Tanks take the list's
+		-- first seal.
+		local tank = rot.role == "tank"
+		local rank = { SealCommand = 1, SealRighteousness = 2 }
+		local best
 		for _, item in ipairs(list) do
-			-- the first seal the rotation uses that you have (Seal of Command
-			-- is a talent: at level 20 it's Righteousness)
-			if not first and item.id and API.SealUp(item.id) ~= nil and resolve(item.id) then
-				first = item.id
+			if item.id and API.SealUp(item.id) ~= nil and resolve(item.id) then
+				local key = API.SealKey and API.SealKey(item.id)
+				local r
+				if tank then
+					r = 0
+				elseif key == "SealFury" then
+					r = 9
+				else
+					r = rank[key] or 5
+				end
+				if not first or r < best then
+					first, best = item.id, r
+				end
 			end
 		end
 		if first then

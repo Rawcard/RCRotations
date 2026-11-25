@@ -309,6 +309,7 @@ function IsSpellKnownOrOverridesKnown(id) return KNOWN[id] == true end
 local RANKS = {
 	["Seal of Command"] = { 20375, 20915, 20918, 20919, 20920 },
 	["Seal of Righteousness"] = { 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 },
+	["Seal of Fury"] = { 1311649, 1311656, 20163, 20419, 20421, 20422, 20423 },
 	["Seal of the Crusader"] = { 21082, 20162, 20305, 20306, 20307, 20308 },
 	["Hammer of Wrath"] = { 24275, 24274, 24239 },
 	["Holy Strike"] = { 679, 678, 1866, 680, 2495, 5569, 10332, 10333 },

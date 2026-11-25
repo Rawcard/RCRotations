@@ -746,6 +746,28 @@ do
 		assert(pick().style == "twist", "Seal Twist playstyle: the Unsealed Wrath build")
 		ns.db.role = "shockadin"
 		assert(pick().style == "shockadin", "Shockadin playstyle: the Holy Shock build")
+		-- Seal Twist with no seal up opens on Command, not the Fury line
+		-- the WoWSims list keeps for a rare swap
+		do
+			ns.db.role = "twist"
+			local savedK = KNOWN
+			KNOWN = { [20920] = true, [20293] = true, [20423] = true, [20271] = true, [10333] = true, [1310735] = true }
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			ns.API.RebuildSpellBookIndex(true)
+			Sim.InvalidateTalents()
+			NOW = NOW + 60
+			local q = ns.BuildQueue()
+			assert(q and q[1] == 20920, "twist, no seal: opens on Seal of Command, not Fury (got " .. tostring(q and q[1]) .. ")")
+			KNOWN[20920] = nil
+			ns.API.RebuildSpellBookIndex(true)
+			NOW = NOW + 1
+			q = ns.BuildQueue()
+			assert(q and q[1] ~= 20423, "twist, no Command: never opens on Fury (got " .. tostring(q and q[1]) .. ")")
+			KNOWN = savedK
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			ns.API.RebuildSpellBookIndex(true)
+			Sim.InvalidateTalents()
+		end
 	end
 	-- picker: Auto first; /rcr apl cycles Auto -> each rotation -> Auto
 	ns.db.role = roles[1]

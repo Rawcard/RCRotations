@@ -763,6 +763,28 @@ do
 			NOW = NOW + 1
 			q = ns.BuildQueue()
 			assert(q and q[1] ~= 20423, "twist, no Command: never opens on Fury (got " .. tostring(q and q[1]) .. ")")
+			-- after the seal is cast and runs out, never Fury
+			KNOWN[20920] = true; ns.API.RebuildSpellBookIndex(true)
+			TARGET, COMBAT = true, true
+			fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-twist", 20920)
+			for t = 1, 70 do
+				NOW = NOW + 1
+				local qq = ns.BuildQueue()
+				for _, id in ipairs(qq) do
+					assert(id ~= 20423, "twist: Seal of Fury suggested " .. t .. "s after Command")
+				end
+			end
+			COMBAT = false
+			-- Fury is off on damage rotations, on for Protection
+			local twistRot, protRot = pick(), nil
+			for _, r in ipairs(list) do if r.role == "tank" then protRot = r end end
+			Sim.BeginPass(twistRot)
+			assert(Sim.FuryOff(20423), "twist rotation: Seal of Fury is off")
+			assert(not Sim.FuryOff(20920), "twist rotation: Seal of Command stays on")
+			if protRot then
+				Sim.BeginPass(protRot)
+				assert(not Sim.FuryOff(20423), "Protection: Seal of Fury stays on")
+			end
 			KNOWN = savedK
 			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
 			ns.API.RebuildSpellBookIndex(true)

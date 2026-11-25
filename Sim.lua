@@ -1494,6 +1494,15 @@ local function blockState(id)
 end
 
 -- Blocked by ID (as written in the rotation or as resolved) or by name.
+-- Seal of Fury on a Paladin damage rotation (see BeginPass)
+local function furyOff(id, rid)
+	if not pass.noFury or not API.SealKey then
+		return false
+	end
+	return API.SealKey(id) == "SealFury" or (rid ~= nil and API.SealKey(rid) == "SealFury")
+end
+Sim.FuryOff = furyOff
+
 function Sim.IsBlocked(id, rid)
 	local state = blockState(id)
 	if state == nil and rid and rid ~= id then
@@ -1696,6 +1705,10 @@ end
 local UNSEALED_WRATH = 1310735
 function Sim.BeginPass(rot)
 	pass = { now = GetTime() }
+	-- Seal of Fury is the tank seal: a Paladin damage rotation never suggests
+	-- it, even where a WoWSims list keeps a (switched off) line for it
+	pass.noFury = ns.GAME == "forever" and rot ~= nil and rot.role ~= "tank"
+		and ns.ClassToken and ns.ClassToken() == "PALADIN"
 	if rot and rot.style == "twist" then
 		local known = (API.Known and API.Known(UNSEALED_WRATH)) or (IsPlayerSpell and call(IsPlayerSpell, UNSEALED_WRATH))
 		pass.noTwistGap = not (known == true)
@@ -1783,7 +1796,7 @@ function Sim.BuildQueue(rot)
 		local rank = { SealCommand = 1, SealRighteousness = 2 }
 		local best
 		for _, item in ipairs(list) do
-			if item.id and API.SealUp(item.id) ~= nil and resolve(item.id) then
+			if item.id and API.SealUp(item.id) ~= nil and resolve(item.id) and not furyOff(item.id, resolve(item.id)) then
 				local key = API.SealKey and API.SealKey(item.id)
 				local r
 				if tank then
@@ -1808,7 +1821,7 @@ function Sim.BuildQueue(rot)
 			end
 			if not anyUp then
 				local rid = resolve(first)
-				if rid and canCast(rid) and not Sim.IsBlocked(first, rid) then
+				if rid and canCast(rid) and not furyOff(first, rid) and not Sim.IsBlocked(first, rid) then
 					q[1] = rid
 					seen[rid] = true
 				end
@@ -1839,7 +1852,7 @@ function Sim.BuildQueue(rot)
 			end
 		elseif item.id then
 			local rid = resolve(item.id)
-			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and canCast(rid) and onBar(rid) and test(item.c) then
+			if rid and not seen[rid] and not furyOff(item.id, rid) and not Sim.IsBlocked(item.id, rid) and canCast(rid) and onBar(rid) and test(item.c) then
 				q[#q + 1] = rid
 				seen[rid] = true
 			end
@@ -1895,6 +1908,9 @@ function Sim.Explain(rot)
 				return ("%d. %s (%s): not known"):format(i, tostring(name), tostring(item.id))
 			end
 			local bits = {}
+			if furyOff(item.id, rid) then
+				bits[#bits + 1] = "OFF (tank seal)"
+			end
 			bits[#bits + 1] = canCast(rid) and "castable" or "NOT castable"
 			bits[#bits + 1] = ("cd %.1f"):format(cooldownRemain(rid))
 			bits[#bits + 1] = onBar(rid) and "on bar" or "NOT ON BAR"
@@ -1941,7 +1957,7 @@ function Sim.FillComingUp(list, q, seen, lookahead)
 	for _, item in ipairs(list) do
 		if item.id and not item.hold then
 			local rid = resolve(item.id)
-			if rid and not seen[rid] and not Sim.IsBlocked(item.id, rid) and onBar(rid) then
+			if rid and not seen[rid] and not furyOff(item.id, rid) and not Sim.IsBlocked(item.id, rid) and onBar(rid) then
 				local cd = cooldownRemain(rid)
 				local usable = ns.GAME == "forever" or usableNow(rid) ~= false
 				if cd > 0 and cd <= lookahead and usable and test(item.c) then

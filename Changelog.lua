@@ -8,6 +8,7 @@ ns.CHANGELOG = {
 			"Tracking reminders and their bar flash stay off in combat however the game reports it.",
 			"Paladin damage: the built-in lists no longer suggest Seal of Fury (the tank seal); it's Command, then Righteousness. Protection still uses Fury.",
 			"Seal Twist: with no seal up, the addon now asks for Seal of Command (or Righteousness), not Seal of Fury. The WoWSims twist rotation lists Fury for a rare swap and the addon was opening on it.",
+			"Paladin damage rotations never suggest Seal of Fury at all now (Protection still does). `/rcr why` marks its line \"OFF (tank seal)\".",
 		},
 	},
 	{

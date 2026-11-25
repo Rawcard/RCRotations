@@ -6,6 +6,7 @@ ns.CHANGELOG = {
 		items = {
 			"WoW Forever: a buff reminder (and its bar flash) now goes away as soon as you cast that buff in combat. The game hides the spell from addons in combat; the addon now reads it from the cast itself, and any rank of the spell counts.",
 			"Tracking reminders and their bar flash stay off in combat however the game reports it.",
+			"Paladin damage: the built-in lists no longer suggest Seal of Fury (the tank seal); it's Command, then Righteousness. Protection still uses Fury.",
 		},
 	},
 	{

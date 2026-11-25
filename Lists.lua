@@ -96,7 +96,6 @@ if ns.GAME == "forever" then
 				step("SealCrusader", P.SealCrusader, { nobuff = true, anybuff = palaSeals, nodebuff = P.JudgementoftheCrusader }),
 				step("Judgement", P.Judgement, { needanybuff = palaSeals, hostile = true }),
 				step("SealCommand", P.SealCommand, { nobuff = true, anybuff = palaSeals }),
-				step("SealFury", P.SealFury, { nobuff = true, anybuff = palaSeals }),
 				step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
 				step("HammerofWrath", P.HammerofWrath, { hp = 20, unit = "target", hostile = true }),
 				step("HolyStrike", P.HolyStrike, { hostile = true }),
@@ -461,7 +460,6 @@ if ns.GAME == "forever" then
 			damage = {
 				aoe = {
 					step("SealCommand", P.SealCommand, { nobuff = true, anybuff = palaSeals }),
-					step("SealFury", P.SealFury, { nobuff = true, anybuff = palaSeals }),
 					step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
 					step("Consecration", P.Consecration, { hostile = true }),
 					step("HolyWrath", P.HolyWrath, { usable = true, hostile = true }),
@@ -474,7 +472,6 @@ if ns.GAME == "forever" then
 				},
 				burst = {
 					step("SealCommand", P.SealCommand, { nobuff = true, anybuff = palaSeals }),
-					step("SealFury", P.SealFury, { nobuff = true, anybuff = palaSeals }),
 					step("SealRighteousness", P.SealRighteousness, { nobuff = true, anybuff = palaSeals }),
 					step("HolyStrike", P.HolyStrike, { hostile = true }),
 					step("Judgement", P.Judgement, { hostile = true }),

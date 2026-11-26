@@ -1260,6 +1260,9 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Plates and ns.Plates.ApplyClickThrough then
 			pcall(ns.Plates.ApplyClickThrough)
 		end
+	elseif msg == "questie" then
+		ns.db.questieTooltipFix = (ns.db.questieTooltipFix == false)
+		ns.Print("adding Questie's quest lines to tooltips the game hides from it: " .. (ns.db.questieTooltipFix and "on" or "off"))
 	elseif msg == "plates" or msg == "nameplates" then
 		if ns.Plates then
 			ns.Plates.Set(ns.db.hidePlates ~= true)

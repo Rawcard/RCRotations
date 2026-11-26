@@ -662,6 +662,130 @@ end
 -- hidden). Right after, the same mob's normal tooltip ("mouseover") is shown
 -- in its place, which Questie and the rest can read.
 local swapping, swapQueued = false, false
+
+-- Questie skips a mob whose GUID WoW Forever hides (in combat, in instances,
+-- some mobs you've tagged), so its quest lines (mobs to kill, items they drop)
+-- go missing, on and off. Then the same lines are asked from Questie by the
+-- mob's name and added here.
+local function readable(v)
+	return v ~= nil and not secret(v)
+end
+
+local function questieModule(name)
+	local L = _G.QuestieLoader
+	if type(L) ~= "table" or type(L.ImportModule) ~= "function" then
+		return nil
+	end
+	local ok, m = pcall(L.ImportModule, L, name)
+	return ok and type(m) == "table" and m or nil
+end
+
+-- NPC IDs with this name that Questie knows
+local function npcIdsByName(name)
+	local lib = _G.LibQuestieDB
+	if type(lib) == "table" and type(lib.Npc) == "table" and type(lib.Npc.IdsByName) == "function" then
+		local ok, ids = pcall(lib.Npc.IdsByName, name)
+		if ok and type(ids) == "table" and #ids > 0 then
+			return ids
+		end
+	end
+	-- older Questie: only mobs your quests need can have lines anyway
+	local tips, db = questieModule("QuestieTooltips"), questieModule("QuestieDB")
+	local ids = {}
+	if tips and type(tips.lookupByKey) == "table" and db and type(db.QueryNPCSingle) == "function" then
+		for key in pairs(tips.lookupByKey) do
+			local id = type(key) == "string" and tonumber(key:match("^m_(%d+)$"))
+			if id then
+				local ok, n = pcall(db.QueryNPCSingle, id, "name")
+				if ok and n == name then
+					ids[#ids + 1] = id
+				end
+			end
+		end
+	end
+	return ids
+end
+
+local function tooltipHas(tip, text)
+	local n = tip.NumLines and tip:NumLines() or 0
+	local base = tip.GetName and tip:GetName() or "GameTooltip"
+	for i = 1, n do
+		local fs = _G[base .. "TextLeft" .. i]
+		local ok, t = pcall(function() return fs and fs:GetText() end)
+		if ok and readable(t) and t == text then
+			return true
+		end
+	end
+	return false
+end
+
+local function hoveredName(tip)
+	local ok, n = pcall(UnitName, "mouseover")
+	if ok and readable(n) and type(n) == "string" and n ~= "" then
+		return n
+	end
+	local base = tip.GetName and tip:GetName() or "GameTooltip"
+	local fs = _G[base .. "TextLeft1"]
+	local okT, t = pcall(function() return fs and fs:GetText() end)
+	if okT and readable(t) and type(t) == "string" and t ~= "" then
+		return (t:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+	end
+	return nil
+end
+
+function Plates.AddQuestieLines(tip)
+	tip = tip or GameTooltip
+	if not tip or not tip:IsShown() or (ns.db and ns.db.questieTooltipFix == false) then
+		return false
+	end
+	local QT = questieModule("QuestieTooltips")
+	if not QT or type(QT.GetTooltip) ~= "function" then
+		return false
+	end
+	local Q = _G.Questie
+	local okP, prof = pcall(function() return type(Q) == "table" and type(Q.db) == "table" and Q.db.profile end)
+	if okP and type(prof) == "table" and prof.enableTooltips == false then
+		return false
+	end
+	-- a readable GUID: Questie did this itself
+	local okG, guid = pcall(UnitGUID, "mouseover")
+	if okG and readable(guid) and guid ~= "" then
+		return false
+	end
+	local name = hoveredName(tip)
+	if not name then
+		return false
+	end
+	local added = false
+	for _, id in ipairs(npcIdsByName(name)) do
+		local ok, lines = pcall(QT.GetTooltip, "m_" .. id)
+		if ok and type(lines) == "table" then
+			for _, line in ipairs(lines) do
+				if type(line) == "string" and not tooltipHas(tip, line) then
+					tip:AddLine(line)
+					added = true
+				end
+			end
+		end
+	end
+	if added then
+		pcall(tip.Show, tip)
+	end
+	return added
+end
+
+local function addQuestieLater()
+	if C_Timer and C_Timer.After then
+		C_Timer.After(0, function() pcall(Plates.AddQuestieLines, GameTooltip) end)
+	else
+		pcall(Plates.AddQuestieLines, GameTooltip)
+	end
+end
+
+-- When the mouse is over a hidden enemy plate, the game shows the nameplate's
+-- tooltip, which other addons can't read on WoW Forever (the mob's GUID is
+-- hidden). Right after, the same mob's normal tooltip ("mouseover") is shown
+-- in its place, which Questie and the rest can read.
 local function swapTooltip()
 	swapQueued = false
 	local tip = GameTooltip
@@ -669,27 +793,31 @@ local function swapTooltip()
 		return
 	end
 	local okE, exists = pcall(UnitExists, "mouseover")
-	if not okE or secret(exists) or not exists then
-		return
+	if okE and not secret(exists) and exists then
+		swapping = true
+		pcall(tip.SetUnit, tip, "mouseover")
+		swapping = false
 	end
-	swapping = true
-	pcall(tip.SetUnit, tip, "mouseover")
-	swapping = false
+	-- still hidden (in combat, say): add Questie's lines by name
+	pcall(Plates.AddQuestieLines, tip)
 end
 
 function Plates.OnUnitTooltip(tooltip, data)
-	if swapping or swapQueued or tooltip ~= GameTooltip or not on() then
+	if swapping or swapQueued or tooltip ~= GameTooltip then
 		return
-	end
-	if IsInInstance then
-		local okI, inside = pcall(IsInInstance)
-		if okI and not secret(inside) and inside then
-			return
-		end
 	end
 	local guid = type(data) == "table" and not secret(data) and data.guid
 	if guid == nil or not secret(guid) then
-		return -- readable already: nothing to fix
+		return -- readable already: Questie handles it
+	end
+	local inside = false
+	if IsInInstance then
+		local okI, i = pcall(IsInInstance)
+		inside = okI and not secret(i) and i == true
+	end
+	if not on() or inside then
+		addQuestieLater()
+		return
 	end
 	swapQueued = true
 	if C_Timer and C_Timer.After then

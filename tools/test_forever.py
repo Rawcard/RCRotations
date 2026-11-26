@@ -234,6 +234,31 @@ do
 	pcall(ns.Plates.Apply)
 end
 assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
+-- Questie skips a mob whose GUID is hidden: its quest lines are added by name
+do
+	local lines = {}
+	local tip = { shown = true }
+	function tip:IsShown() return self.shown end
+	function tip:NumLines() return #lines end
+	function tip:GetName() return "QTestTip" end
+	function tip:AddLine(t) lines[#lines + 1] = t; _G["QTestTipTextLeft" .. #lines] = { GetText = function() return t end } end
+	function tip:Show() end
+	tip:AddLine("Southsea Dock Worker")
+	local wasLoader, wasGUID, wasName = QuestieLoader, UnitGUID, UnitName
+	local QT = { lookupByKey = { m_7857 = {} } }
+	function QT.GetTooltip(key) if key == "m_7857" then return { "Pirate Hats Ahoy!", "   6/20 Southsea Pirate Hat" } end end
+	local DB = { QueryNPCSingle = function(id, f) if id == 7857 and f == "name" then return "Southsea Dock Worker" end end }
+	QuestieLoader = { ImportModule = function(_, n) if n == "QuestieTooltips" then return QT elseif n == "QuestieDB" then return DB end end }
+	UnitGUID = function(u) if u == "mouseover" then return secret("Creature-0-1-1-1-7857-0") end return "Player-1" end
+	UnitName = function(u) if u == "mouseover" then return secret("Southsea Dock Worker") end return "Rob" end
+	assert(ns.Plates.AddQuestieLines(tip), "hidden GUID: Questie's lines added by name")
+	assert(lines[2] == "Pirate Hats Ahoy!" and lines[3] == "   6/20 Southsea Pirate Hat", "Questie's lines in order")
+	assert(not ns.Plates.AddQuestieLines(tip) and #lines == 3, "no doubled lines")
+	UnitGUID = function(u) return "Creature-0-1-1-1-7857-0" end
+	lines = { "Southsea Dock Worker" }
+	assert(not ns.Plates.AddQuestieLines(tip), "readable GUID: Questie does it itself")
+	QuestieLoader, UnitGUID, UnitName = wasLoader, wasGUID, wasName
+end
 -- hidden plates are click-through (Questie tooltips), and put back when plates are shown
 do
 	local ct = false

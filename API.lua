@@ -1145,20 +1145,42 @@ local ECHO_OF = { -- Echo aura ID -> the seal it stores
 	[1311705] = "SealJustice", [1328198] = "SealLight", [1328206] = "SealWisdom",
 }
 local sealNames -- lower-case name -> key
+local sealNamesFull = false
+-- English names as a fallback: right after login (or in combat) the game can
+-- answer nil for a spell's name, and a seal missing from this table was not
+-- recognised at all (Seal of Fury came back on damage rotations that way)
+local SEAL_EN = {
+	["seal of command"] = "SealCommand", ["seal of righteousness"] = "SealRighteousness",
+	["seal of fury"] = "SealFury", ["seal of justice"] = "SealJustice", ["seal of light"] = "SealLight",
+	["seal of wisdom"] = "SealWisdom", ["seal of the crusader"] = "SealCrusader",
+}
 local function sealSets()
-	if sealNames then
+	if sealNames and sealNamesFull then
 		return sealNames
 	end
 	local P = ns.Spell and ns.Spell.Paladin or {}
 	sealNames = {}
+	for n, key in pairs(SEAL_EN) do
+		sealNames[n] = key
+	end
+	local found = 0
 	for _, key in ipairs(SEAL_KEYS) do
 		local n = P[key] and ns.API.SpellName(P[key])
 		if type(n) == "string" and n ~= "" then
 			sealNames[n:lower()] = key
+			found = found + 1
 		end
 	end
+	-- only keep the table once every seal's name was readable; until then
+	-- build it again next time
+	sealNamesFull = found >= #SEAL_KEYS
 	return sealNames
 end
+-- Seal of Fury by spell ID (every rank the addon knows), so it's caught even
+-- when the game gives no name for it
+local FURY_IDS = { [1311649] = true, [1311656] = true, [20163] = true, [20419] = true,
+	[20421] = true, [20422] = true, [20423] = true }
+local sealKeyById = {}
 local sealNow, sealAt = nil, 0 -- key of the last seal cast, and when
 local sealExpire = 0 -- when it runs out
 local sealSeen = false -- the seal state is known (a cast, or a look at readable buffs)
@@ -1322,8 +1344,21 @@ end
 
 -- Which seal (SealCommand, SealFury, ...) a spell is, by name; nil if none.
 function ns.API.SealKey(spellID)
+	if spellID == nil then
+		return nil
+	end
+	if sealKeyById[spellID] then
+		return sealKeyById[spellID]
+	end
+	if FURY_IDS[spellID] then
+		return "SealFury"
+	end
 	local n = ns.API.SpellName(spellID)
-	return type(n) == "string" and sealSets()[n:lower()] or nil
+	local key = type(n) == "string" and sealSets()[n:lower()] or nil
+	if key then
+		sealKeyById[spellID] = key -- a spell's name doesn't change
+	end
+	return key
 end
 
 -- Should the twist swap to this seal now?

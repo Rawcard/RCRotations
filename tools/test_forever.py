@@ -806,6 +806,21 @@ do
 			Sim.BeginPass(twistRot)
 			assert(Sim.FuryOff(20423), "twist rotation: Seal of Fury is off")
 			assert(not Sim.FuryOff(20920), "twist rotation: Seal of Command stays on")
+			-- the game can answer no name for Seal of Fury (fresh login): still off
+			for _, id in ipairs({ 1311649, 1311656, 20423 }) do HIDE_SPELL_NAMES[id] = true end
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			assert(Sim.FuryOff(20423) and Sim.FuryOff(1311649), "twist rotation: Seal of Fury off even with its name hidden")
+			NOW = NOW + 120
+			TARGET, COMBAT = true, true
+			for t = 1, 30 do
+				NOW = NOW + 1
+				for _, id in ipairs(ns.BuildQueue() or {}) do
+					assert(id ~= 20423 and id ~= 1311649, "twist, Fury name hidden: Seal of Fury suggested")
+				end
+			end
+			COMBAT = false
+			HIDE_SPELL_NAMES = {}
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
 			if protRot then
 				Sim.BeginPass(protRot)
 				assert(not Sim.FuryOff(20423), "Protection: Seal of Fury stays on")

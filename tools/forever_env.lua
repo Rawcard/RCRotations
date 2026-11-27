@@ -320,7 +320,8 @@ local RANKS = {
 }
 local RANK_NAME = {}
 for n, ids in pairs(RANKS) do for _, id in ipairs(ids) do RANK_NAME[id] = n end end
-local function spellNameOf(id) return RANK_NAME[id] or ("Spell" .. id) end
+HIDE_SPELL_NAMES = {} -- ids the game answers no name for (right after login)
+local function spellNameOf(id) if HIDE_SPELL_NAMES[id] then return nil end return RANK_NAME[id] or ("Spell" .. id) end
 C_Spell = {
 	GetSpellInfo = function(id) if type(id) ~= "number" then return nil end return { name = spellNameOf(id), spellID = id, iconID = 134400, castTime = 0, minRange = 0, maxRange = 30 } end,
 	GetSpellName = function(id) return type(id) == "number" and spellNameOf(id) or nil end,

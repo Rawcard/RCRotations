@@ -9,6 +9,7 @@ ns.CHANGELOG = {
 			"Paladin damage: the built-in lists no longer suggest Seal of Fury (the tank seal); it's Command, then Righteousness. Protection still uses Fury.",
 			"Seal Twist: with no seal up, the addon now asks for Seal of Command (or Righteousness), not Seal of Fury. The WoWSims twist rotation lists Fury for a rare swap and the addon was opening on it.",
 			"Paladin damage rotations never suggest Seal of Fury at all now (Protection still does). `/rcr why` marks its line \"OFF (tank seal)\".",
+			"Seal of Fury could still come back after a fresh login (not after a /reload): right after login the game can give no name for it, and the addon then didn't recognise it as a seal. It's now recognised by its spell ID as well, so it stays off.",
 			"Questie tooltips: when WoW Forever hides a mob from Questie (in combat, in dungeons, mobs you've tagged), the quest lines (mobs to kill, items they drop) were missing. The addon now asks Questie for them by the mob's name and adds them. `/rcr questie` turns this off.",
 		},
 	},

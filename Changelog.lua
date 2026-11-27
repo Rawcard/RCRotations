@@ -2,6 +2,12 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.27",
+		items = {
+			"Seal twist tracker: it now tracks the echoes of whatever seal you have up, not just Command and Righteousness. Seal of Wisdom, Light, Justice (and Fury) show their stored echoes out of 3 in their own color, with SWAP once all 3 are stored (a hit with any other seal spends them, each with that seal's chance to go off: a burst of mana from Wisdom, healing from Light). Seal of the Crusader stores no echoes, so the tracker says so.",
+		},
+	},
+	{
 		version = "1.5.26",
 		items = {
 			"WoW Forever: a buff reminder (and its bar flash) now goes away as soon as you cast that buff in combat. The game hides the spell from addons in combat; the addon now reads it from the cast itself, and any rank of the spell counts.",
@@ -21,13 +27,6 @@ ns.CHANGELOG = {
 			"Seal twist tracker: click the pattern in its corner (3/1) to switch between 3/1 (WoWSims), 3/3 (levelling) and 2/1 (end game), locked or not; the rotation follows it.",
 			"Name-only enemy nameplates: the quest, elite and loot / interact icons now sit in a row above the enemy's name (above the yards readout when it shows) instead of beside it.",
 			"Name-only enemy nameplates: names (and their yards) stay fully visible far away and behind walls; the game's own distance / line-of-sight fade made them vanish around 30-40 yards.",
-		},
-	},
-	{
-		version = "1.5.20",
-		items = {
-			"WoW Forever rotations updated from WoWSims. WoWSims dropped the Hunter Beast Mastery and Marksmanship melee-weave builds, so those two rotations are gone (Auto picks another), and the Shaman Elemental and Enhancement rotations now come from WoWSims' default builds.",
-			"Rotations that check how long the target has left work again (those lines were skipped).",
 		},
 	},
 }

@@ -9,9 +9,22 @@ ns.Twist = ns.Twist or {}
 local W = ns.Twist
 
 local UNSEALED_WRATH = 1310735
-local ECHO_OF_SEAL = { SealCommand = 1311703, SealRighteousness = 1311704 }
+-- the Echo aura each seal stores (Crusader has none in WoW Forever)
+local ECHO_OF_SEAL = {
+	SealCommand = 1311703, SealRighteousness = 1311704, SealFury = 1311701,
+	SealJustice = 1311705, SealLight = 1328198, SealWisdom = 1328206,
+}
 local OTHER = { SealCommand = "SealRighteousness", SealRighteousness = "SealCommand" }
-local SEAL_LABEL = { SealCommand = "Command", SealRighteousness = "Righteousness" }
+local SEAL_LABEL = {
+	SealCommand = "Command", SealRighteousness = "Righteousness", SealFury = "Fury",
+	SealJustice = "Justice", SealLight = "Light", SealWisdom = "Wisdom", SealCrusader = "Crusader",
+}
+-- pip color for each seal's echoes
+local PIP_COLOR = {
+	SealCommand = { 0.35, 0.65, 1 }, SealRighteousness = { 1, 0.85, 0.2 },
+	SealWisdom = { 0.3, 0.55, 1 }, SealLight = { 1, 1, 0.75 },
+	SealJustice = { 0.75, 0.45, 1 }, SealFury = { 1, 0.35, 0.2 },
+}
 
 local function call(fn, ...)
 	if not fn then
@@ -309,24 +322,34 @@ function W.Refresh()
 		frame.name:SetText("No seal")
 	end
 	-- echoes stored, out of the swings the pattern wants on this seal
+	-- Command and Righteousness follow the twist pattern; any other seal
+	-- (Wisdom, Light, Justice, Fury) shows its echoes out of the full 3
 	local echoId = current and ECHO_OF_SEAL[current]
 	local stacks = echoId and ns.API.EchoStacks(echoId) or 0
-	local goal = current == "SealRighteousness" and sor or cmd
+	local twistSeal = OTHER[current] ~= nil
+	local goal = current == "SealRighteousness" and sor or (current == "SealCommand" and cmd or 3)
+	local col = PIP_COLOR[current] or PIP_COLOR.SealCommand
 	for i, p in ipairs(frame.pips) do
-		p:SetShown(i <= math.max(goal, 1))
+		p:SetShown(echoId ~= nil and i <= math.max(goal, 1))
 		if i <= stacks then
-			if current == "SealRighteousness" then
-				p:SetColorTexture(1, 0.85, 0.2, 1)
-			else
-				p:SetColorTexture(0.35, 0.65, 1, 1)
-			end
+			p:SetColorTexture(col[1], col[2], col[3], 1)
 		else
 			p:SetColorTexture(0.25, 0.25, 0.25, 1)
 		end
 	end
-	-- the swing to change seal
-	local other = current and OTHER[current]
-	local ready = other and seal(other) and ns.API.TwistReady and ns.API.TwistReady(seal(other))
+	if id and current and not echoId then
+		frame.name:SetText((SEAL_LABEL[current] or "") .. " (no echoes)")
+	end
+	-- the swing to change seal: the twist pattern for Command / Righteousness;
+	-- for another seal, once all 3 echoes are stored (any different seal
+	-- spends them)
+	local ready
+	if twistSeal then
+		local other = OTHER[current]
+		ready = seal(other) and ns.API.TwistReady and ns.API.TwistReady(seal(other))
+	elseif echoId then
+		ready = stacks >= 3 and ns.API.InCombat and ns.API.InCombat()
+	end
 	frame.swap:SetText(ready and "SWAP" or "")
 end
 

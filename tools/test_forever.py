@@ -1115,6 +1115,37 @@ if CLASS_FILE == "PALADIN" then
 	ns.Twist.Refresh()
 	assert(RCRotationsTwist.name.text == "Righteousness", "tracker shows the seal you have, got " .. tostring(RCRotationsTwist.name.text))
 	assert(RCRotationsTwist.swap.text == "SWAP", "tracker says SWAP on the swing to change seal")
+	-- any seal with an Echo: Wisdom shows its echoes out of 3 and SWAP at 3
+	do
+		local wasCombat = COMBAT
+		COMBAT = true
+		NOW = NOW + 1
+		ns.API.NoteSpellCast(P.SealWisdom)
+		NOW = NOW + 1
+		ns.Twist.Refresh()
+		assert(RCRotationsTwist.name.text == "Wisdom", "tracker shows Seal of Wisdom, got " .. tostring(RCRotationsTwist.name.text))
+		assert(RCRotationsTwist.pips[3].shown, "Wisdom: 3 echo pips")
+		assert(RCRotationsTwist.swap.text == "", "Wisdom, not 3 echoes yet: no SWAP")
+		NOW = NOW + 9
+		ns.Twist.Refresh()
+		assert(ns.API.EchoStacks(1328206) == 3, "Wisdom: 3 echoes stored, got " .. tostring(ns.API.EchoStacks(1328206)))
+		assert(RCRotationsTwist.swap.text == "SWAP", "Wisdom at 3 echoes: SWAP")
+		NOW = NOW + 1
+		ns.API.NoteSpellCast(P.SealLight)
+		NOW = NOW + 1
+		ns.Twist.Refresh()
+		assert(RCRotationsTwist.name.text == "Light", "tracker shows Seal of Light")
+		NOW = NOW + 1
+		ns.API.NoteSpellCast(P.SealCrusader)
+		ns.Twist.Refresh()
+		assert(RCRotationsTwist.name.text == "Crusader (no echoes)", "Crusader stores no echoes, got " .. tostring(RCRotationsTwist.name.text))
+		assert(not RCRotationsTwist.pips[1].shown, "Crusader: no pips")
+		NOW = NOW + 1
+		ns.API.NoteSpellCast(P.SealRighteousness)
+		NOW = NOW + 2.5
+		COMBAT = wasCombat
+		ns.Twist.Refresh()
+	end
 	assert(not RCRotationsTwist.bar.shown, "locked by default: no lock bar")
 	SlashCmdList.RCROT("twist unlock")
 	assert(RCRotationsTwist.bar.shown, "/rcr twist unlock shows the lock bar to drag it")

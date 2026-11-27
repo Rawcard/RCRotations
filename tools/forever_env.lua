@@ -309,6 +309,7 @@ function IsSpellKnownOrOverridesKnown(id) return KNOWN[id] == true end
 local RANKS = {
 	["Seal of Command"] = { 20375, 20915, 20918, 20919, 20920 },
 	["Seal of Righteousness"] = { 21084, 20287, 20288, 20289, 20290, 20291, 20292, 20293 },
+	["Seal of Fury"] = { 1311649, 1311656, 20163, 20419, 20421, 20422, 20423 },
 	["Seal of the Crusader"] = { 21082, 20162, 20305, 20306, 20307, 20308 },
 	["Hammer of Wrath"] = { 24275, 24274, 24239 },
 	["Holy Strike"] = { 679, 678, 1866, 680, 2495, 5569, 10332, 10333 },
@@ -319,7 +320,8 @@ local RANKS = {
 }
 local RANK_NAME = {}
 for n, ids in pairs(RANKS) do for _, id in ipairs(ids) do RANK_NAME[id] = n end end
-local function spellNameOf(id) return RANK_NAME[id] or ("Spell" .. id) end
+HIDE_SPELL_NAMES = {} -- ids the game answers no name for (right after login)
+local function spellNameOf(id) if HIDE_SPELL_NAMES[id] then return nil end return RANK_NAME[id] or ("Spell" .. id) end
 C_Spell = {
 	GetSpellInfo = function(id) if type(id) ~= "number" then return nil end return { name = spellNameOf(id), spellID = id, iconID = 134400, castTime = 0, minRange = 0, maxRange = 30 } end,
 	GetSpellName = function(id) return type(id) == "number" and spellNameOf(id) or nil end,
@@ -499,3 +501,9 @@ C_NamePlate = {
 	GetNamePlates = function() return plateList end,
 	GetNamePlateForUnit = function(u) for _, p in ipairs(plateList) do if p.namePlateUnitToken == u then return p end end end,
 }
+
+function strsplit(sep, str)
+	local out = {}
+	for part in (str .. sep):gmatch("(.-)" .. sep:gsub("%p", "%%%0")) do out[#out + 1] = part end
+	return unpack(out)
+end

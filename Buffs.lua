@@ -187,9 +187,13 @@ function Buffs.NoteCast(spellID)
 		ns.db.lastDemon = spellID
 	end
 	if spellID and #held > 0 then
+		-- any rank of the same spell counts (Blessing of Might rank 4 clears
+		-- a reminder for rank 1)
+		local castName = ns.API and ns.API.SpellName and ns.API.SpellName(spellID)
 		for i = #held, 1, -1 do
 			local ids = heldIds[held[i]]
-			if held[i] == spellID or (ids and ids[spellID]) then
+			local heldName = ns.API and ns.API.SpellName and ns.API.SpellName(held[i])
+			if held[i] == spellID or (ids and ids[spellID]) or (castName and heldName and castName == heldName) then
 				heldIds[held[i]] = nil
 				table.remove(held, i)
 			end

@@ -881,7 +881,7 @@ local function liveAuraUnit(unit)
 		or unit == "mouseover"
 end
 
-frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
+frame:SetScript("OnEvent", function(_, event, unit, castGUID, spellID)
 	if event == "PLAYER_LOGOUT" then
 		stopTicker()
 		if ns.FlushProfile then
@@ -993,6 +993,15 @@ frame:SetScript("OnEvent", function(_, event, unit, _, spellID)
 			local id = spellID
 			if (id == nil or (issecretvalue and issecretvalue(id))) and castName and ns.API and ns.API.ResolveFromName then
 				id = ns.API.ResolveFromName(castName)
+			end
+			-- spell ID and name both hidden (WoW Forever in combat): the cast's GUID
+			-- ("Cast-3-server-instance-zone-SPELLID-counter") may still carry it
+			if (id == nil or (issecretvalue and issecretvalue(id))) and type(castGUID) == "string"
+				and not (issecretvalue and issecretvalue(castGUID)) then
+				local fromGuid = tonumber((select(6, strsplit("-", castGUID))))
+				if fromGuid and fromGuid > 0 then
+					id = fromGuid
+				end
 			end
 			if ns.API and ns.API.NoteSelfBuff then
 				ns.API.NoteSelfBuff(id)
@@ -1251,6 +1260,9 @@ SlashCmdList.RCROT = function(msg)
 		if ns.Plates and ns.Plates.ApplyClickThrough then
 			pcall(ns.Plates.ApplyClickThrough)
 		end
+	elseif msg == "questie" then
+		ns.db.questieTooltipFix = (ns.db.questieTooltipFix == false)
+		ns.Print("adding Questie's quest lines to tooltips the game hides from it: " .. (ns.db.questieTooltipFix and "on" or "off"))
 	elseif msg == "plates" or msg == "nameplates" then
 		if ns.Plates then
 			ns.Plates.Set(ns.db.hidePlates ~= true)

@@ -2,6 +2,18 @@
 local addonName, ns = ...
 ns.CHANGELOG = {
 	{
+		version = "1.5.26",
+		items = {
+			"WoW Forever: a buff reminder (and its bar flash) now goes away as soon as you cast that buff in combat. The game hides the spell from addons in combat; the addon now reads it from the cast itself, and any rank of the spell counts.",
+			"Tracking reminders and their bar flash stay off in combat however the game reports it.",
+			"Paladin damage: the built-in lists no longer suggest Seal of Fury (the tank seal); it's Command, then Righteousness. Protection still uses Fury.",
+			"Seal Twist: with no seal up, the addon now asks for Seal of Command (or Righteousness), not Seal of Fury. The WoWSims twist rotation lists Fury for a rare swap and the addon was opening on it.",
+			"Paladin damage rotations never suggest Seal of Fury at all now (Protection still does). `/rcr why` marks its line \"OFF (tank seal)\".",
+			"Seal of Fury could still come back after a fresh login (not after a /reload): right after login the game can give no name for it, and the addon then didn't recognise it as a seal. It's now recognised by its spell ID as well, so it stays off.",
+			"Questie tooltips: when WoW Forever hides a mob from Questie (in combat, in dungeons, mobs you've tagged), the quest lines (mobs to kill, items they drop) were missing. The addon now asks Questie for them by the mob's name and adds them. `/rcr questie` turns this off.",
+		},
+	},
+	{
 		version = "1.5.24",
 		items = {
 			"Seal twist tracker: an \"Unlock twist tracker\" button in Options > General > Windows to move or resize it again after locking it (click again to lock). It also unlocks and locks along with the HUD's Unlock / Lock button. /rcr twist unlock still works too.",
@@ -16,12 +28,6 @@ ns.CHANGELOG = {
 		items = {
 			"WoW Forever rotations updated from WoWSims. WoWSims dropped the Hunter Beast Mastery and Marksmanship melee-weave builds, so those two rotations are gone (Auto picks another), and the Shaman Elemental and Enhancement rotations now come from WoWSims' default builds.",
 			"Rotations that check how long the target has left work again (those lines were skipped).",
-		},
-	},
-	{
-		version = "1.5.19",
-		items = {
-			"Seal twist tracker (WoW Forever Paladin): pops up once you have Unsealed Wrath. Shows your seal, the echoes it has stored (counted from your swings, since the game hides them in combat) and SWAP on the swing to change seal. It has its own lock bar: /rcr twist unlock, drag it by the bar, click Lock. The bar also switches the twist pattern: 3/1 (WoWSims, the default), 3/3 or 2/1 swings on Command / Righteousness; the rotation follows the pattern you pick. Turn it off in Options > General > Windows (\"Seal twist tracker\"), or with /rcr twist. /rcr twist preview shows it before you have the talent, so you can put it where you want it now. While unlocked, drag its bottom-right corner to resize it.",
 		},
 	},
 }

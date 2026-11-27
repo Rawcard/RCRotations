@@ -234,6 +234,31 @@ do
 	pcall(ns.Plates.Apply)
 end
 assert(not ns.Plates.lastError, "no error laying out icons: " .. tostring(ns.Plates.lastError))
+-- Questie skips a mob whose GUID is hidden: its quest lines are added by name
+do
+	local lines = {}
+	local tip = { shown = true }
+	function tip:IsShown() return self.shown end
+	function tip:NumLines() return #lines end
+	function tip:GetName() return "QTestTip" end
+	function tip:AddLine(t) lines[#lines + 1] = t; _G["QTestTipTextLeft" .. #lines] = { GetText = function() return t end } end
+	function tip:Show() end
+	tip:AddLine("Southsea Dock Worker")
+	local wasLoader, wasGUID, wasName = QuestieLoader, UnitGUID, UnitName
+	local QT = { lookupByKey = { m_7857 = {} } }
+	function QT.GetTooltip(key) if key == "m_7857" then return { "Pirate Hats Ahoy!", "   6/20 Southsea Pirate Hat" } end end
+	local DB = { QueryNPCSingle = function(id, f) if id == 7857 and f == "name" then return "Southsea Dock Worker" end end }
+	QuestieLoader = { ImportModule = function(_, n) if n == "QuestieTooltips" then return QT elseif n == "QuestieDB" then return DB end end }
+	UnitGUID = function(u) if u == "mouseover" then return secret("Creature-0-1-1-1-7857-0") end return "Player-1" end
+	UnitName = function(u) if u == "mouseover" then return secret("Southsea Dock Worker") end return "Rob" end
+	assert(ns.Plates.AddQuestieLines(tip), "hidden GUID: Questie's lines added by name")
+	assert(lines[2] == "Pirate Hats Ahoy!" and lines[3] == "   6/20 Southsea Pirate Hat", "Questie's lines in order")
+	assert(not ns.Plates.AddQuestieLines(tip) and #lines == 3, "no doubled lines")
+	UnitGUID = function(u) return "Creature-0-1-1-1-7857-0" end
+	lines = { "Southsea Dock Worker" }
+	assert(not ns.Plates.AddQuestieLines(tip), "readable GUID: Questie does it itself")
+	QuestieLoader, UnitGUID, UnitName = wasLoader, wasGUID, wasName
+end
 -- hidden plates are click-through (Questie tooltips), and put back when plates are shown
 do
 	local ct = false
@@ -551,6 +576,12 @@ step("buffs", function()
 		local after = ns.Buffs.Missing()
 		if #after ~= #m - 1 then error("casting " .. m[1] .. " in combat didn't clear its reminder") end
 		for _, id in ipairs(after) do if id == m[1] then error("reminder " .. id .. " stayed after casting it") end end
+		-- the game hides the spell ID in combat: the cast GUID still names it
+		if #after > 0 then
+			fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-3-4170-0-1-" .. after[1] .. "-0000ABCDEF", secret(after[1]))
+			local after2 = ns.Buffs.Missing()
+			for _, id in ipairs(after2) do if id == after[1] then error("hidden spell ID: reminder " .. id .. " stayed (cast GUID not read)") end end
+		end
 	end
 	COMBAT, AURAS_SECRET = false, false
 	AURAS.player = { { spellId = 1, name = "Buff" } }
@@ -740,6 +771,65 @@ do
 		assert(pick().style == "twist", "Seal Twist playstyle: the Unsealed Wrath build")
 		ns.db.role = "shockadin"
 		assert(pick().style == "shockadin", "Shockadin playstyle: the Holy Shock build")
+		-- Seal Twist with no seal up opens on Command, not the Fury line
+		-- the WoWSims list keeps for a rare swap
+		do
+			ns.db.role = "twist"
+			local savedK = KNOWN
+			KNOWN = { [20920] = true, [20293] = true, [20423] = true, [20271] = true, [10333] = true, [1310735] = true }
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			ns.API.RebuildSpellBookIndex(true)
+			Sim.InvalidateTalents()
+			NOW = NOW + 60
+			local q = ns.BuildQueue()
+			assert(q and q[1] == 20920, "twist, no seal: opens on Seal of Command, not Fury (got " .. tostring(q and q[1]) .. ")")
+			KNOWN[20920] = nil
+			ns.API.RebuildSpellBookIndex(true)
+			NOW = NOW + 1
+			q = ns.BuildQueue()
+			assert(q and q[1] ~= 20423, "twist, no Command: never opens on Fury (got " .. tostring(q and q[1]) .. ")")
+			-- after the seal is cast and runs out, never Fury
+			KNOWN[20920] = true; ns.API.RebuildSpellBookIndex(true)
+			TARGET, COMBAT = true, true
+			fire("UNIT_SPELLCAST_SUCCEEDED", "player", "Cast-twist", 20920)
+			for t = 1, 70 do
+				NOW = NOW + 1
+				local qq = ns.BuildQueue()
+				for _, id in ipairs(qq) do
+					assert(id ~= 20423, "twist: Seal of Fury suggested " .. t .. "s after Command")
+				end
+			end
+			COMBAT = false
+			-- Fury is off on damage rotations, on for Protection
+			local twistRot, protRot = pick(), nil
+			for _, r in ipairs(list) do if r.role == "tank" then protRot = r end end
+			Sim.BeginPass(twistRot)
+			assert(Sim.FuryOff(20423), "twist rotation: Seal of Fury is off")
+			assert(not Sim.FuryOff(20920), "twist rotation: Seal of Command stays on")
+			-- the game can answer no name for Seal of Fury (fresh login): still off
+			for _, id in ipairs({ 1311649, 1311656, 20423 }) do HIDE_SPELL_NAMES[id] = true end
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			assert(Sim.FuryOff(20423) and Sim.FuryOff(1311649), "twist rotation: Seal of Fury off even with its name hidden")
+			NOW = NOW + 120
+			TARGET, COMBAT = true, true
+			for t = 1, 30 do
+				NOW = NOW + 1
+				for _, id in ipairs(ns.BuildQueue() or {}) do
+					assert(id ~= 20423 and id ~= 1311649, "twist, Fury name hidden: Seal of Fury suggested")
+				end
+			end
+			COMBAT = false
+			HIDE_SPELL_NAMES = {}
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			if protRot then
+				Sim.BeginPass(protRot)
+				assert(not Sim.FuryOff(20423), "Protection: Seal of Fury stays on")
+			end
+			KNOWN = savedK
+			if ns.API.InvalidateSpells then pcall(ns.API.InvalidateSpells, true) end
+			ns.API.RebuildSpellBookIndex(true)
+			Sim.InvalidateTalents()
+		end
 	end
 	-- picker: Auto first; /rcr apl cycles Auto -> each rotation -> Auto
 	ns.db.role = roles[1]
